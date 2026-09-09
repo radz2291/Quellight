@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config';
+import { fileURLToPath } from 'node:url';
 
 /**
  * The NODE-SIDE test configuration: composition, conversation lifecycle,
@@ -6,6 +7,11 @@ import { defineConfig } from 'vitest/config';
  * Runs fully offline — no network access and no provider credential.
  */
 export default defineConfig({
+  resolve: {
+    alias: {
+      $lib: fileURLToPath(new URL('./src/lib', import.meta.url)),
+    },
+  },
   test: {
     environment: 'node',
     include: ['test/**/*.test.ts'],

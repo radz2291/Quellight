@@ -82,11 +82,11 @@ export const application = defineApplication({
           name: 'main',
           surfaces: [
             {
-              role: 'text',
-              id: 't.workspace-hold',
-              content:
-                'Quellight workspace. The conversation surface arrives with the Stage 07B conversation increment.',
-              level: 2,
+              role: 'component',
+              id: 'sc.workspace',
+              componentId: 'qlt.conversation-workspace',
+              revision: '1',
+              props: {},
             },
           ],
         },
@@ -164,6 +164,7 @@ export const application = defineApplication({
     },
   ],
   resources: [{ resourceId: 'qlt.threads', revision: '1' }],
+  components: [{ componentId: 'qlt.conversation-workspace', revision: '1' }],
   compatibility: { applicationSchema: APPLICATION_DEFINITION_SCHEMA_V2 },
 });
 
@@ -203,17 +204,33 @@ function boundedStringContract(id: string, maxLength: number) {
   };
 }
 
-export const inputContracts = [
+/**
+ * The typed mutation input contracts — RUNTIME IMPLEMENTATIONS. These
+ * validate untrusted input at the server adapter (AI-014): bounded plain
+ * strings only, no exotic shapes. The compiled plan references the same
+ * contracts by canonical {id, revision} registry entries (see
+ * `inputContractRegistry`); parse functions are NOT part of the neutral
+ * definition data.
+ */
+export const inputContractImplementations = [
   boundedStringContract('qlt.threads.create.input', 200),
   boundedStringContract('qlt.threads.rename.input', 200),
   boundedStringContract('qlt.threads.archive.input', 128),
   boundedStringContract('qlt.threads.reopen.input', 128),
 ] as const;
 
+/** Canonical contract REGISTRY entries for the compiled plan (data only). */
+export const inputContracts = [
+  { id: 'qlt.threads.create.input', revision: '1' },
+  { id: 'qlt.threads.rename.input', revision: '1' },
+  { id: 'qlt.threads.archive.input', revision: '1' },
+  { id: 'qlt.threads.reopen.input', revision: '1' },
+] as const;
+
 export const bindings = {
   contracts: inputContracts,
   capabilities: [],
-  components: [],
+  components: [{ componentId: 'qlt.conversation-workspace', revision: '1' }],
 } as const;
 
 /** Compile the neutral definition into the immutable plan. */
