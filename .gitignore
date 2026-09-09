@@ -1,0 +1,44 @@
+# Quellight — local development hygiene.
+# Quellight is a private, UNLICENSED product repository. Never publish.
+
+# Dependencies
+node_modules/
+
+# Build outputs
+build/
+dist/
+.svelte-kit/
+.vite/
+
+# Quellight durable state (stores are NEVER committed)
+.quellight-data/
+.data/
+
+# SQLite databases and sidecars (any location)
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
+# Credentials and environment (names only in .env.example)
+.env
+.env.*
+!.env.example
+
+# Local coding-agent material
+.pi/
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+
+# Test and tooling tmp artifacts
+test-results/
+tmp/
+*.tmp
+.vitest-cache/
