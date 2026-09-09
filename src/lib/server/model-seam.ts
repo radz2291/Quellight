@@ -126,16 +126,24 @@ export function withTurnDeadline<T extends object>(
     };
   };
 
-  // Prototype-chain wrapper: class instances keep their methods, getters,
-  // private state, and instanceof identity; only doStream is overridden.
-  const wrappedModel: Record<string, unknown> = Object.create(model);
+  // Instance-level shadow: `doStream` is overridden as an own property on
+  // the REAL model instance. Every other method keeps the instance as its
+  // receiver, so class-private state (`#fields`) keeps working — a
+  // prototype-chain WRAPPER object would break private-field access
+  // inside Mastra's router classes (TypeError on #lastStreamTransport).
   const source = model as unknown as Record<string, unknown>;
   if (typeof source['doStream'] === 'function') {
-    wrappedModel['doStream'] = wrapDoStream(
+    const bounded = wrapDoStream(
       source['doStream'].bind(model) as (options: unknown) => Promise<DeadlineStreamResult>,
     );
+    Object.defineProperty(model, 'doStream', {
+      value: bounded,
+      writable: true,
+      configurable: true,
+      enumerable: false,
+    });
   }
-  return wrappedModel as T;
+  return model;
 }
 
 export interface LiveProviderModelOptions {
@@ -166,11 +174,18 @@ export function createLiveProviderModel(options: LiveProviderModelOptions): {
   }
   const providerId = options.routerModel.slice(0, slash);
   const modelId = options.routerModel.slice(slash + 1);
+  // ProviderId+modelId ONLY: the pinned @mastra/core registry resolves
+  // the provider's endpoint and reads the credential BY VARIABLE NAME
+  // from the process environment. Passing an explicit `url` would take
+  // the router's custom-endpoint branch, which ignores the env lookup
+  // (it builds the request with an empty credential -> Unauthorized).
+  // The registry entry for ollama-cloud pins the same endpoint the
+  // owner decided (https://ollama.com/v1).
   const model = new ModelRouterLanguageModel({
     providerId,
     modelId,
-    url: options.endpointBaseUrl,
   });
+  void options.endpointBaseUrl;
   return model as unknown as {
     provider: string;
     modelId: string;
