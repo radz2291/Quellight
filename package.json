@@ -1,0 +1,50 @@
+{
+  "name": "quellight",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Quellight — a persistent cognitive partner (long-term). Stage 07B delivers the conversation foundation: streaming conversation over persistent threads through the released VICT packages.",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "vite dev",
+    "build": "svelte-kit sync && vite build",
+    "preview": "vite preview",
+    "test": "npm run test:node && npm run test:ui",
+    "test:node": "vitest run --config vitest.node.config.ts",
+    "test:ui": "vitest run --config vitest.config.ts",
+    "check": "svelte-kit sync && tsc -p tsconfig.json --noEmit",
+    "format:check": "node scripts/check-format.mjs",
+    "lint": "npm run format:check && npm run check",
+    "typecheck": "npm run check",
+    "verify:consumer": "node scripts/verify-consumer.mjs",
+    "verify:quellight": "node scripts/verify-quellight.mjs",
+    "verify:live-provider": "node scripts/verify-live-provider.mjs",
+    "scaffold:host": "node scripts/scaffold-host.mjs"
+  },
+  "dependencies": {
+    "@victframework/application": "0.1.0",
+    "@victframework/contracts": "0.1.0",
+    "@victframework/control": "0.1.0",
+    "@victframework/mastra": "0.1.0",
+    "@victframework/renderer-svelte": "0.1.0",
+    "@victframework/runtime": "0.1.0",
+    "@victframework/sdk": "0.1.0",
+    "@victframework/server": "0.1.0",
+    "@victframework/store-sqlite": "0.1.0"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-node": "^5.2.12",
+    "@sveltejs/kit": "^2.20.0",
+    "@sveltejs/vite-plugin-svelte": "^5.0.3",
+    "@victframework/scaffolder": "0.1.0",
+    "happy-dom": "^15.11.7",
+    "prettier": "^3.9.6",
+    "svelte": "^5.28.0",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "vitest": "^4.1.11"
+  }
+}

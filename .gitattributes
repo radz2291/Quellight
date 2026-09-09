@@ -1,0 +1,6 @@
+# Quellight — deterministic line-ending discipline.
+# The canonical input document must remain byte-identical in every clone.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary

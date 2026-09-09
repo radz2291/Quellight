@@ -1,0 +1,4 @@
+# The canonical architecture input is byte-frozen (SHA-256
+# e7f61d24c16fd60c66efdb0af0b32859f1fdf1b571e32a0368870cb559b01331).
+# It is NEVER reformatted or touched by tooling.
+docs/The-Persistent-Cognitive-Partner-Agent-Context-v1.3-CANONICAL.md
