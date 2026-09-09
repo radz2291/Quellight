@@ -21,7 +21,8 @@
     "typecheck": "npm run check",
     "verify:consumer": "node scripts/verify-consumer.mjs",
     "verify:quellight": "node scripts/verify-quellight.mjs",
-    "verify:live-provider": "node scripts/verify-live-provider.mjs",
+    "verify:browser": "node scripts/browser-check.mjs",
+    "verify:live-provider": "node --import tsx scripts/verify-live-provider.mjs",
     "scaffold:host": "node scripts/scaffold-host.mjs"
   },
   "dependencies": {
@@ -36,6 +37,8 @@
     "@victframework/store-sqlite": "0.1.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.63.0",
     "@sveltejs/adapter-node": "^5.2.12",
     "@sveltejs/kit": "^2.20.0",
     "@sveltejs/vite-plugin-svelte": "^5.0.3",
@@ -43,6 +46,7 @@
     "happy-dom": "^15.11.7",
     "prettier": "^3.9.6",
     "svelte": "^5.28.0",
+    "tsx": "^4.23.13",
     "typescript": "^5.8.3",
     "vite": "^6.3.5",
     "vitest": "^4.1.11"
