@@ -189,7 +189,12 @@ e53ee87  docs: canonical architecture input
 b63b4b6  chore: dependencies and lockfile
 2155cce  chore(stage-07b): verification tooling dependencies
 9354a12  feat(stage-07b): implement live conversation foundation
-<report> docs(stage-07b): record implementation evidence
+909e812  docs(stage-07b): record implementation evidence
+4aa82ed  fix(stage-07b): live provider model construction
+9184593  fix(stage-07b): align live-proof cancellation evidence with
+         released contract
+<final>  docs(stage-07b): record final commit chain
 ```
 
-Push is fast-forward-only to `main` after re-checking the remote.
+All pushes were fast-forward-only to `main` after re-checking the
+remote; the remote never advanced unexpectedly during the stage.
