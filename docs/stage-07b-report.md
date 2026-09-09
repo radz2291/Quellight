@@ -142,8 +142,21 @@ suite. The script (`npm run verify:live-provider`):
 - scans every persisted store byte and captured ledger frame for the
   credential value and fails on any hit.
 
-Result: recorded in the completion response of this stage (run after
-all offline gates and the push).
+**Result**: PASS. Three bounded live turns against the real provider —
+t1 completed (~2.6 s), t2 cancelled mid-stream with the truthful
+terminal (exactly one `response.cancelled` durable frame), full
+composition restart on the same data dir (~340 ms) with truthful
+restore (3 durably restored messages; turn statuses
+completed/cancelled), t3 completed in the restarted process. The
+credential value was absent from every persisted byte and ledger
+frame. No conversation content was printed.
+
+Contract note (recorded in D-4's spirit, no framework change): in
+released VICT 0.1.0 an in-flight cancellation records the turn as
+`cancelled` WITHOUT a code on the turn record; the
+`VICT_TURN_CANCELLED` code is written on the restart-reconcile path.
+The live proof asserts the released contract: truthful cancelled
+status plus exactly one `response.cancelled` durable terminal frame.
 
 ## 7. Framework-change proposal
 

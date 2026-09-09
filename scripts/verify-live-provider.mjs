@@ -184,8 +184,18 @@ try {
   if (t2Settled.status !== 'cancelled') {
     fail(`t2 expected cancelled, got ${t2Settled.status}`);
   }
-  if (t2Settled.errorCode !== 'VICT_TURN_CANCELLED') {
-    fail(`t2 expected stable code VICT_TURN_CANCELLED, got ${t2Settled.errorCode}`);
+  // The truthful terminal for an in-flight cancellation in released
+  // VICT 0.1.0: status 'cancelled' and exactly one response.cancelled
+  // durable terminal frame (the VICT_TURN_CANCELLED code is recorded on
+  // the restart-reconcile path, not the in-flight path).
+  const t2Frames = await composition.stores.streamLedger.listEventsFrom(t2.streamId, 0);
+  const t2Terminals = t2Frames
+    .map((frame) => frame.event?.kind ?? frame.kind)
+    .filter((kind) =>
+      ['response.completed', 'response.failed', 'response.cancelled'].includes(kind),
+    );
+  if (t2Terminals.length !== 1 || t2Terminals[0] !== 'response.cancelled') {
+    fail(`t2 expected exactly one response.cancelled terminal, got ${JSON.stringify(t2Terminals)}`);
   }
 
   // credential leak scan for session 1 writes
