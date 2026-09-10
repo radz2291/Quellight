@@ -1,5 +1,40 @@
 # Quellight system reference — Stage 07B
 
+## Status (current, 2026-09-10)
+
+```text
+Stage 07B: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
+Stage 07C: SPECIFICATION PERMITTED — NOT BEGUN
+Stage 07:  IN PROGRESS (07A closed; 07B closed; 07C–07E remaining)
+```
+
+- Stage 07B is formally closed against the audited evidence SHA
+  `1e0c0f53d62cde6d5031f865fe871ac1d41c9a9b` (independent re-verification
+  verdict `VERIFIED WITH NON-BLOCKING ISSUES — FORMAL CLOSURE
+PERMITTED`). See
+  `docs/report/QUELLIGHT-STAGE-07B-FORMAL-CLOSURE.md` and the VICT
+  constitutional closure (System Reference v0.4.7, §0.16, commit
+  `1fd98060254bd4789cdb559b7952d414d6b51a6b`).
+- The retained dependency is exactly the immutable release set
+  `@victframework/*@0.1.0` (`vict-release-set@1/0.1.0`, content ID
+  `v1_dbb7438dfe16b7de245fe3863f6980b7e9a44a83c1809e01071941782597a11d`).
+  VICT `0.1.1` is published but NOT adopted; any later adoption requires
+  an explicit Stage 07C compatibility decision and fresh verification.
+- The semantic-authority enforcement principle is registered as VICT
+  `GOV-007` and mirrored here as decision register **D-8**; the F-8
+  `app.data.mutate` payload gap is the binding Stage 07C entry gate,
+  mirrored as **D-9**.
+- Non-blocking debt carried forward: F-3 (open Low, `VICT_`-prefixed
+  display-only code), F-4 (open Low, historical implementation-report
+  placement), F-5 (open Low, cosmetic verifier output), F-6/F-7
+  (informational, development-only). F-1, F-2, and the missing
+  independent live proof are remediated/resolved and independently
+  verified closed.
+- The status sections below describe the delivered Stage 07B behavior;
+  `docs/stage-07b-report.md` is the preserved historical implementation
+  report (its issuance-time status wording is superseded by this
+  section).
+
 ## What Quellight is
 
 A single-user, conversation-first workspace. One SvelteKit process
@@ -105,4 +140,6 @@ retention-metadata marking, never Shared World meaning deletion.
 - `docs/database.md` — store layout and migration discipline
 - `docs/setup.md` — operator configuration and credentials
 - `docs/decision-register.md` — binding decisions
-- `docs/stage-07b-report.md` — implementation evidence
+- `docs/stage-07b-report.md` — implementation evidence (historical;
+  status superseded by the Status section above)
+- `docs/report/QUELLIGHT-STAGE-07B-FORMAL-CLOSURE.md` — formal closure

@@ -86,3 +86,58 @@ treats the terminal event as the durable milestone and reconciles the
 open thread's transcript from the VICT-authoritative restore boundary
 at terminal. This is the honest composition of the released contracts:
 nothing fabricated, nothing invented, no framework change.
+
+## D-8 — VICT semantic authority (owner enforcement principle; mirror of VICT GOV-007)
+
+Registered in VICT as governing requirement **GOV-007**
+(`VICT-SYSTEM-REFERENCE.md` v0.4.7, §0.4 and §0.16.2) at the Stage 07B
+formal closure; mirrored here as a binding Quellight decision:
+
+- VICT's released definitions, typed IR, contracts, compilers, runtimes,
+  capability boundaries, execution identities, delivery semantics, and
+  protocols are authoritative wherever VICT defines the behavior.
+- YAML is an optional authoring or serialization notation; YAML itself
+  provides no architectural enforcement or conformance guarantee. Stage
+  07B was **not** YAML-authored — its authoritative representation is
+  the typed Application Definition plus the compiled plan; YAML absence
+  alone is never a conformance failure.
+- A consumer may implement product UI, presentation state, product
+  policy, prompts, product-owned storage, and thin documented adapters.
+- A consumer may not recreate, shadow, bypass, or silently replace
+  VICT-owned semantics.
+- A framework limitation must fail closed and become an explicit
+  framework-change or registered-extension proposal — never a custom
+  shortcut.
+- Every effectful user action must have auditable provenance from the
+  user-visible action through its declared application action or
+  capability, runtime handler, governed boundary, and resulting effect;
+  presentation-only actions (focus, panel visibility, local layout) do
+  not require capability governance.
+- Independent consumer audits must treat an unproven critical VICT path
+  or semantic bypass as blocking even when the application appears to
+  work.
+
+## D-9 — Stage 07C entry gate (F-8)
+
+The released `app.data.mutate` command payload structurally cannot carry
+mutation input (D-4; confirmed at released-source level by the
+independent audit). This is non-blocking for Stage 07B (closed 2026-09-10)
+and binding as the **Stage 07C entry gate** (VICT reference §0.16.3;
+`docs/report/QUELLIGHT-STAGE-07B-FORMAL-CLOSURE.md` §5): before Stage 07C
+implements Shared World proposals, confirmation ceremonies, corrections,
+commitments, open loops, or other durable meaning writes, the Stage 07C
+handoff must resolve F-8 by proving ONE of:
+
+1. the required mutation input is expressible through a released public
+   VICT application/capability boundary; or
+2. a formally defined, registered, governed consumer capability
+   extension provides the required input and effect boundary; or
+3. VICT is corrected, independently verified, released as a new
+   immutable package set, and Quellight adopts that exact set through a
+   controlled compatibility change.
+
+Prohibited: `UI or ordinary product route → custom mutation shortcut →
+direct durable write` merely because the current `app.data.mutate`
+payload is insufficient. The existing bounded `/api/act` treatment
+remains historical Stage 07B behavior and must not silently become the
+general Stage 07C effect model.

@@ -10,9 +10,19 @@ linked, or patched.
 ## Status
 
 ```text
-Stage 07B: IMPLEMENTED — AWAITING INDEPENDENT VERIFICATION
-Stage 07C: ACCEPTED SEQUENCE — NOT BEGUN
+Stage 07B: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
+Stage 07C: SPECIFICATION PERMITTED — NOT BEGUN
+Stage 07:  IN PROGRESS (07A closed; 07B closed; 07C–07E remaining)
 ```
+
+Stage 07B is formally closed (2026-09-10) against the audited evidence
+SHA `1e0c0f53d62cde6d5031f865fe871ac1d41c9a9b`; see
+`docs/report/QUELLIGHT-STAGE-07B-FORMAL-CLOSURE.md`. The VICT
+constitutional closure is recorded in the VICT System Reference v0.4.7
+(§0.16). Quellight remains pinned to the immutable release set
+`vict-release-set@1/0.1.0` (`@victframework/*@0.1.0`); VICT `0.1.1` is
+published but not adopted — any later adoption requires an explicit
+Stage 07C compatibility decision and fresh verification.
 
 Stage 07B delivers the **conversation foundation**: one pinned provider
 profile, real streaming conversation through `@victframework/mastra`,
