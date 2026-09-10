@@ -22,6 +22,7 @@
     "verify:consumer": "node scripts/verify-consumer.mjs",
     "verify:quellight": "node scripts/verify-quellight.mjs",
     "verify:browser": "node scripts/browser-check.mjs",
+    "verify:stop": "node scripts/browser-stop-check.mjs",
     "verify:live-provider": "node --import tsx scripts/verify-live-provider.mjs",
     "scaffold:host": "node scripts/scaffold-host.mjs"
   },

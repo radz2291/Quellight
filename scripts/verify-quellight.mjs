@@ -105,6 +105,18 @@ record(
   }),
 );
 
+// 6b. REAL-BROWSER Stop-control regression (F-1): the old-commit negative
+// control in an isolated worktree + the full real-browser Stop flow.
+step('6b. real-browser Stop regression (F-1): old-commit negative control + real click flow');
+record(
+  'browser-stop-check',
+  spawnSync(process.execPath, ['scripts/browser-stop-check.mjs'], {
+    encoding: 'utf8',
+    timeout: 600_000,
+    maxBuffer: 32 * 1024 * 1024,
+  }),
+);
+
 // 7. Credential/canary/local-path scan over sources and artifacts.
 step('7. credential/canary/local-path artifact scan');
 const SKIP_DIRS = new Set([

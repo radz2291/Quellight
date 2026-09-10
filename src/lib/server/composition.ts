@@ -247,6 +247,17 @@ export interface CreateQuellightCompositionOptions {
   readonly reconcileOnStart?: boolean;
   /** Test-only: dedicated Mastra store file name (default `mastra-store.db`). */
   readonly mastraStoreFileName?: string;
+  /**
+   * Test-only: override the OFFLINE fixture model factory (never consulted
+   * in live mode). The default remains the released deterministic offline
+   * fixture wrapped in the production deadline seam, so offline behavior
+   * is unchanged in every non-test composition. Used by the deterministic
+   * deadline proof (N-6) and the real-browser stop regression, which need
+   * a fixture whose stream is still genuinely in flight at a controlled
+   * moment; the override changes WHICH offline model instance runs, never
+   * how provider execution, the adapter, the hub, or the boundary behave.
+   */
+  readonly offlineModelFactory?: () => unknown;
 }
 
 /**
@@ -415,13 +426,13 @@ export async function createQuellightComposition(
       });
       return withTurnDeadline(live, env.turnDeadlineMs, clock);
     }
-    return withTurnDeadline(
-      createDeterministicOfflineModel({
-        script: (options.offlineScript ?? {}) as never,
-      }),
-      env.turnDeadlineMs,
-      clock,
-    );
+    const offline =
+      options.offlineModelFactory !== undefined
+        ? options.offlineModelFactory()
+        : createDeterministicOfflineModel({
+            script: (options.offlineScript ?? {}) as never,
+          });
+    return withTurnDeadline(offline as object, env.turnDeadlineMs, clock);
   };
 
   const mastraComposition: MastraTurnComposition = composeMastraTurnExecutor({

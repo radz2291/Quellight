@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { authenticatedActorContext, type ActorRecord } from '@victframework/runtime';
 import type { AgentStreamEvent } from '@victframework/contracts';
+import { createDeterministicOfflineModel } from '@victframework/mastra';
 import {
   createQuellightComposition,
   resolveQuellightEnvironment,
@@ -47,6 +48,10 @@ const LONG_TEXT =
 async function compose(
   script: Record<string, unknown>,
   envOverrides: Record<string, string | undefined> = {},
+  compositionOverrides: {
+    clock?: () => number;
+    offlineModelFactory?: () => unknown;
+  } = {},
 ) {
   const dir = tempDir();
   const env = resolveQuellightEnvironment(
@@ -61,6 +66,7 @@ async function compose(
     env,
     offlineScript: script,
     skipListen: true,
+    ...compositionOverrides,
   });
   composed.push(composition);
   return { composition, dir, env };
@@ -243,16 +249,156 @@ describe('Quellight composition — offline deterministic conversation (WP-4)', 
     }
   });
 
-  it('N-6: deadline expiry at the model seam settles the turn failed with a stable safe code', async () => {
+  it('N-6: the configured turn deadline is reached against a genuinely pending provider fixture and settles the turn failed exactly once (controlled time)', async () => {
+    // Controlled time: nothing advances except this test. The deadline
+    // seam (withTurnDeadline) and every store receive the same clock, so
+    // the proof is deterministic with zero real sleeping.
+    const DEADLINE_MS = 5_000;
     let now = 0;
+    const clock = (): number => now;
+
+    // The provider fixture is the RELEASED deterministic offline model
+    // (not a fixture that pre-returns the expected error). A gate holds
+    // its stream parts so the provider stream stays genuinely PENDING —
+    // no part delivered, no completion — until the test releases it.
+    const fixture = createDeterministicOfflineModel({
+      script: {
+        'deadline probe': {
+          kind: 'text',
+          text: 'This scripted content must never be delivered before the deadline.',
+        },
+      },
+    });
+    const gateWaiters: Array<() => void> = [];
+    let partsDeliveredBeforeDeadline = 0;
+    let partsDeliveredTotal = 0;
+    const gatedModel = {
+      ...fixture,
+      doStream: async (callOptions: unknown) => {
+        const result = (await fixture.doStream(callOptions as never)) as {
+          stream: ReadableStream<{ type: string; [key: string]: unknown }>;
+          [key: string]: unknown;
+        };
+        const source = result.stream.getReader();
+        const stream = new ReadableStream<{ type: string; [key: string]: unknown }>({
+          async start(controller) {
+            for (;;) {
+              const { done, value } = await source.read();
+              if (done) {
+                break;
+              }
+              // The gate holds EVERY part until the test releases it.
+              await new Promise<void>((resolvePromise) => gateWaiters.push(resolvePromise));
+              if (clock() < DEADLINE_MS) {
+                partsDeliveredBeforeDeadline += 1;
+              }
+              partsDeliveredTotal += 1;
+              controller.enqueue(value);
+            }
+            try {
+              controller.close();
+            } catch {
+              /* the consumer already went away */
+            }
+          },
+        });
+        return { ...result, stream };
+      },
+    };
+
     const { composition } = await compose(
-      { 'slow turn': { kind: 'text', text: 'chunk. '.repeat(2000) } },
       {},
+      {
+        QUELLIGHT_TURN_DEADLINE_MS: String(DEADLINE_MS),
+      },
+      {
+        clock,
+        offlineModelFactory: () => gatedModel,
+      },
     );
-    void now;
-    void composition;
-    // NOTE: deadline behavior is covered by the dedicated seam test below
-    // (the composition-level deadline needs a controllable clock).
+    const { turnId, streamId } = await startTurn(
+      composition,
+      'Deadline thread',
+      'deadline probe',
+      'idem-n6-1',
+    );
+
+    // The fixture model was invoked exactly once and stays pending while
+    // controlled time is before the configured deadline.
+    const waitForInvocation = async (): Promise<void> => {
+      const started = Date.now();
+      while (fixture.invocationCount() < 1) {
+        if (Date.now() - started > 30_000) {
+          throw new Error('the deadline fixture model was never invoked');
+        }
+        await new Promise((resolvePromise) => setTimeout(resolvePromise, 25));
+      }
+    };
+    await waitForInvocation();
+    await new Promise((resolvePromise) => setTimeout(resolvePromise, 120));
+    expect(fixture.invocationCount()).toBe(1);
+    expect(partsDeliveredBeforeDeadline).toBe(0);
+    const beforeDeadline = await composition.turnService.getTurn(actorOf(composition), turnId);
+    // The turn is genuinely in flight (not settled) while the fixture
+    // remains pending before the configured deadline.
+    expect(['intent', 'running']).toContain(beforeDeadline.status);
+
+    // Reach the configured deadline in controlled time, then let exactly
+    // one pending stream part through: the deadline seam observes the
+    // expired deadline at its next read and emits its single error part.
+    now = DEADLINE_MS + 1;
+    const releaseOne = gateWaiters.shift();
+    expect(releaseOne).toBeDefined();
+    releaseOne!();
+
+    const settled = await awaitTurnTerminal(composition, turnId);
+    expect(settled.status).toBe('failed');
+    // The stable sanitized durable code — never raw provider content.
+    expect(settled.errorCode).toBe('VICT_AGENT_TURN_FAILED');
+
+    // Exactly one terminal frame, and it is the deadline failure; no
+    // completion or cancellation terminal was also emitted, and no
+    // durable content milestone exists (the fixture stayed pending).
+    const { events, frames } = await collectStream(composition, streamId);
+    const terminalKinds = events
+      .filter((event) =>
+        ['response.completed', 'response.failed', 'response.cancelled'].includes(event.kind),
+      )
+      .map((event) => event.kind);
+    expect(terminalKinds).toEqual(['response.failed']);
+    expect(events.some((event) => event.kind === 'response.completed')).toBe(false);
+    expect(events.some((event) => event.kind === 'response.cancelled')).toBe(false);
+    expect(events.some((event) => event.kind === 'content.completed')).toBe(false);
+    expect(partsDeliveredBeforeDeadline).toBe(0);
+    // No second model effect: exactly one invocation, no automatic retry.
+    expect(fixture.invocationCount()).toBe(1);
+    // Durable rows carry the failure terminal exactly once.
+    const durableTerminals = frames.filter((frame) =>
+      ['response.completed', 'response.failed', 'response.cancelled'].some((kind) =>
+        frame.includes(kind),
+      ),
+    );
+    expect(durableTerminals).toHaveLength(1);
+
+    // Reconnect: a client replaying the stream from zero receives the
+    // SAME single terminal truth.
+    const replay = await composition.hub.replay({ streamId, lastSeq: 0 });
+    const replayTerminals = replay.events.filter((event) =>
+      ['response.completed', 'response.failed', 'response.cancelled'].includes(event.kind),
+    );
+    expect(replayTerminals.map((event) => event.kind)).toEqual(['response.failed']);
+
+    // Durable reconciliation (the boot path) preserves the same terminal
+    // truth and creates no second effect.
+    await composition.turnService.reconcileAfterRestart();
+    const afterReconcile = await composition.turnService.getTurn(actorOf(composition), turnId);
+    expect(afterReconcile.status).toBe('failed');
+    expect(afterReconcile.errorCode).toBe('VICT_AGENT_TURN_FAILED');
+    const { events: eventsAfter } = await collectStream(composition, streamId);
+    const terminalsAfter = eventsAfter.filter((event) =>
+      ['response.completed', 'response.failed', 'response.cancelled'].includes(event.kind),
+    );
+    expect(terminalsAfter.map((event) => event.kind)).toEqual(['response.failed']);
   });
 
   it('N-11: duplicate agent.turn.start with the same idempotency key yields exactly one turn', async () => {
