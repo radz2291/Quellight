@@ -14,7 +14,17 @@
    * - every state is truthful: empty, streaming, stopping, disconnected,
    *   reconnecting, recoverable failure, non-recoverable failure,
    *   cancelled (partial retained and marked), archived (read-only),
-   *   restored, and configuration-unavailable.
+   *   restored, and configuration-unavailable;
+   * - the Stop control routes the user's cancellation intent through the
+   *   real `/vict` proxy into the released VICT HTTP command boundary
+   *   (`agent.turn.cancel`) using the exact released vict.command@1
+   *   contract: the closed `{ payload: { turnId, reasonCode? } }` request
+   *   envelope plus a non-empty `idempotency-key` header (one intent, one
+   *   key; retries of the same intent reuse the key). The request never
+   *   fabricates a cancelled state: only the authoritative
+   *   `response.cancelled` stream terminal settles the UI, and a rejected
+   *   or undeliverable stop request surfaces as a stable, accessible
+   *   failure state instead of being swallowed.
    */
   import { connectAgentStream } from './stream-client';
 
@@ -65,6 +75,23 @@
   let renaming = $state(false);
   let announcement = $state('');
   let listMessage = $state('');
+  /** Stable display code for a rejected or undelivered stop request. */
+  let cancelError = $state<string | undefined>(undefined);
+  /**
+   * The idempotency key of the CURRENT cancellation intent (one intent,
+   * one key). Plain binding: it never renders directly.
+   */
+  let stopIntentKey: string | undefined = undefined;
+
+  /** Whether an authoritative terminal already settled the open stream. */
+  function isSettled(): boolean {
+    return (
+      connection === 'completed' ||
+      connection === 'cancelled' ||
+      connection === 'failed' ||
+      connection === 'disconnected'
+    );
+  }
 
   const selectedThread = $derived(threads.find((thread) => thread.id === selectedThreadId));
   const archived = $derived(selectedThread?.state === 'dormant');
@@ -128,6 +155,8 @@
     messages = [];
     turns = [];
     failureCode = undefined;
+    cancelError = undefined;
+    stopIntentKey = undefined;
     partialMarked = false;
     connection = 'idle';
     const { body } = await fetchJson(`/api/threads/${encodeURIComponent(threadId)}/messages`);
@@ -221,6 +250,7 @@
     }
     if (kind === 'response.completed') {
       connection = 'completed';
+      cancelError = undefined;
       announcement = 'Response completed.';
       return;
     }
@@ -234,6 +264,7 @@
     }
     if (kind === 'response.failed') {
       connection = 'failed';
+      cancelError = undefined;
       failureCode = typeof event['code'] === 'string' ? (event['code'] as string) : 'UNKNOWN';
       announcement = `Response failed (${failureCode ?? 'unknown'}). Retry sends a new message.`;
       return;
@@ -291,6 +322,10 @@
     const input = draft.trim();
     draft = '';
     failureCode = undefined;
+    cancelError = undefined;
+    // A new send is a NEW turn and therefore a NEW cancellation intent:
+    // its Stop clicks must carry a fresh idempotency key.
+    stopIntentKey = undefined;
     partialMarked = false;
     streamUnhealthy = false;
     cursorSeq = 0;
@@ -321,19 +356,92 @@
     }
   }
 
+  /**
+   * The visible Stop control: one user cancellation intent crosses the
+   * real `/vict` proxy into the released VICT command boundary
+   * (`agent.turn.cancel`) using the exact released public contract —
+   * the closed vict.command@1 request envelope `{ payload: { turnId,
+   * reasonCode? } }` plus a non-empty `idempotency-key` header (the
+   * released boundary deterministically rejects any other shape with
+   * 400 `VICT_HTTP_BODY_MALFORMED` / `VICT_COMMAND_IDEMPOTENCY_KEY_INVALID`).
+   *
+   * Idempotency: the FIRST Stop click for a turn creates the intent key;
+   * every retry of the SAME intent (repeated clicks, redelivery) reuses
+   * it, so the released boundary's durable deduplication yields exactly
+   * one cancellation effect. A later send starts a new turn and a new key.
+   *
+   * Truthfulness: acceptance here is only an intermediate state — the UI
+   * never claims cancellation before the authoritative stream terminal;
+   * an HTTP rejection or network failure surfaces as a stable, accessible
+   * failure state (never swallowed, never a false cancelled claim).
+   */
   async function stop(): Promise<void> {
     if (activeTurnId === undefined) {
       return;
     }
-    connection = 'stopping';
+    stopIntentKey ??= `stop-${crypto.randomUUID()}`;
+    cancelError = undefined;
+    const inFlight =
+      connection === 'streaming' || connection === 'connecting' || connection === 'stopping';
+    if (inFlight && connection !== 'stopping') {
+      connection = 'stopping';
+    }
     try {
-      await fetchJson('/vict/v1/turns/cancel', {
+      const { status, body } = await fetchJson('/vict/v1/turns/cancel', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ turnId: activeTurnId }),
+        headers: { 'content-type': 'application/json', 'idempotency-key': stopIntentKey },
+        body: JSON.stringify({ payload: { turnId: activeTurnId, reasonCode: 'user' } }),
       });
+      const result = body as {
+        ok: boolean;
+        code?: string;
+        data?: { result?: { accepted?: boolean; duplicate?: boolean } };
+      };
+      if (status === 200 && result.ok) {
+        // Accepted (or a durable duplicate of this same intent): keep the
+        // truthful intermediate state until the authoritative terminal.
+        if (
+          connection === 'streaming' ||
+          connection === 'connecting' ||
+          connection === 'stopping'
+        ) {
+          connection = 'stopping';
+          announcement = 'Stop request accepted. Waiting for the response to finish stopping.';
+        }
+        return;
+      }
+      if (result.code === 'VICT_COMMAND_IDEMPOTENCY_IN_PROGRESS') {
+        // The SAME intent is already being processed durably: intermediate
+        // state, not a failure.
+        if (connection === 'streaming' || connection === 'connecting') {
+          connection = 'stopping';
+          announcement = 'A stop request for this response is already being processed.';
+        }
+        return;
+      }
+      // HTTP rejection: surfaced accessibly — but only while the turn is
+      // still in flight. If a terminal already settled the stream, the
+      // truthful terminal state stands and the stale rejection is dropped.
+      // The response was NOT cancelled by this request, so the stream
+      // state stays truthful (streaming) and Stop remains retryable.
+      if (!isSettled()) {
+        cancelError = result.code ?? `HTTP_${status}`;
+        if (connection === 'stopping') {
+          connection = 'streaming';
+        }
+        announcement = `The stop request was rejected (${cancelError}). The response was not cancelled by it; you can retry.`;
+      }
     } catch {
-      /* the stream's terminal event settles the truth */
+      // Network failure delivering the stop request: surfaced, never
+      // swallowed, and never a false cancelled claim.
+      if (!isSettled()) {
+        cancelError = 'CANCEL_REQUEST_UNDELIVERED';
+        if (connection === 'stopping') {
+          connection = 'streaming';
+        }
+        announcement =
+          'The stop request could not be delivered. The response was not cancelled by it; you can retry.';
+      }
     }
   }
 
@@ -347,9 +455,19 @@
         `/api/threads/${encodeURIComponent(selectedThreadId)}/messages`,
         { method: 'GET' },
       );
-      const result = body as { ok: boolean; messages?: Array<{ role: string; text: string }> };
+      const result = body as {
+        ok: boolean;
+        messages?: Array<{ role: string; text: string }>;
+        turns?: TurnRecord[];
+      };
       if (result.ok && Array.isArray(result.messages)) {
         messages = result.messages.map((message) => ({ ...message, kind: 'restored' }));
+        // The VICT-authoritative turn records arrive with the same
+        // response: a cancelled or failed outcome stays visibly marked
+        // after the durable reconcile (never silently unmarked).
+        if (Array.isArray(result.turns)) {
+          turns = result.turns;
+        }
         partialMarked = false;
       }
     } catch {
@@ -477,6 +595,12 @@
           </p>
         {:else if connection === 'stopping'}
           <p class="qlt-banner" role="status">Stopping…</p>
+        {/if}
+        {#if cancelError !== undefined}
+          <p class="qlt-banner qlt-banner--warn" role="status">
+            The stop request was not accepted ({cancelError}). The response was not cancelled by
+            that request; Stop can be retried.
+          </p>
         {/if}
         {#if streamUnhealthy}
           <p class="qlt-banner qlt-banner--warn" role="status">
