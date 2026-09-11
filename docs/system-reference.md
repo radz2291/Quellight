@@ -1,29 +1,31 @@
 # Quellight system reference — Stage 07B
 
-## Status (current, 2026-09-10)
+## Status (current, 2026-09-11 — Phase Q1)
 
 ```text
 Stage 07B: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
-Stage 07C: SPECIFICATION PERMITTED — NOT BEGUN
-Stage 07:  IN PROGRESS (07A closed; 07B closed; 07C–07E remaining)
+Stage 07C Phase Q1: IMPLEMENTED — AWAITING INDEPENDENT VERIFICATION
+Stage 07C Phases Q2–Q7: PENDING (Shared World meaning and ceremony has not begun)
+Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 awaiting verification; Q2–Q7, 07D, 07E remaining)
 ```
 
-- Stage 07B is formally closed against the audited evidence SHA
-  `1e0c0f53d62cde6d5031f865fe871ac1d41c9a9b` (independent re-verification
-  verdict `VERIFIED WITH NON-BLOCKING ISSUES — FORMAL CLOSURE
-PERMITTED`). See
-  `docs/report/QUELLIGHT-STAGE-07B-FORMAL-CLOSURE.md` and the VICT
-  constitutional closure (System Reference v0.4.7, §0.16, commit
-  `1fd98060254bd4789cdb559b7952d414d6b51a6b`).
-- The retained dependency is exactly the immutable release set
-  `@victframework/*@0.1.0` (`vict-release-set@1/0.1.0`, content ID
-  `v1_dbb7438dfe16b7de245fe3863f6980b7e9a44a83c1809e01071941782597a11d`).
-  VICT `0.1.1` is published but NOT adopted; any later adoption requires
-  an explicit Stage 07C compatibility decision and fresh verification.
-- The semantic-authority enforcement principle is registered as VICT
-  `GOV-007` and mirrored here as decision register **D-8**; the F-8
-  `app.data.mutate` payload gap is the binding Stage 07C entry gate,
-  mirrored as **D-9**.
+- The retained dependency is now the immutable coordinated release set
+  `@victframework/*@0.2.0` (`vict-release-set@1/0.2.0`, content ID
+  `v1_7a557983114b0743334061bd1f02ccd14f22e29f3a86697a4fd09b1722a8f172`),
+  adopted in Phase Q1 through the controlled compatibility change D-10
+  (independently re-derived from the public registry; see
+  `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q1-CONTROLLED-ADOPTION.md`).
+  The prior sets (`0.1.0`, `0.1.1`) remain published and installable but
+  are not adopted; any later change requires an explicit compatibility
+  decision and fresh verification.
+- The F-8 `app.data.mutate` payload gap (entry gate D-9) was resolved by
+  VICT Stage 07C Phase F2/F3 and closed by the Phase Q1 adoption:
+  thread mutations now cross the released governed mutation envelope.
+  The historical Stage 07B `/api/act` direct-adapter accommodation is
+  retired; `/api/act` is a thin transport ingress (D-10). The retired
+  parallel mutation shortcut is removed and permanently gated.
+- Phase Q1 awaits independent verification; Shared World meaning and
+  ceremony implementation has not begun; Q2–Q7 remain pending.
 - Non-blocking debt carried forward: F-3 (open Low, `VICT_`-prefixed
   display-only code), F-4 (open Low, historical implementation-report
   placement), F-5 (open Low, cosmetic verifier output), F-6/F-7
@@ -101,10 +103,15 @@ claims, commitments, open loops, or agent-derived meaning exist in
   records (from operational stores) gate the transcript read (from the
   Mastra store). Incomplete/failed turns stay visibly marked; no
   per-message fabrication.
-- `/api/act` — typed Application Layer action boundary
-  (`ApplicationDataAdapter`, DATA-014) for thread mutations;
-  `app.data.query` crosses the released command path;
-  `app.data.mutate` fails closed (see decision register D-4).
+- `/api/act` — the ONLY non-local action ingress: a thin transport
+  boundary that parses the declared request, resolves the local user
+  identity server-side, and invokes the released VICT 0.2.0
+  `app.data.query` / `app.data.mutate` command boundary (closed mutation
+  envelope, plan-resolved action identity, contract-fenced input,
+  durable idempotency). It writes no SQLite and holds no parallel
+  shortcut (the Stage 07B direct-adapter accommodation is retired;
+  decision register D-10). The legacy identity-only `app.data.mutate`
+  payload fails closed (`QLT_APPDATA_MUTATION_PAYLOAD_UNSUPPORTED`).
 - `/api/health` — discloses model mode, release version, deadline.
 
 ## Streaming contract
@@ -143,3 +150,5 @@ retention-metadata marking, never Shared World meaning deletion.
 - `docs/stage-07b-report.md` — implementation evidence (historical;
   status superseded by the Status section above)
 - `docs/report/QUELLIGHT-STAGE-07B-FORMAL-CLOSURE.md` — formal closure
+- `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q1-CONTROLLED-ADOPTION.md` —
+  Phase Q1 implementation evidence (awaits independent verification)

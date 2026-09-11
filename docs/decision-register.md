@@ -28,9 +28,13 @@ Stage 07B must not implement 07C–07E scope.
 
 ## D-3 — Immutable consumption (owner + release identity)
 
-Only exact public registry versions `@victframework/*@0.1.0`
-(release identity `vict-release-set@1/0.1.0`, content ID
-`v1_dbb7438dfe16b7de245fe3863f6980b7e9a44a83c1809e01071941782597a11d`).
+Only exact public registry versions (initially `@victframework/*@0.1.0`
+— release identity `vict-release-set@1/0.1.0`, content ID
+`v1_dbb7438dfe16b7de245fe3863f6980b7e9a44a83c1809e01071941782597a11d`;
+as of Phase Q1 the adopted set is `@victframework/*@0.2.0`, release
+identity `vict-release-set@1/0.2.0`, content ID
+`v1_7a557983114b0743334061bd1f02ccd14f22e29f3a86697a4fd09b1722a8f172`,
+see D-10).
 `workspace:` / `file:` / `link:` / git dependencies / vendored VICT
 source are prohibited and are negative-controlled by
 `npm run verify:consumer`.
@@ -141,3 +145,37 @@ direct durable write` merely because the current `app.data.mutate`
 payload is insufficient. The existing bounded `/api/act` treatment
 remains historical Stage 07B behavior and must not silently become the
 general Stage 07C effect model.
+
+## D-10 — Controlled adoption of VICT 0.2.0 and the governed mutation boundary (Phase Q1)
+
+**Decision (Phase Q1, implemented):** Quellight adopts the exact
+coordinated public release set `@victframework/*@0.2.0` (release identity
+`vict-release-set@1/0.2.0`, content ID
+`v1_7a557983114b0743334061bd1f02ccd14f22e29f3a86697a4fd09b1722a8f172`,
+independently re-derived from the public registry during Phase Q1),
+resolving the D-9 entry gate through option 3: VICT was corrected (Stage
+07C Phase F2/F3), independently verified, released as the new immutable
+set, and adopted here through a controlled compatibility change.
+
+Consequences:
+
+- the historical Stage 07B `/api/act` → direct-`ApplicationDataAdapter`
+  mutation accommodation (D-4) is RETIRED. `/api/act` is now a thin
+  transport ingress over the released `app.data.mutate`/`app.data.query`
+  command boundary (closed mutation envelope; plan-resolved action
+  identity; contract-fenced input; durable claim/lease/fenced
+  idempotency; server-derived actor). The parallel in-process shortcut
+  `sharedWorldActionBoundary` is removed and gated.
+- there is exactly ONE authoritative effect path for Quellight thread
+  mutations: UI → declared action → compiled contract → released
+  boundary → resolved handler → one SQLite transaction → attributable
+  result/event. This remains the BOUNDED Stage 07B behavior set; it is
+  NOT the general Shared World write architecture (Q2/Q3 boundary).
+- D-4 remains the historical finding/record (not rewritten); D-9's
+  prohibition is enforced structurally and at runtime by the permanent
+  gates (`npm run verify:governance`, `test/governed-mutation.test.ts`).
+- rollback (if ever needed) restores the 0.1.0 manifest + lockfile
+  through version-control reversal only; no runtime dual-path toggle;
+  the public release is never mutated.
+- Phase Q1 does NOT begin Shared World meaning or ceremony work; Q2–Q7
+  remain pending.
