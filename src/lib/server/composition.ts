@@ -56,6 +56,8 @@ import {
   remoteMutate,
   VictCommandService,
   type ApplicationDataPortLike,
+  type RemoteApplicationDataOptions,
+  type ResolvedApplicationAction,
   type VictHttpServer,
 } from '@victframework/server';
 import type { ApplicationDataResult } from '@victframework/application';
@@ -63,6 +65,7 @@ import { createSqliteAgentControlStores, createSqliteStores } from '@victframewo
 import type { SqliteAgentControlStoreSet } from '@victframework/store-sqlite';
 import { createSharedWorldSqlite } from '../sharedworld/sqlite';
 import type { SharedWorldSqlite } from '../sharedworld/sqlite';
+import { getCompiledPlan, inputContractImplementations } from '$lib/application/definition';
 import { withTurnDeadline, createLiveProviderModel } from './model-seam';
 
 /** The ONE pinned Stage 07B provider profile (closed value; §7). */
@@ -229,8 +232,6 @@ export interface QuellightComposition {
       readonly terminalAtMs?: number;
     }[];
   }>;
-  /** The typed Application Layer action boundary (DATA-014) for thread mutations. */
-  sharedWorldActionBoundary: ApplicationDataPortLike;
   flush(): Promise<void>;
   close(): Promise<void>;
 }
@@ -482,7 +483,45 @@ export async function createQuellightComposition(
   const turnService = mastraComposition.turnService;
   turnServiceRef.current = turnService;
 
-  // ---- Thread-resource application data boundary -----------------------------
+  // ---- Thread-resource application data boundary ---------------------------
+  // Stage 07C Phase Q1: the released 0.2.0 governed mutation envelope is
+  // the ONE authoritative effect path for Quellight thread mutations. The
+  // composed plan (single frozen instance) and the closed product input
+  // contracts are resolved at the released boundary via `resolveAction` /
+  // `resolveInputContract`; identity, provenance, and idempotency stay
+  // VICT-owned. The port forwards EXACTLY the conforming
+  // `ApplicationDataMutationRequest` shape to the Quellight adapter under
+  // the declared governance context; legacy identity-only payloads (which
+  // structurally cannot carry a mutation input, D-4/D-9 history) fail
+  // closed exactly as in Stage 07B.
+  const plan = getCompiledPlan();
+  const contractImplementations = new Map(
+    inputContractImplementations.map((contract) => [contract.id, contract] as const),
+  );
+  const resolveCompiledMutationAction = (
+    actionId: string,
+  ): ResolvedApplicationAction | undefined => {
+    const action = plan.actions[actionId];
+    if (action === undefined || action.kind !== 'mutation') {
+      return undefined;
+    }
+    return {
+      actionId: action.id,
+      revision: action.revision,
+      kind: 'mutation',
+      resourceId: action.resourceId,
+      op: action.op,
+      ...(action.inputContractId !== undefined ? { inputContractId: action.inputContractId } : {}),
+    } satisfies ResolvedApplicationAction;
+  };
+  const resolveCompiledInputContract = (actionId: string) => {
+    const action = plan.actions[actionId];
+    if (action === undefined || action.kind !== 'mutation') {
+      return undefined;
+    }
+    const contractId = action.inputContractId;
+    return contractId !== undefined ? contractImplementations.get(contractId) : undefined;
+  };
   const threadDataPort: ApplicationDataPortLike = {
     async query(request: Record<string, unknown>): Promise<unknown> {
       const filters =
@@ -500,21 +539,43 @@ export async function createQuellightComposition(
       );
       return result;
     },
-    async mutate(): Promise<unknown> {
-      // The released `app.data.mutate` command surface carries identity
-      // fields only (closed payload field set: resourceId/releaseVersion/
-      // expectedRevision/actionKind) — it structurally cannot carry a
-      // mutation payload. Quellight thread mutations cross the typed
-      // Application Layer action boundary instead (/api/act, DATA-014).
-      // Recorded as a bounded framework-change proposal in the Stage 07B
-      // report; this boundary fails closed, never pretending success.
-      return {
-        ok: false,
-        code: 'QLT_APPDATA_MUTATION_PAYLOAD_UNSUPPORTED',
-        message:
-          'The released app.data.mutate command surface cannot carry mutation payloads; thread mutations cross the typed Application Layer action boundary.',
-      };
+    async mutate(request: Record<string, unknown>): Promise<unknown> {
+      // The governed mutation-envelope path (released 0.2.0 boundary)
+      // forwards exactly the conforming request shape; identity and
+      // governance checks ran at the boundary BEFORE any port call. A
+      // request without a declared operation is a legacy identity-only
+      // payload, which structurally cannot carry a mutation input — it
+      // fails closed, never pretending success (D-4/D-9 history).
+      const op = request['op'];
+      if (typeof op !== 'string' || op.length === 0) {
+        return {
+          ok: false,
+          code: 'QLT_APPDATA_MUTATION_PAYLOAD_UNSUPPORTED',
+          message:
+            'The legacy identity-only app.data.mutate payload cannot carry mutation input; thread mutations cross the governed mutation envelope of the released boundary.',
+        };
+      }
+      const input = (request['input'] ?? {}) as Record<string, unknown>;
+      const id = typeof request['id'] === 'string' ? request['id'] : undefined;
+      const idempotencyKey =
+        typeof request['idempotencyKey'] === 'string' ? request['idempotencyKey'] : undefined;
+      return sharedWorld.adapter.mutate(
+        {
+          resourceId: sharedWorld.resource.id,
+          op,
+          input,
+          ...(id !== undefined ? { id } : {}),
+          ...(idempotencyKey !== undefined ? { idempotencyKey } : {}),
+        },
+        { permissions: ['qlt.threads.read', 'qlt.threads.write'], effect: 'write' },
+      );
     },
+  };
+  const remoteApplicationDataOptions: RemoteApplicationDataOptions = {
+    data: threadDataPort,
+    expectedReleaseVersion: APPLICATION_RELEASE_VERSION,
+    resolveAction: resolveCompiledMutationAction,
+    resolveInputContract: resolveCompiledInputContract,
   };
 
   const commandService = new VictCommandService({
@@ -528,17 +589,9 @@ export async function createQuellightComposition(
     clock,
     appData: {
       query: (actorContext, input) =>
-        remoteQuery(
-          actorContext,
-          { data: threadDataPort, expectedReleaseVersion: APPLICATION_RELEASE_VERSION },
-          input,
-        ),
+        remoteQuery(actorContext, remoteApplicationDataOptions, input),
       mutate: (actorContext, input) =>
-        remoteMutate(
-          actorContext,
-          { data: threadDataPort, expectedReleaseVersion: APPLICATION_RELEASE_VERSION },
-          input,
-        ),
+        remoteMutate(actorContext, remoteApplicationDataOptions, input),
     },
   });
 
@@ -570,31 +623,6 @@ export async function createQuellightComposition(
     commandService,
     activation,
     victServer,
-    sharedWorldActionBoundary: {
-      query: (request: Record<string, unknown>) => threadDataPort.query(request),
-      mutate: (request: Record<string, unknown>) => {
-        // Quellight-owned typed action boundary: identity-scoped mutation
-        // dispatch with the declared resource op vocabulary. The actor is
-        // the authenticated local actor (server-side only).
-        const op = typeof request['op'] === 'string' ? request['op'] : '';
-        const input = (request['input'] ?? {}) as Record<string, unknown>;
-        const id = typeof request['id'] === 'string' ? request['id'] : undefined;
-        const idempotencyKey =
-          typeof request['idempotencyKey'] === 'string' ? request['idempotencyKey'] : undefined;
-        return sharedWorld.adapter
-          .mutate(
-            {
-              resourceId: sharedWorld.resource.id,
-              op,
-              input,
-              ...(id !== undefined ? { id } : {}),
-              ...(idempotencyKey !== undefined ? { idempotencyKey } : {}),
-            },
-            { permissions: ['qlt.threads.read', 'qlt.threads.write'], effect: 'write' },
-          )
-          .then((result) => result);
-      },
-    },
     async listen(): Promise<number> {
       return listenVictHttpServer(victServer);
     },

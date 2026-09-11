@@ -181,7 +181,12 @@
       const { body } = await fetchJson('/api/act', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ actionId: 'act.createThread', input: { title } }),
+        body: JSON.stringify({
+          actionId: 'act.createThread',
+          input: { title },
+          // One logical create, one stable key across retries.
+          idempotencyKey: `create-${crypto.randomUUID()}`,
+        }),
       });
       const result = body as { ok: boolean; value?: { id?: string } };
       await refreshThreads();
@@ -200,7 +205,11 @@
     await fetchJson('/api/act', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ actionId, input: { ...input, id: selectedThreadId } }),
+      body: JSON.stringify({
+        actionId,
+        input: { ...input, id: selectedThreadId },
+        idempotencyKey: `${actionId}-${crypto.randomUUID()}`,
+      }),
     });
     await refreshThreads();
     await openThread(selectedThreadId);

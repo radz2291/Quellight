@@ -24,18 +24,19 @@
     "verify:browser": "node scripts/browser-check.mjs",
     "verify:stop": "node scripts/browser-stop-check.mjs",
     "verify:live-provider": "node --import tsx scripts/verify-live-provider.mjs",
-    "scaffold:host": "node scripts/scaffold-host.mjs"
+    "scaffold:host": "node scripts/scaffold-host.mjs",
+    "verify:governance": "node --import tsx scripts/verify-governance.mjs"
   },
   "dependencies": {
-    "@victframework/application": "0.1.0",
-    "@victframework/contracts": "0.1.0",
-    "@victframework/control": "0.1.0",
-    "@victframework/mastra": "0.1.0",
-    "@victframework/renderer-svelte": "0.1.0",
-    "@victframework/runtime": "0.1.0",
-    "@victframework/sdk": "0.1.0",
-    "@victframework/server": "0.1.0",
-    "@victframework/store-sqlite": "0.1.0"
+    "@victframework/application": "0.2.0",
+    "@victframework/contracts": "0.2.0",
+    "@victframework/control": "0.2.0",
+    "@victframework/mastra": "0.2.0",
+    "@victframework/renderer-svelte": "0.2.0",
+    "@victframework/runtime": "0.2.0",
+    "@victframework/sdk": "0.2.0",
+    "@victframework/server": "0.2.0",
+    "@victframework/store-sqlite": "0.2.0"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
@@ -43,7 +44,7 @@
     "@sveltejs/adapter-node": "^5.2.12",
     "@sveltejs/kit": "^2.20.0",
     "@sveltejs/vite-plugin-svelte": "^5.0.3",
-    "@victframework/scaffolder": "0.1.0",
+    "@victframework/scaffolder": "0.2.0",
     "happy-dom": "^15.11.7",
     "prettier": "^3.9.6",
     "svelte": "^5.28.0",

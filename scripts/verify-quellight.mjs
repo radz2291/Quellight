@@ -46,14 +46,23 @@ const record = (label, result) => {
   return ok;
 };
 
-// 1–2. Format and typecheck.
+// 1. Format check.
 step('1. format check');
 record('format:check', runNpm('format:check'));
 
+// 2–2b. Typecheck and the governed-mutation structural conformance gate.
 step('2. typecheck');
 record('typecheck', runNpm('typecheck'));
 
-// 3–4. Deterministic tests (offline fixture model only; no network).
+step('2b. governed-mutation structural conformance gate (Phase Q1)');
+record(
+  'verify:governance',
+  spawnSync(process.execPath, ['--import', 'tsx', 'scripts/verify-governance.mjs'], {
+    encoding: 'utf8',
+    timeout: 300_000,
+    maxBuffer: 16 * 1024 * 1024,
+  }),
+);
 step('3. node-side tests (composition, sharedworld, restart, reconnect)');
 record('test:node', runNpm('test:node'));
 

@@ -15,7 +15,7 @@ import {
   type QuellightComposition,
 } from './composition';
 
-interface QuellightRuntime {
+export interface QuellightRuntime {
   readonly composition: QuellightComposition;
   readonly port: number;
   victOrigin(): string;
