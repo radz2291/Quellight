@@ -36,6 +36,8 @@ import {
   type QltThreadState,
   type SharedWorldPort,
 } from './port.js';
+import type { SharedWorldMeaningStore } from './meaning-contract.js';
+import { createSharedWorldMeaningStore } from './meaning-store.js';
 import { runSharedWorldMigrations } from './migrations.js';
 
 const MAX_TITLE_LENGTH = 200;
@@ -170,6 +172,10 @@ export interface SharedWorldSqliteOptions {
   readonly ids?: {
     readonly threadId?: () => string;
     readonly conversationId?: () => string;
+    readonly proposalId?: () => string;
+    readonly recordId?: () => string;
+    readonly correctionId?: () => string;
+    readonly linkId?: () => string;
   };
 }
 
@@ -183,16 +189,36 @@ export interface SharedWorldSqlite extends SharedWorldPort {
   readonly resource: ResourceDefinition;
   /** The declared input contracts of the adapter mutations. */
   readonly contracts: readonly Contract<unknown>[];
+  /**
+   * The Q2 durable meaning repository (proposal/ceremony, claims,
+   * commitments, open loops, corrections, source links) over the SAME
+   * connection. Q2: exercised directly by tests only — no production
+   * user or agent path reaches it (governed Q3 wiring comes later).
+   */
+  readonly meaning: SharedWorldMeaningStore;
 }
 
 export function createSharedWorldSqlite(options: SharedWorldSqliteOptions): SharedWorldSqlite {
   const db = new DatabaseSync(options.path);
+  // FK-protected Q2 meaning tables: the frozen schema declares foreign
+  // keys, which SQLite enforces only when this pragma is on.
+  db.exec('PRAGMA foreign_keys = ON;');
   const clock = options.clock ?? (() => Date.now());
   const threadId = options.ids?.threadId ?? (() => `qlt-${randomBytes(8).toString('hex')}`);
   const conversationId =
     options.ids?.conversationId ?? (() => `conv-${randomBytes(8).toString('hex')}`);
 
   runSharedWorldMigrations(db, () => new Date(clock()).toISOString());
+
+  const meaning = createSharedWorldMeaningStore(db, {
+    clock,
+    ids: {
+      proposalId: options.ids?.proposalId,
+      recordId: options.ids?.recordId,
+      correctionId: options.ids?.correctionId,
+      linkId: options.ids?.linkId,
+    },
+  });
 
   function getThreadRow(threadIdValue: string): ThreadRow | undefined {
     return db.prepare('SELECT * FROM qlt_thread WHERE id = ?;').get(threadIdValue) as
@@ -894,5 +920,6 @@ export function createSharedWorldSqlite(options: SharedWorldSqliteOptions): Shar
     adapter,
     resource: sharedWorldThreadResource,
     contracts: sharedWorldContracts,
+    meaning,
   };
 }

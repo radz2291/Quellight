@@ -82,7 +82,7 @@ describe('Quellight Shared World store (Quellight-owned; §6)', () => {
       .prepare('SELECT version FROM quellight_shared_world_migrations ORDER BY version;')
       .all() as Array<{ version: number }>;
     raw.close();
-    expect(bookkeeping.map((row) => row.version)).toEqual([QLT_SHARED_WORLD_SCHEMA_VERSION]);
+    expect(bookkeeping.map((row) => row.version)).toEqual([1, QLT_SHARED_WORLD_SCHEMA_VERSION]);
     store.close();
   });
 
