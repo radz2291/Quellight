@@ -63,6 +63,16 @@ record(
     maxBuffer: 16 * 1024 * 1024,
   }),
 );
+
+step('2c. Q2 durable Shared World schema conformance gate (Phase Q2)');
+record(
+  'verify:q2',
+  spawnSync(process.execPath, ['--import', 'tsx', 'scripts/verify-q2.mjs'], {
+    encoding: 'utf8',
+    timeout: 300_000,
+    maxBuffer: 16 * 1024 * 1024,
+  }),
+);
 step('3. node-side tests (composition, sharedworld, restart, reconnect)');
 record('test:node', runNpm('test:node'));
 

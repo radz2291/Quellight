@@ -25,7 +25,8 @@
     "verify:stop": "node scripts/browser-stop-check.mjs",
     "verify:live-provider": "node --import tsx scripts/verify-live-provider.mjs",
     "scaffold:host": "node scripts/scaffold-host.mjs",
-    "verify:governance": "node --import tsx scripts/verify-governance.mjs"
+    "verify:governance": "node --import tsx scripts/verify-governance.mjs",
+    "verify:q2": "node --import tsx scripts/verify-q2.mjs"
   },
   "dependencies": {
     "@victframework/application": "0.2.0",
