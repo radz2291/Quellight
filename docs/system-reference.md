@@ -4,9 +4,10 @@
 
 ```text
 Stage 07B: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
-Stage 07C Phase Q1: IMPLEMENTED — AWAITING INDEPENDENT VERIFICATION
-Stage 07C Phases Q2–Q7: PENDING (Shared World meaning and ceremony has not begun)
-Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 awaiting verification; Q2–Q7, 07D, 07E remaining)
+Stage 07C Phase Q1: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
+Stage 07C Phase Q2: PERMITTED — NOT BEGUN (durable Shared World schema)
+Stage 07C Phases Q3–Q7: NOT BEGUN (Shared World meaning and ceremony unimplemented)
+Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2–Q7, 07D, 07E remaining)
 ```
 
 - The retained dependency is now the immutable coordinated release set
@@ -15,23 +16,44 @@ Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 awaiting verification; Q2–Q
   adopted in Phase Q1 through the controlled compatibility change D-10
   (independently re-derived from the public registry; see
   `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q1-CONTROLLED-ADOPTION.md`).
-  The prior sets (`0.1.0`, `0.1.1`) remain published and installable but
-  are not adopted; any later change requires an explicit compatibility
-  decision and fresh verification.
+  Phase Q1 is independently verified (verdict `VERIFIED WITH
+NON-BLOCKING ISSUES — PHASE Q1 FORMAL CLOSURE PERMITTED`,
+  `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q1-INDEPENDENT-VERIFICATION.md`)
+  and FORMALLY CLOSED
+  (`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q1-FORMAL-CLOSURE.md`; VICT
+  constitutional closure at `0f4f72b0812bdfa40229a170f4d97e9696f72dd9`,
+  System Reference v0.4.13, §0.21). The prior sets (`0.1.0`, `0.1.1`)
+  remain published and installable but are not adopted; any later change
+  requires an explicit compatibility decision and fresh verification.
 - The F-8 `app.data.mutate` payload gap (entry gate D-9) was resolved by
   VICT Stage 07C Phase F2/F3 and closed by the Phase Q1 adoption:
   thread mutations now cross the released governed mutation envelope.
   The historical Stage 07B `/api/act` direct-adapter accommodation is
   retired; `/api/act` is a thin transport ingress (D-10). The retired
   parallel mutation shortcut is removed and permanently gated.
-- Phase Q1 awaits independent verification; Shared World meaning and
-  ceremony implementation has not begun; Q2–Q7 remain pending.
+- Phase Q1 is formally closed against the independent verification;
+  Phase Q2 — durable Shared World schema — is permitted and has NOT
+  BEGUN, and must not yet expose production proposal or confirmation
+  actions, allow the agent to promote meaning, activate canonical Shared
+  World context, add ceremony/correction UI, assemble context, enforce
+  retention, begin autonomous learning, or create an alternate write
+  path; any future effectful write uses the governed VICT 0.2.0 boundary
+  adopted in Q1. Q3–Q7 remain pending; Shared World meaning and ceremony
+  implementation has not begun.
 - Non-blocking debt carried forward: F-3 (open Low, `VICT_`-prefixed
   display-only code), F-4 (open Low, historical implementation-report
   placement), F-5 (open Low, cosmetic verifier output), F-6/F-7
-  (informational, development-only). F-1, F-2, and the missing
-  independent live proof are remediated/resolved and independently
-  verified closed.
+  (informational, development-only); from Phase Q1: FENCE-1 (open Low —
+  prototype-named unknown fields silently dropped at the existing Q1
+  ingress, proven harmless by the audit; Q2/Q3 Shared World input
+  contracts must define explicit closed-field and prototype-key
+  behavior, and silent dropping must not become an assumed general
+  Shared World safety model) and TEST-1 (open Low — no permanent
+  browser-level replay-recovery test; must be resolved no later than
+  Phase Q3 verification, before the confirmation ceremony is accepted
+  as reliable). DOC-1 (the stale 0.1.0 statement in this document) was
+  resolved at formal closure. F-1, F-2, and the missing independent live
+  proof are remediated/resolved and independently verified closed.
 - The status sections below describe the delivered Stage 07B behavior;
   `docs/stage-07b-report.md` is the preserved historical implementation
   report (its issuance-time status wording is superseded by this
@@ -41,8 +63,10 @@ Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 awaiting verification; Q2–Q
 
 A single-user, conversation-first workspace. One SvelteKit process
 hosts the product surface **and** composes the VICT runtime in-process;
-all VICT boundaries are consumed as released `@victframework/*@0.1.0`
-packages from the public registry.
+all VICT boundaries are consumed as released `@victframework/*@0.2.0`
+packages — the exact immutable coordinated release
+`vict-release-set@1/0.2.0` adopted and verified in Phase Q1 — from the
+public registry.
 
 ## Ownership boundaries (canonical)
 
@@ -151,4 +175,8 @@ retention-metadata marking, never Shared World meaning deletion.
   status superseded by the Status section above)
 - `docs/report/QUELLIGHT-STAGE-07B-FORMAL-CLOSURE.md` — formal closure
 - `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q1-CONTROLLED-ADOPTION.md` —
-  Phase Q1 implementation evidence (awaits independent verification)
+  Phase Q1 implementation evidence
+- `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q1-INDEPENDENT-VERIFICATION.md`
+  — Phase Q1 independent verification (audit)
+- `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q1-FORMAL-CLOSURE.md` — Phase
+  Q1 formal closure

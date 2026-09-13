@@ -11,9 +11,10 @@ linked, or patched.
 
 ```text
 Stage 07B: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
-Stage 07C Phase Q1: IMPLEMENTED — AWAITING INDEPENDENT VERIFICATION
-Stage 07C Phases Q2–Q7: PENDING (Shared World meaning and ceremony has not begun)
-Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 awaiting verification; Q2–Q7, 07D, 07E remaining)
+Stage 07C Phase Q1: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
+Stage 07C Phase Q2: PERMITTED — NOT BEGUN (durable Shared World schema)
+Stage 07C Phases Q3–Q7: NOT BEGUN (Shared World meaning and ceremony unimplemented)
+Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2–Q7, 07D, 07E remaining)
 ```
 
 Stage 07B is formally closed (2026-09-10) against the audited evidence
@@ -25,9 +26,17 @@ Q1 (2026-09-11) Quellight adopted the immutable release set
 independently re-derived from the public registry) and migrated thread
 mutations to the released governed mutation boundary; see
 `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q1-CONTROLLED-ADOPTION.md` and
-decision register D-10. Phase Q1 awaits independent verification; VICT
-`0.1.0`/`0.1.1` remain published but are not adopted — any later change
-requires an explicit compatibility decision and fresh verification.
+decision register D-10. Phase Q1 was independently verified with verdict
+`VERIFIED WITH NON-BLOCKING ISSUES — PHASE Q1 FORMAL CLOSURE PERMITTED`
+(`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q1-INDEPENDENT-VERIFICATION.md`)
+and is FORMALLY CLOSED (2026-09-13;
+`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q1-FORMAL-CLOSURE.md`; VICT
+constitutional closure `0f4f72b…`, System Reference v0.4.13 §0.21).
+Phase Q2 — durable Shared World schema — is permitted and NOT BEGUN;
+Q3–Q7 have not begun; Shared World meaning and ceremony remain
+unimplemented; VICT `0.1.0`/`0.1.1` remain published but are not
+adopted — any later change requires an explicit compatibility decision
+and fresh verification.
 
 Stage 07B/07C-Q1 deliver the **conversation foundation** on the governed
 mutation boundary: one pinned provider profile, real streaming
