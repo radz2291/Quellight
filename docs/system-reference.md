@@ -1,13 +1,13 @@
-# Quellight system reference — Stage 07B
+# Quellight system reference — Stage 07B/07C
 
-## Status (current, 2026-09-11 — Phase Q1)
+## Status (current, 2026-09-13 — Phase Q2 implemented)
 
 ```text
 Stage 07B: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
 Stage 07C Phase Q1: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
-Stage 07C Phase Q2: PERMITTED — NOT BEGUN (durable Shared World schema)
+Stage 07C Phase Q2: IMPLEMENTED — AWAITING INDEPENDENT VERIFICATION (durable Shared World schema)
 Stage 07C Phases Q3–Q7: NOT BEGUN (Shared World meaning and ceremony unimplemented)
-Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2–Q7, 07D, 07E remaining)
+Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 implemented; Q3–Q7, 07D, 07E remaining)
 ```
 
 - The retained dependency is now the immutable coordinated release set
@@ -31,24 +31,39 @@ NON-BLOCKING ISSUES — PHASE Q1 FORMAL CLOSURE PERMITTED`,
   The historical Stage 07B `/api/act` direct-adapter accommodation is
   retired; `/api/act` is a thin transport ingress (D-10). The retired
   parallel mutation shortcut is removed and permanently gated.
-- Phase Q1 is formally closed against the independent verification;
-  Phase Q2 — durable Shared World schema — is permitted and has NOT
-  BEGUN, and must not yet expose production proposal or confirmation
-  actions, allow the agent to promote meaning, activate canonical Shared
-  World context, add ceremony/correction UI, assemble context, enforce
-  retention, begin autonomous learning, or create an alternate write
-  path; any future effectful write uses the governed VICT 0.2.0 boundary
-  adopted in Q1. Q3–Q7 remain pending; Shared World meaning and ceremony
-  implementation has not begun.
+- Phase Q1 is formally closed against the independent verification.
+  Phase Q2 — the durable Shared World schema foundation — is
+  IMPLEMENTED (2026-09-13;
+  `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q2-DURABLE-SCHEMA-IMPLEMENTATION.md`,
+  frozen contract at
+  `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q2-CONTRACT-FREEZE.md`) and
+  AWAITING INDEPENDENT VERIFICATION: additive migration 2
+  (`qlt-meaning-foundation`) creates the proposal/ceremony, epistemic
+  claim, commitment, open loop, correction-lineage, and source-link
+  record families (retention metadata on every table); the closed
+  validators reject unknown/prototype/oversized/non-serializable input
+  (the Q2-contract FENCE-1 condition); the `SharedWorldMeaningStore`
+  repository enforces atomic ceremony/correction transactions, keyed
+  idempotency, optimistic versions, user-only confirmation and
+  correction identity, version-eligibility (never elapsed-time)
+  proposal staleness, append-only lineage, and deterministic
+  current-effective resolution; a permanent adversarial suite plus the
+  focused `verify:q2` gate (wired into `verify:quellight` step 2c)
+  enforce it. Q2 wires NO production meaning or confirmation path — no
+  proposal/ceremony action, route, UI, agent tool, or context assembly
+  exists; the repository is exercised directly by tests only; any future
+  effectful write uses the governed VICT 0.2.0 boundary adopted in Q1.
+  Q3–Q7 remain pending; Shared World meaning and ceremony implementation
+  has not begun.
 - Non-blocking debt carried forward: F-3 (open Low, `VICT_`-prefixed
   display-only code), F-4 (open Low, historical implementation-report
   placement), F-5 (open Low, cosmetic verifier output), F-6/F-7
   (informational, development-only); from Phase Q1: FENCE-1 (open Low —
   prototype-named unknown fields silently dropped at the existing Q1
-  ingress, proven harmless by the audit; Q2/Q3 Shared World input
-  contracts must define explicit closed-field and prototype-key
-  behavior, and silent dropping must not become an assumed general
-  Shared World safety model) and TEST-1 (open Low — no permanent
+  ingress, proven harmless by the audit; the Q1 ingress itself is NOT
+  modified by Q2, while every NEW Q2 Shared World input contract now
+  defines explicit closed-field and prototype-key rejection behavior, as
+  that finding required) and TEST-1 (open Low — no permanent
   browser-level replay-recovery test; must be resolved no later than
   Phase Q3 verification, before the confirmation ceremony is accepted
   as reliable). DOC-1 (the stale 0.1.0 statement in this document) was
@@ -70,15 +85,20 @@ public registry.
 
 ## Ownership boundaries (canonical)
 
-| Layer                                  | Owner                                    | Contents                                                                                                       |
-| -------------------------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Conversation execution & delivery      | **VICT**                                 | turn lifecycle, streaming, sequencing, idempotency, cancel/restart semantics, protected operator configuration |
-| Transcripts & in-flight working memory | **Mastra** (via `@victframework/mastra`) | dedicated conversation store; replaceable caches                                                               |
-| Durable partnership material           | **Quellight**                            | Shared World SQLite store (`qlt_thread` family); retention metadata                                            |
+| Layer                                  | Owner                                    | Contents                                                                                                                                                                                               |
+| -------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Conversation execution & delivery      | **VICT**                                 | turn lifecycle, streaming, sequencing, idempotency, cancel/restart semantics, protected operator configuration                                                                                         |
+| Transcripts & in-flight working memory | **Mastra** (via `@victframework/mastra`) | dedicated conversation store; replaceable caches                                                                                                                                                       |
+| Durable partnership material           | **Quellight**                            | Shared World SQLite store (`qlt_thread` family + the Q2 meaning families: proposals/ceremony records, epistemic claims, commitments, open loops, correction lineage, source links; retention metadata) |
 
 **Transcript survival is not Shared World continuity.** No epistemic
-claims, commitments, open loops, or agent-derived meaning exist in
-07B; the agent has **no** Shared World write path (negative-controlled).
+claims, commitments, open loops, or agent-derived meaning existed in
+07B; Q2 adds the DURABLE STORAGE CONTRACTS for those families plus
+their lifecycle/lineage/eligibility rules, but still activates no
+production meaning path: the agent has **no** Shared World write path
+(negative-controlled), records exist only through the test-exercised
+repository, and only user-ceremony-confirmed material may ever become
+canonical in later phases.
 
 ## Composition (one process)
 
@@ -180,3 +200,8 @@ retention-metadata marking, never Shared World meaning deletion.
   — Phase Q1 independent verification (audit)
 - `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q1-FORMAL-CLOSURE.md` — Phase
   Q1 formal closure
+- `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q2-CONTRACT-FREEZE.md` — the
+  frozen Phase Q2 durable-schema contract
+- `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q2-DURABLE-SCHEMA-IMPLEMENTATION.md`
+  — Phase Q2 implementation evidence (implemented; awaiting independent
+  verification)

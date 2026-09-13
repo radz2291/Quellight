@@ -12,9 +12,9 @@ linked, or patched.
 ```text
 Stage 07B: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
 Stage 07C Phase Q1: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
-Stage 07C Phase Q2: PERMITTED — NOT BEGUN (durable Shared World schema)
+Stage 07C Phase Q2: IMPLEMENTED — AWAITING INDEPENDENT VERIFICATION (durable Shared World schema)
 Stage 07C Phases Q3–Q7: NOT BEGUN (Shared World meaning and ceremony unimplemented)
-Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2–Q7, 07D, 07E remaining)
+Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 implemented; Q3–Q7, 07D, 07E remaining)
 ```
 
 Stage 07B is formally closed (2026-09-10) against the audited evidence
@@ -32,7 +32,23 @@ decision register D-10. Phase Q1 was independently verified with verdict
 and is FORMALLY CLOSED (2026-09-13;
 `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q1-FORMAL-CLOSURE.md`; VICT
 constitutional closure `0f4f72b…`, System Reference v0.4.13 §0.21).
-Phase Q2 — durable Shared World schema — is permitted and NOT BEGUN;
+Phase Q2 — the durable Shared World schema foundation (2026-09-13) — is
+IMPLEMENTED and AWAITING INDEPENDENT VERIFICATION: one additive
+migration (`qlt-meaning-foundation`, schema version 2) creating the
+proposal/ceremony, epistemic-claim, commitment, open-loop,
+correction-lineage, and source-link record families with retention
+metadata; closed validators and lifecycle vocabularies; the
+`SharedWorldMeaningStore` repository with atomic ceremony/correction
+transactions, keyed idempotency, version-based (never time-based)
+proposal staleness, deterministic current-effective resolution, and
+repository-level inspection reads; a permanent adversarial suite and the
+focused `verify:q2` gate. Q2 wires NO production meaning or confirmation
+path: schema existence alone never makes material canonical,
+model-visible, or user-confirmed; `/api/act` and the declared action
+surface are unchanged; any future effectful write uses the governed VICT
+0.2.0 boundary. See
+`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q2-CONTRACT-FREEZE.md` and
+`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q2-DURABLE-SCHEMA-IMPLEMENTATION.md`.
 Q3–Q7 have not begun; Shared World meaning and ceremony remain
 unimplemented; VICT `0.1.0`/`0.1.1` remain published but are not
 adopted — any later change requires an explicit compatibility decision
@@ -71,7 +87,8 @@ store layout.
 ```bash
 npm run verify:consumer        # registry-only dependency proof (N-1/N-2; 0.2.0 set)
 npm run verify:governance      # governed mutation boundary structural gate (Phase Q1)
-npm run verify:quellight       # full deterministic offline gate (N-20, incl. Q1 gates)
+npm run verify:q2              # Q2 durable-schema conformance gate (schema/deterministic/repository/structural)
+npm run verify:quellight       # full deterministic offline gate (N-20, incl. Q1 gates + Q2 gate)
 npm run verify:live-provider   # bounded live proof (requires explicit gate)
 ```
 
