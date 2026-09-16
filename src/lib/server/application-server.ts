@@ -2,6 +2,10 @@ import { getCompiledPlan } from '$lib/application/definition';
 import { createHash } from 'node:crypto';
 import type { ActionResult } from '@victframework/application';
 import { VictControlError } from '@victframework/runtime';
+import {
+  QLT_INGRESS_PROHIBITED_FIELD,
+  QLT_INGRESS_PROHIBITED_KEYS,
+} from '$lib/sharedworld/ceremony-contract';
 import { getQuellightRuntime, type QuellightRuntime } from './runtime';
 
 /**
@@ -25,34 +29,143 @@ import { getQuellightRuntime, type QuellightRuntime } from './runtime';
  * retired (decision register D-9; released `vict-release-set@1/0.2.0`).
  */
 
-/** The closed ingress request contract for one declared action. */
+/**
+ * The closed ingress request contract for one declared action.
+ * Stage 07C Phase Q3: the field map carries a TYPE per field — bounded
+ * strings, finite safe integers ('number'), or plain objects ('object')
+ * whose fine-grained shape is fenced by the declared contract at the
+ * released boundary and re-validated by the memory surface through the
+ * frozen Q2 parse fence (the two-fence pattern).
+ */
+export type IngressFieldSpec =
+  | { readonly kind: 'string'; readonly max: number }
+  | { readonly kind: 'number' }
+  | { readonly kind: 'object' };
+
 interface IngressActionSpec {
   /** Accepted request-input fields and their bounds (product-owned schema). */
-  readonly fields: Readonly<Record<string, number>>;
+  readonly fields: Readonly<Record<string, IngressFieldSpec>>;
   readonly required: readonly string[];
   /** Whether the request must carry a stable idempotency key. */
-  readonly idempotencyRequired: true;
+  readonly idempotencyRequired: boolean;
 }
+
+const S = (max: number): IngressFieldSpec => ({ kind: 'string', max });
+const NUM: IngressFieldSpec = { kind: 'number' };
+const OBJ: IngressFieldSpec = { kind: 'object' };
 
 /**
  * The declared ingress request schemas — Quellight-owned product schemas
  * (never added to VICT). The target identity (`id`) is a resource field;
  * every other field flows into the contract-validated envelope input.
+ * The Q3 ceremony additions (frozen §5) follow the four thread actions.
  */
 const INGRESS_ACTIONS: Readonly<Record<string, IngressActionSpec>> = {
   'act.createThread': {
-    fields: { id: 128, title: 200 },
+    fields: { id: S(128), title: S(200) },
     required: ['title'],
     idempotencyRequired: true,
   },
   'act.renameThread': {
-    fields: { id: 128, title: 200 },
+    fields: { id: S(128), title: S(200) },
     required: ['id', 'title'],
     idempotencyRequired: true,
   },
-  'act.archiveThread': { fields: { id: 128 }, required: ['id'], idempotencyRequired: true },
-  'act.reopenThread': { fields: { id: 128 }, required: ['id'], idempotencyRequired: true },
+  'act.archiveThread': { fields: { id: S(128) }, required: ['id'], idempotencyRequired: true },
+  'act.reopenThread': { fields: { id: S(128) }, required: ['id'], idempotencyRequired: true },
+  'act.confirmProposal': {
+    fields: { proposalId: S(128), expectedVersion: NUM },
+    required: ['proposalId'],
+    idempotencyRequired: true,
+  },
+  'act.rejectProposal': {
+    fields: { proposalId: S(128), reason: S(500) },
+    required: ['proposalId'],
+    idempotencyRequired: true,
+  },
+  'act.amendProposal': {
+    fields: { proposalId: S(128), content: OBJ, reason: S(500) },
+    required: ['proposalId', 'content'],
+    idempotencyRequired: true,
+  },
+  'act.withdrawProposal': {
+    fields: { proposalId: S(128), reason: S(500) },
+    required: ['proposalId'],
+    idempotencyRequired: true,
+  },
+  'act.createClaim': {
+    fields: {
+      threadId: S(128),
+      subject: S(200),
+      epistemicType: S(2),
+      honestyState: S(16),
+      confidence: S(16),
+      statement: S(2000),
+    },
+    required: ['subject', 'epistemicType', 'honestyState', 'confidence', 'statement'],
+    idempotencyRequired: true,
+  },
+  'act.createCommitment': {
+    fields: { threadId: S(128), commitmentKey: S(200), statement: S(2000) },
+    required: ['commitmentKey', 'statement'],
+    idempotencyRequired: true,
+  },
+  'act.createOpenLoop': {
+    fields: { threadId: S(128), subject: S(200), loopKind: S(24), detail: S(2000) },
+    required: ['subject', 'loopKind', 'detail'],
+    idempotencyRequired: true,
+  },
+  'act.correctRecord': {
+    // The correction's source thread is derived SERVER-SIDE from the
+    // subject record; the request carries no thread identity (frozen §5).
+    fields: {
+      recordId: S(128),
+      recordKind: S(16),
+      statement: S(2000),
+      detail: S(2000),
+      reason: S(500),
+      expectedVersion: NUM,
+    },
+    required: ['recordId', 'recordKind'],
+    idempotencyRequired: true,
+  },
+  'act.retireClaim': {
+    fields: { recordId: S(128), reason: S(500), expectedVersion: NUM },
+    required: ['recordId'],
+    idempotencyRequired: true,
+  },
+  'act.releaseCommitment': {
+    fields: { recordId: S(128), reason: S(500), expectedVersion: NUM },
+    required: ['recordId'],
+    idempotencyRequired: true,
+  },
+  'act.resolveLoop': {
+    fields: { recordId: S(128), expectedVersion: NUM },
+    required: ['recordId'],
+    idempotencyRequired: true,
+  },
+  'act.abandonLoop': {
+    fields: { recordId: S(128), reason: S(500), expectedVersion: NUM },
+    required: ['recordId'],
+    idempotencyRequired: true,
+  },
+  'act.transformLoop': {
+    fields: { recordId: S(128), reason: S(500), expectedVersion: NUM },
+    required: ['recordId'],
+    idempotencyRequired: true,
+  },
 };
+
+/**
+ * FENCE-1 (D-Q3-6, resolved in Q3): a request key that is prototype-named
+ * or otherwise prohibited fails CLOSED with the stable non-echoing code —
+ * the Q1 behavior (prototype-chain field lookups silently dropping such
+ * keys, and the filters rebuild dropping `__proto__`) is retired here and
+ * permanently regression-controlled.
+ */
+function prohibitedKey(key: string): boolean {
+  return (QLT_INGRESS_PROHIBITED_KEYS as readonly string[]).includes(key);
+}
 
 /** The bounded idempotency-key shape (same closed pattern as VICT). */
 const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
@@ -139,6 +252,15 @@ export function createAppServer(
           for (const [key, value] of Object.entries(
             requestInput['filters'] as Record<string, unknown>,
           )) {
+            // FENCE-1 (D-Q3-6): prototype-named filter keys fail closed
+            // instead of being silently dropped by the plain rebuild.
+            if (prohibitedKey(key)) {
+              return {
+                ok: false,
+                code: QLT_INGRESS_PROHIBITED_FIELD,
+                message: 'The filter container declares a prohibited key.',
+              };
+            }
             if (typeof key !== 'string' || key.length === 0 || key.length > 128) {
               return {
                 ok: false,
@@ -217,7 +339,17 @@ export function createAppServer(
         };
       }
       for (const key of Object.keys(requestInput)) {
-        if (spec.fields[key] === undefined) {
+        // FENCE-1 (D-Q3-6): own-property membership plus the prohibited-key
+        // refusal — prototype-chain lookups (`constructor`, `__proto__`)
+        // can no longer smuggle a key past the fence.
+        if (prohibitedKey(key)) {
+          return {
+            ok: false,
+            code: QLT_INGRESS_PROHIBITED_FIELD,
+            message: 'The mutation request declares a prohibited field.',
+          };
+        }
+        if (!Object.hasOwn(spec.fields, key)) {
           return {
             ok: false,
             code: 'INVALID_REQUEST',
@@ -236,6 +368,48 @@ export function createAppServer(
       }
       const bounded = (value: unknown, max: number): string | undefined =>
         typeof value === 'string' && value.length > 0 && value.length <= max ? value : undefined;
+      /**
+       * Typed validation of every declared field (Q3): bounded non-empty
+       * strings, finite safe integers, and plain objects only. Values that
+       * fail their declared type are an INVALID_REQUEST — never silently
+       * coerced or dropped.
+       */
+      const envelopeFields: Record<string, unknown> = {};
+      for (const [fieldName, fieldSpec] of Object.entries(spec.fields)) {
+        const value = requestInput[fieldName];
+        if (value === undefined) {
+          continue;
+        }
+        if (fieldSpec.kind === 'string') {
+          const boundedValue = bounded(value, fieldSpec.max);
+          if (boundedValue === undefined) {
+            return {
+              ok: false,
+              code: 'INVALID_REQUEST',
+              message: `The field '${fieldName}' must be a non-empty string of at most ${fieldSpec.max} characters.`,
+            };
+          }
+          envelopeFields[fieldName] = boundedValue;
+        } else if (fieldSpec.kind === 'number') {
+          if (typeof value !== 'number' || !Number.isSafeInteger(value)) {
+            return {
+              ok: false,
+              code: 'INVALID_REQUEST',
+              message: `The field '${fieldName}' must be a finite safe integer.`,
+            };
+          }
+          envelopeFields[fieldName] = value;
+        } else {
+          if (!isPlainObject(value)) {
+            return {
+              ok: false,
+              code: 'INVALID_REQUEST',
+              message: `The field '${fieldName}' must be a plain object.`,
+            };
+          }
+          envelopeFields[fieldName] = value;
+        }
+      }
 
       // Target identity: for create, the client MAY supply a bounded id
       // (Stage 07B behavior); otherwise the server generates one
@@ -244,7 +418,11 @@ export function createAppServer(
       // reconcilable). For rename/archive/reopen the target id is
       // required.
       let targetId: string | undefined;
-      if (action.op === 'create') {
+      if (action.resourceId === 'qlt.memory') {
+        // Memory actions carry their target identity inside the declared
+        // typed fields (proposalId / recordId); no envelope target id.
+        targetId = undefined;
+      } else if (action.op === 'create') {
         const supplied = bounded(requestInput['id'], 128);
         targetId =
           supplied !== undefined && /^[A-Za-z0-9][A-Za-z0-9._:-]*$/.test(supplied)
@@ -261,15 +439,19 @@ export function createAppServer(
         }
       }
 
-      // The envelope input carries ONLY the declared contract fields
-      // (never the target identity for non-create mutations, which
-      // crosses the envelope's `id` field).
+      // The envelope input carries ONLY the declared contract fields.
+      // Thread actions keep their historical exact shapes (create carries
+      // the target identity; rename the title); memory actions carry the
+      // typed declared fields validated above (the contract at the released
+      // boundary is the first fence, the memory surface the second).
       const envelopeInput: Record<string, unknown> =
-        action.op === 'create'
-          ? { id: targetId, title: bounded(requestInput['title'], 200) ?? '' }
-          : action.op === 'rename'
-            ? { title: bounded(requestInput['title'], 200) ?? '' }
-            : {};
+        action.resourceId === 'qlt.threads'
+          ? action.op === 'create'
+            ? { id: targetId, title: bounded(requestInput['title'], 200) ?? '' }
+            : action.op === 'rename'
+              ? { title: bounded(requestInput['title'], 200) ?? '' }
+              : {}
+          : envelopeFields;
 
       const outcome = await composition.commandService.dispatch(actor, {
         command: 'app.data.mutate',
@@ -282,7 +464,7 @@ export function createAppServer(
           expectedActionRevision: action.revision,
           mutation: {
             op: action.op,
-            id: targetId,
+            ...(targetId !== undefined ? { id: targetId } : {}),
             input: envelopeInput,
             idempotencyKey,
           },

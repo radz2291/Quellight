@@ -179,6 +179,34 @@ export interface SharedWorldSqliteOptions {
   };
 }
 
+/**
+ * One bounded, READ-ONLY row of the Q3 thread-scoped memory listing
+ * (amendment A-AMEND-1): the raw join-projection the ceremony query surface
+ * projects into the unified `qlt.memory` catalogue shape.
+ */
+export interface QltMemoryListRow {
+  readonly kind: 'claim' | 'commitment' | 'open_loop';
+  readonly id: string;
+  readonly status: string;
+  readonly title: string;
+  readonly text: string;
+  readonly threadId: string;
+  readonly turnRef: string;
+  readonly actor: string;
+  readonly decisionBy: string;
+  readonly version: number;
+  readonly createdAtMs: number;
+  readonly updatedAtMs: number;
+}
+
+export interface QltMemoryListOptions {
+  readonly threadId: string;
+  readonly kind?: 'claim' | 'commitment' | 'open_loop';
+  readonly status?: string;
+  readonly limit?: number;
+  readonly offset?: number;
+}
+
 /** The Quellight Shared World store: domain port + Application Layer adapter. */
 export interface SharedWorldSqlite extends SharedWorldPort {
   readonly id: string;
@@ -192,10 +220,25 @@ export interface SharedWorldSqlite extends SharedWorldPort {
   /**
    * The Q2 durable meaning repository (proposal/ceremony, claims,
    * commitments, open loops, corrections, source links) over the SAME
-   * connection. Q2: exercised directly by tests only — no production
-   * user or agent path reaches it (governed Q3 wiring comes later).
+   * connection. Q3 wires it behind the governed VICT boundary through the
+   * ceremony action surface (`ceremony-actions.ts`).
    */
   readonly meaning: SharedWorldMeaningStore;
+  /**
+   * A-AMEND-1 (Q3): ONE bounded READ-ONLY thread-scoped listing over the
+   * same connection (SELECT only; no write/effect path). Serves the user
+   * presentation read of claims/commitments/open loops for a thread.
+   */
+  listMemoryRows(options: QltMemoryListOptions): Promise<{
+    readonly rows: readonly QltMemoryListRow[];
+    readonly total: number;
+  }>;
+  /**
+   * Q3 (freeze §8): server-derived thread correlation — the Shared World
+   * thread id for a conversation (Mastra) thread id, resolved from the
+   * correlation record. READ-ONLY; undefined when no link exists.
+   */
+  getThreadIdByConversation(mastraThreadId: string): Promise<string | undefined>;
 }
 
 export function createSharedWorldSqlite(options: SharedWorldSqliteOptions): SharedWorldSqlite {
@@ -913,6 +956,132 @@ export function createSharedWorldSqlite(options: SharedWorldSqliteOptions): Shar
     },
   };
 
+  // ---- Q3 read-only memory listing (amendment A-AMEND-1; SELECT only) -----
+
+  const MEMORY_FAMILY_TABLES = {
+    claim: 'qlt_claim',
+    commitment: 'qlt_commitment',
+    open_loop: 'qlt_open_loop',
+  } as const;
+  const CLOSED_RECORD_STATUSES = new Set([
+    // claim
+    'active',
+    'superseded',
+    'retired',
+    // commitment
+    'released',
+    'amended',
+    // open_loop
+    'open',
+    'resolved',
+    'abandoned',
+    'transformed',
+  ]);
+
+  async function listMemoryRows(options: QltMemoryListOptions): Promise<{
+    readonly rows: readonly QltMemoryListRow[];
+    readonly total: number;
+  }> {
+    const threadId = assertBoundedId(options.threadId);
+    const families = (
+      options.kind === undefined
+        ? (Object.keys(MEMORY_FAMILY_TABLES) as (keyof typeof MEMORY_FAMILY_TABLES)[])
+        : [options.kind]
+    ).filter(
+      (family): family is keyof typeof MEMORY_FAMILY_TABLES => family in MEMORY_FAMILY_TABLES,
+    );
+    if (families.length === 0) {
+      throw new QltSharedWorldError('QLT_THREAD_INVALID_STATE', 'Unknown memory family.');
+    }
+    if (
+      options.status !== undefined &&
+      (typeof options.status !== 'string' || !CLOSED_RECORD_STATUSES.has(options.status))
+    ) {
+      throw new QltSharedWorldError('QLT_THREAD_INVALID_STATE', 'Unknown memory status.');
+    }
+    const limit = options.limit ?? 50;
+    const offset = options.offset ?? 0;
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
+      throw new QltSharedWorldError('QLT_THREAD_INVALID_STATE', 'Invalid memory list limit.');
+    }
+    if (!Number.isSafeInteger(offset) || offset < 0) {
+      throw new QltSharedWorldError('QLT_THREAD_INVALID_STATE', 'Invalid memory list offset.');
+    }
+    const rows: QltMemoryListRow[] = [];
+    let total = 0;
+    for (const family of families) {
+      const table = MEMORY_FAMILY_TABLES[family];
+      const statusCondition = options.status === undefined ? '' : ' AND status = ?';
+      const params = options.status === undefined ? [threadId] : [threadId, options.status];
+      const countRow = db
+        .prepare(
+          `SELECT COUNT(*) AS total FROM ${table} WHERE source_thread_id = ?${statusCondition};`,
+        )
+        .get(...params) as { total: number };
+      total += countRow.total;
+      const raw = db
+        .prepare(
+          `SELECT * FROM ${table} WHERE source_thread_id = ?${statusCondition}
+           ORDER BY updated_at_ms DESC, id ASC;`,
+        )
+        .all(...params) as unknown as Array<Record<string, unknown>>;
+      for (const row of raw) {
+        const contentText = (() => {
+          try {
+            const parsed = JSON.parse(String(row['content'] ?? '{}')) as Record<string, unknown>;
+            const text = parsed['statement'] ?? parsed['detail'];
+            return typeof text === 'string' ? text : '';
+          } catch {
+            return '';
+          }
+        })();
+        rows.push({
+          kind: family,
+          id: String(row['id'] ?? ''),
+          status: String(row['status'] ?? ''),
+          title:
+            family === 'commitment'
+              ? String(row['commitment_key'] ?? '')
+              : String(row['subject'] ?? ''),
+          text: contentText,
+          threadId: String(row['source_thread_id'] ?? ''),
+          turnRef: String(row['source_turn_ref'] ?? ''),
+          actor: String(row['created_by'] ?? ''),
+          decisionBy: String(row['exit_by'] ?? ''),
+          version: Number(row['version'] ?? 1),
+          createdAtMs: Number(row['created_at_ms'] ?? 0),
+          updatedAtMs: Number(row['updated_at_ms'] ?? 0),
+        });
+      }
+    }
+    // Deterministic global ordering across the requested families
+    // (updated_at_ms DESC, id ASC), then bounded pagination.
+    rows.sort((left, right) =>
+      left.updatedAtMs === right.updatedAtMs
+        ? left.id < right.id
+          ? 1
+          : left.id > right.id
+            ? -1
+            : 0
+        : right.updatedAtMs - left.updatedAtMs,
+    );
+    return { rows: rows.slice(offset, offset + limit), total };
+  }
+
+  async function getThreadIdByConversation(mastraThreadId: string): Promise<string | undefined> {
+    if (
+      typeof mastraThreadId !== 'string' ||
+      mastraThreadId.length === 0 ||
+      mastraThreadId.length > 200
+    ) {
+      return undefined;
+    }
+    const row = db
+      .prepare('SELECT thread_id FROM qlt_thread_conversation WHERE mastra_thread_id = ?;')
+      .get(mastraThreadId) as { thread_id: string } | undefined;
+    return row === undefined ? undefined : row.thread_id;
+  }
+
   return {
     ...port,
     id: adapter.id,
@@ -921,5 +1090,7 @@ export function createSharedWorldSqlite(options: SharedWorldSqliteOptions): Shar
     resource: sharedWorldThreadResource,
     contracts: sharedWorldContracts,
     meaning,
+    listMemoryRows,
+    getThreadIdByConversation,
   };
 }

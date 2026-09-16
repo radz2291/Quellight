@@ -14,6 +14,7 @@ import {
   resolveQuellightEnvironment,
   type QuellightComposition,
 } from './composition';
+import { QLT_FIXTURE_TRIGGERS } from '../sharedworld/ceremony-contract';
 
 export interface QuellightRuntime {
   readonly composition: QuellightComposition;
@@ -37,8 +38,21 @@ const DEFAULT_OFFLINE_FIXTURE_SCRIPT = {
   },
   'Tell me about yourself': {
     kind: 'text',
-    text: 'Quellight runs on the VICT runtime with the pinned profile agent.quellight.conversation@1. This reply is the deterministic offline fixture, not a live model.',
+    text: 'Quellight runs on the VICT runtime with the pinned profile agent.quellight.conversation@2. This reply is the deterministic offline fixture, not a live model.',
   },
+  // The frozen Q3 ceremony triggers (freeze §3): one deterministic
+  // proposal-draft tool call per fresh conversation — the TEST-1 backbone.
+  ...Object.fromEntries(
+    QLT_FIXTURE_TRIGGERS.map((trigger) => [
+      trigger.userText,
+      {
+        kind: 'tool-call',
+        toolName: trigger.toolName,
+        args: trigger.args,
+        thenText: trigger.thenText,
+      },
+    ]),
+  ),
 } as Record<string, unknown>;
 
 function repoRoot(): string {

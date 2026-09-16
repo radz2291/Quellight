@@ -6,6 +6,11 @@ import {
 } from '@victframework/sdk';
 import { compileApplication } from '@victframework/application';
 import type { ApplicationPlan } from '@victframework/application';
+import {
+  memoryContractRegistry,
+  memoryContracts,
+  memoryResource,
+} from '$lib/sharedworld/ceremony-actions';
 
 /**
  * QUELLIGHT APPLICATION DEFINITION — author-owned.
@@ -117,6 +122,27 @@ export const application = defineApplication({
       resourceRevision: '1',
       fields: ['id', 'title', 'state', 'retentionState', 'createdAt', 'updatedAt'],
     },
+    {
+      viewId: 'v.memory',
+      resourceId: 'qlt.memory',
+      resourceRevision: '1',
+      fields: [
+        'id',
+        'kind',
+        'proposalKind',
+        'status',
+        'title',
+        'text',
+        'threadId',
+        'turnRef',
+        'actor',
+        'decisionBy',
+        'stale',
+        'version',
+        'createdAt',
+        'updatedAt',
+      ],
+    },
   ],
   actions: [
     {
@@ -166,8 +192,44 @@ export const application = defineApplication({
       inputContractId: 'qlt.threads.reopen.input',
       inputContractRevision: '1',
     },
+    // ---- Stage 07C Phase Q3: the governed Shared World ceremony surface
+    // (one bounded resource; every action user-attributed; frozen §3) -----
+    {
+      kind: 'query',
+      id: 'act.queryMemory',
+      revision: '1',
+      resourceId: 'qlt.memory',
+      resourceRevision: '1',
+    },
+    ...[
+      ['act.confirmProposal', 'confirmProposal', 'qlt.memory.confirm.input'],
+      ['act.rejectProposal', 'rejectProposal', 'qlt.memory.reject.input'],
+      ['act.amendProposal', 'amendProposal', 'qlt.memory.amend.input'],
+      ['act.withdrawProposal', 'withdrawProposal', 'qlt.memory.withdraw.input'],
+      ['act.createClaim', 'createClaim', 'qlt.memory.claim.input'],
+      ['act.createCommitment', 'createCommitment', 'qlt.memory.commitment.input'],
+      ['act.createOpenLoop', 'createOpenLoop', 'qlt.memory.loop.input'],
+      ['act.correctRecord', 'correctRecord', 'qlt.memory.correct.input'],
+      ['act.retireClaim', 'retireClaim', 'qlt.memory.claimExit.input'],
+      ['act.releaseCommitment', 'releaseCommitment', 'qlt.memory.commitmentExit.input'],
+      ['act.resolveLoop', 'resolveLoop', 'qlt.memory.loopExit.input'],
+      ['act.abandonLoop', 'abandonLoop', 'qlt.memory.loopExit.input'],
+      ['act.transformLoop', 'transformLoop', 'qlt.memory.loopExit.input'],
+    ].map(([id, op, contractId]) => ({
+      kind: 'mutation' as const,
+      id,
+      revision: '1',
+      resourceId: 'qlt.memory',
+      resourceRevision: '1',
+      op,
+      inputContractId: contractId,
+      inputContractRevision: '1',
+    })),
   ],
-  resources: [{ resourceId: 'qlt.threads', revision: '1' }],
+  resources: [
+    { resourceId: 'qlt.threads', revision: '1' },
+    { resourceId: 'qlt.memory', revision: '1' },
+  ],
   components: [{ componentId: 'qlt.conversation-workspace', revision: '1' }],
   compatibility: { applicationSchema: APPLICATION_DEFINITION_SCHEMA_V2 },
 });
@@ -257,6 +319,9 @@ export const inputContractImplementations = [
   closedStringContract('qlt.threads.rename.input', { title: THREAD_TITLE_MAX_LENGTH }, ['title']),
   closedStringContract('qlt.threads.archive.input', {}, []),
   closedStringContract('qlt.threads.reopen.input', {}, []),
+  // The Q3 ceremony contracts (executable implementations live in the
+  // memory surface module; the same frozen field specs).
+  ...memoryContracts,
 ] as const;
 
 /** Canonical contract REGISTRY entries for the compiled plan (data only). */
@@ -265,6 +330,7 @@ export const inputContracts = [
   { id: 'qlt.threads.rename.input', revision: '1' },
   { id: 'qlt.threads.archive.input', revision: '1' },
   { id: 'qlt.threads.reopen.input', revision: '1' },
+  ...memoryContractRegistry,
 ] as const;
 
 export const bindings = {
@@ -277,7 +343,7 @@ export const bindings = {
 export function compileAppPlan(): ApplicationPlan {
   const result = compileApplication({
     application,
-    resources: [threadResource],
+    resources: [threadResource, memoryResource],
     contracts: bindings.contracts,
     capabilities: bindings.capabilities,
     components: bindings.components,
