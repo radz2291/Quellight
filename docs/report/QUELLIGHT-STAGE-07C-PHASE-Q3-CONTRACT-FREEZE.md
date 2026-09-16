@@ -565,7 +565,7 @@ on Escape and returns focus to the chip.
 | File                                                                                                                                                                                                                                                                                                     | Lane                                                     |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
 | `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q3-CONTRACT-FREEZE.md`, `src/lib/sharedworld/ceremony-contract.ts`                                                                                                                                                                                                | Phase 0 freeze (integration owner; frozen for all lanes) |
-| `src/lib/application/definition.ts`, `src/lib/server/application-server.ts`, `src/lib/server/composition.ts`, `src/lib/server/runtime.ts`, `src/lib/sharedworld/ceremony-actions.ts` (new)                                                                                                               | Lane A — governed application and persistence surface    |
+| `src/lib/application/definition.ts`, `src/lib/server/application-server.ts`, `src/lib/server/composition.ts`, `src/lib/server/runtime.ts`, `src/lib/sharedworld/ceremony-actions.ts` (new), `src/lib/sharedworld/sqlite.ts` (read-only memory listing helper only — amendment A-AMEND-1)                                                                                                               | Lane A — governed application and persistence surface    |
 | `src/lib/agent/proposal-capability.ts` (new), `test/proposal-capability.test.ts` (new)                                                                                                                                                                                                                   | Lane B — agent proposal capability                       |
 | `src/lib/islands/ConversationWorkspace.svelte`, `test/ui/workspace.test.ts`, `test/ui/memory-inbox.test.ts` (new)                                                                                                                                                                                        | Lane C — quiet memory UX                                 |
 | `test/ceremony-authority.test.ts` (new), `scripts/verify-q3.mjs` (new), `package.json` (verify:q3 script), `scripts/verify-quellight.mjs` (aggregate steps), `scripts/verify-q2.mjs` (structural inventory reconciliation ONLY), `test/sharedworld-meaning.test.ts` (A-29 inventory reconciliation ONLY) | Lane D — contract-first adversarial tests + verifier     |
@@ -670,3 +670,23 @@ Amendment: if implementation reveals a material contract defect, affected
 lanes STOP; the integration owner reconciles the change ONCE, records the
 amendment (dated addendum; no silent edits), and restarts affected work
 from the amended freeze SHA.
+
+## 20. Dated amendments
+
+### A-AMEND-1 (2026-09-16, recorded before Lane A began; Lane B restarted from the amended SHA)
+
+The memory query surface (§3) declares a `threadId` equality filter over
+ALL four families. The frozen Q2 repository exposes thread-scoped reads
+for proposals (`listProposals({ sourceThreadId })`) but not for the claim,
+commitment, and open-loop families (their Q2 query types carry no thread
+field, and `meaning-contract.ts` is frozen). Rather than filtering
+unbounded pools in application code or touching frozen Q2 artifacts, Lane
+A's file map gains `src/lib/sharedworld/sqlite.ts` for ONE bounded,
+READ-ONLY helper: a thread-scoped listing SELECT (per family:
+`WHERE source_thread_id = ?` plus the declared status/kind constraints,
+`ORDER BY updated_at_ms DESC, id ASC`, LIMIT/OFFSET + truthful filtered
+count) over the SAME connection. It is a read path only — it creates no
+second WRITE/effect path (the single-effect-path rule governs writes and
+remains enforced). No other change: every other element of this freeze,
+including all frozen identifiers, contracts, codes, and the Q2 artifacts,
+is unchanged.
