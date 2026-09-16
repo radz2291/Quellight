@@ -271,7 +271,7 @@ response.
 
 ## 13. Preservation and cleanup
 
-- VICT (`C:\Users\RZ1\Desktop\RZ\260831-VCT-02`): source, packages, tests,
+- The VICT repository: source, packages, tests,
   manifests, lockfiles, and historical reports byte-identical; only the
   current System Reference received the authorized v0.4.14 documentation
   reconciliation (separate commit), recording Q2 closure, Q3
