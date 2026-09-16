@@ -720,3 +720,24 @@ assertion (no thread mutation by a text-only turn; store survival) is
 unchanged and stays green. This continues the same reconciliation
 principle recorded in §16 for the Q2-era structural gates: re-pinning
 to the amended frozen reality, never weakening.
+
+### A-AMEND-4 (2026-09-16, during Lane E's TEST-1 browser run)
+
+TEST-1's reject scenario (a decision WITHOUT a reason -- the quiet inbox
+sends no reason field by default) exposed a latent defect in the Q2
+meaning store's keyed-verb reconciliation payloads: an optional field left
+`undefined` crashes the canonical fingerprint serializer
+(`TypeError: value is not canonically serializable`) instead of behaving
+as a clean absent field. Every affected site is inside
+`src/lib/sharedworld/meaning-store.ts` (reject/withdraw/amend proposal,
+correction apply, subject exit, loop exit -- both resolveKeyed and
+recordKey payloads). Per section 19, the reconciliation is bounded: that
+file joins the amended file map for ONE bounded normalization -- optional
+payload fields are spread conditionally so absent fields are simply
+omitted from the canonical payload. Fingerprints for calls that PROVIDE
+the fields are byte-identical to before (no convergence-history change for
+any previously possible success); reason-less calls previously crashed
+before recording anything, so no persisted key semantics change. No
+contract, identifier, or schema change: the verbs' declared contracts
+already mark these fields optional. Verified by a focused reason-less
+probe plus the full existing suite (134 node tests green).

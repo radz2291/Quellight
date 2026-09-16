@@ -1424,7 +1424,12 @@ export function createSharedWorldMeaningStore(
       const { prior } = resolveKeyed(
         SCOPE.proposalReject,
         key,
-        { verb: 'proposal.reject', proposalId: input.proposalId, decidedBy, reason },
+        {
+          verb: 'proposal.reject',
+          proposalId: input.proposalId,
+          decidedBy,
+          ...(reason !== undefined ? { reason } : {}),
+        },
         (rowIdentity) => rowToProposal(getProposalRow(rowIdentity)!),
       );
       if (prior !== undefined) {
@@ -1453,7 +1458,7 @@ export function createSharedWorldMeaningStore(
               verb: 'proposal.reject',
               proposalId: input.proposalId,
               decidedBy,
-              reason,
+              ...(reason !== undefined ? { reason } : {}),
             }),
           );
         }
@@ -1478,7 +1483,12 @@ export function createSharedWorldMeaningStore(
       const { prior } = resolveKeyed(
         SCOPE.proposalWithdraw,
         key,
-        { verb: 'proposal.withdraw', proposalId: input.proposalId, withdrawnBy, reason },
+        {
+          verb: 'proposal.withdraw',
+          proposalId: input.proposalId,
+          withdrawnBy,
+          ...(reason !== undefined ? { reason } : {}),
+        },
         (rowIdentity) => rowToProposal(getProposalRow(rowIdentity)!),
       );
       if (prior !== undefined) {
@@ -1507,7 +1517,7 @@ export function createSharedWorldMeaningStore(
               verb: 'proposal.withdraw',
               proposalId: input.proposalId,
               withdrawnBy,
-              reason,
+              ...(reason !== undefined ? { reason } : {}),
             }),
           );
         }
@@ -1535,7 +1545,7 @@ export function createSharedWorldMeaningStore(
           proposalId: input.proposalId,
           amendedBy,
           content: input.content,
-          reason,
+          ...(reason !== undefined ? { reason } : {}),
         },
         (rowIdentity) => {
           const amendmentRow = getProposalRow(rowIdentity);
@@ -1960,7 +1970,7 @@ export function createSharedWorldMeaningStore(
           subjectFamily: normalized.subjectFamily,
           correctionKey: normalized.correctionKey,
           content: normalized.content,
-          reason: normalized.reason,
+          ...(normalized.reason !== undefined ? { reason: normalized.reason } : {}),
           correctedBy: normalized.correctedBy,
           sourceThreadId: normalized.sourceThreadId,
           sourceTurnRef: normalized.sourceTurnRef,
@@ -2155,7 +2165,12 @@ export function createSharedWorldMeaningStore(
     const { prior } = resolveKeyed(
       scope,
       key,
-      { verb, recordId: input.recordId, exitedBy: input.exitedBy, reason: input.reason },
+      {
+        verb,
+        recordId: input.recordId,
+        exitedBy: input.exitedBy,
+        ...(input.reason !== undefined ? { reason: input.reason } : {}),
+      },
       (rowIdentity) => requireSubjectRecord(family, rowIdentity),
     );
     if (prior !== undefined) {
@@ -2197,7 +2212,7 @@ export function createSharedWorldMeaningStore(
             verb,
             recordId: input.recordId,
             exitedBy: input.exitedBy,
-            reason: input.reason,
+            ...(input.reason !== undefined ? { reason: input.reason } : {}),
           }),
         );
       }
@@ -2239,7 +2254,12 @@ export function createSharedWorldMeaningStore(
     const { prior } = resolveKeyed(
       scope,
       key,
-      { verb, loopId: input.loopId, exitedBy: input.exitedBy, reason },
+      {
+        verb,
+        loopId: input.loopId,
+        exitedBy: input.exitedBy,
+        ...(reason !== undefined ? { reason } : {}),
+      },
       (rowIdentity) => {
         const row = getOpenLoopRow(rowIdentity);
         if (row === undefined) {
@@ -2286,7 +2306,12 @@ export function createSharedWorldMeaningStore(
           scope,
           key,
           input.loopId,
-          contentFingerprint({ verb, loopId: input.loopId, exitedBy: input.exitedBy, reason }),
+          contentFingerprint({
+            verb,
+            loopId: input.loopId,
+            exitedBy: input.exitedBy,
+            ...(reason !== undefined ? { reason } : {}),
+          }),
         );
       }
       db.exec('COMMIT;');
