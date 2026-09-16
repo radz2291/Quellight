@@ -377,8 +377,7 @@ carried M-2/L-1/L-2/L-3 findings are closed in Q4 as recorded in the
 implementation report; M-1 and M-3 obligations remain tracked (M-3
 honored: no amendment commits were needed).
 
-## D-Q4-H1-1 — One active agent turn per conversation (owner decision;
-## binding; implemented by the H-1 remediation)
+## D-Q4-H1-1 — One active agent turn per conversation (owner decision; binding; implemented by the H-1 remediation)
 
 The Phase Q4 independent verification (audit commit `821d4f8…`,
 `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-INDEPENDENT-VERIFICATION.md`)
@@ -431,8 +430,7 @@ deferral remain preserved; **M-1** remains open with its hard deadline
 Quellight repin must complete before the Phase Q6 live-provider proof
 and the Stage 07C final audit).
 
-## D-FUTURE-STEERING-1 — Future turn steering (deferred product
-## direction; recorded, NOT implemented)
+## D-FUTURE-STEERING-1 — Future turn steering (deferred product direction; recorded, NOT implemented)
 
 Deferred product direction, not an implementation requirement of the
 H-1 remediation:
