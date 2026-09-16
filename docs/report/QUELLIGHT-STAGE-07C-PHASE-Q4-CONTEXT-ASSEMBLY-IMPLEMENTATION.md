@@ -274,7 +274,7 @@ the production build with the deterministic offline fixture:
   now confirmed by the composer clearing, with a re-resolved click as the
   fallback) — disclosed as a script robustness fix, not a product change.
 
-## 12. Changed-file inventory (Git-derived)
+## Changed-file inventory (Git-derived)
 
 Derived with `git diff --numstat <freeze-sha>..HEAD` against the freeze
 SHA `b4bf75980a14f74346bdfa59c252c84dadca338e` (verify:q4 re-derives and
