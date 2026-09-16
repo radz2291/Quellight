@@ -1,7 +1,7 @@
 /**
- * The Quellight model seam (§8.5, §8.8, §8.10).
+ * The Quellight model seam (§8.5, §8.8, §8.10; Phase Q4 D-Q4-1).
  *
- * Two Quellight-owned composition wrappers around model instances:
+ * Three Quellight-owned composition wrappers around model instances:
  *
  * 1. `withTurnDeadline` — enforces the operator-visible turn deadline AT
  *    THE MODEL SEAM: when the deadline expires mid-stream, the stream
@@ -17,9 +17,44 @@
  *    protected operator-configuration foundation and injected as the
  *    provider ENVIRONMENT value (`OLLAMA_API_KEY`, the registry's
  *    `apiKeyEnvVar`) that the router resolution path reads by name.
+ *
+ * 3. `withTurnContextAssembly` (Phase Q4, frozen contract §5/§8) — the
+ *    per-turn context-injection seam: for every model call it resolves
+ *    the frozen per-turn assembly (server-derived turn identity; the
+ *    assembler in `context-assembler.ts`), and — ONLY for a `complete`
+ *    outcome — inserts ONE user-role message holding the rendered block
+ *    immediately BEFORE the trailing user-role message of the request
+ *    prompt. The transformation is call-scoped and non-persistent: the
+ *    durable user message, the stored transcript, and every durable row
+ *    are untouched; system/developer messages remain structurally
+ *    superior. No injection ever happens without a frozen `complete`
+ *    assembly, and a failed or ambiguous attribution injects zero records
+ *    and lets the turn continue (freeze §6).
  */
 
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { ModelRouterLanguageModel } from '@mastra/core/llm';
+import type { TurnAssemblyScope, TurnStreamResolution } from '../sharedworld/context-assembler';
+
+/**
+ * The Quellight-owned async scope installed by the turns route around the
+ * turn dispatch: the SERVER-RESOLVED Shared World thread id and Mastra
+ * conversation id. The client and the model supply neither value; both
+ * derive from durable server records (freeze §8). The detached turn
+ * execution inherits this scope, so the model seam can correlate a model
+ * call to the conversation without any request payload trust.
+ */
+const assemblyScopeStorage = new AsyncLocalStorage<TurnAssemblyScope>();
+
+/** Run one turn dispatch inside the assembly correlation scope. */
+export function runWithTurnAssemblyScope<T>(scope: TurnAssemblyScope, run: () => T): T {
+  return assemblyScopeStorage.run(scope, run);
+}
+
+/** Read the current assembly correlation scope (undefined outside turns). */
+export function readTurnAssemblyScope(): TurnAssemblyScope | undefined {
+  return assemblyScopeStorage.getStore();
+}
 
 /** Marker for a deadline-enforced stream failure (message is a fixed string). */
 const DEADLINE_MARKER = 'quellight turn deadline exceeded';
@@ -149,6 +184,123 @@ export function withTurnDeadline<T extends object>(
 export interface LiveProviderModelOptions {
   readonly routerModel: string;
   readonly endpointBaseUrl: string;
+}
+
+/**
+ * The result shape the seam reads from `doStream` options. The prompt is
+ * the released model-request message array; every other option field is
+ * forwarded untouched through the prototype-chain wrapper below.
+ */
+interface ContextStreamOptions {
+  prompt?: unknown;
+  [key: string]: unknown;
+}
+
+/** One prompt message of the released model-request shape. */
+interface ContextPromptMessage {
+  readonly role: unknown;
+  readonly content?: unknown;
+}
+
+/**
+ * Build the injected message for a frozen block: ONE user-role message
+ * whose content is ONE text part (frozen `QLT_CONTEXT_INJECTION` shape).
+ */
+function injectedContextMessage(block: string): ContextPromptMessage {
+  return {
+    role: 'user',
+    content: [{ type: 'text', text: block }],
+  };
+}
+
+/**
+ * Insert the context message immediately BEFORE the trailing user-role
+ * message (the real user message stays the LAST user message; the
+ * fixture/agent behavior keyed on the last user text is unaffected). If
+ * no user-role message exists, the frozen prompt invariant is violated:
+ * fail closed by returning the prompt unchanged (zero injection).
+ */
+function promptWithContext(
+  prompt: readonly ContextPromptMessage[],
+  block: string,
+): ContextPromptMessage[] {
+  let trailingUserIndex = -1;
+  for (let index = prompt.length - 1; index >= 0; index -= 1) {
+    if (prompt[index]?.role === 'user') {
+      trailingUserIndex = index;
+      break;
+    }
+  }
+  if (trailingUserIndex < 0) {
+    return [...prompt];
+  }
+  const next = [...prompt];
+  next.splice(trailingUserIndex, 0, injectedContextMessage(block));
+  return next;
+}
+
+/**
+ * Wrap a model so every doStream call resolves the frozen per-turn
+ * assembly and injects the rendered block as bounded DATA. The wrapper is
+ * an instance-level shadow (the same discipline as `withTurnDeadline`):
+ * class-private state of the real model keeps working, and the returned
+ * value IS the model instance with only `doStream` overridden.
+ *
+ * Resolution discipline (freeze §6/§8):
+ * - no scope (not a conversation turn): pass through untouched;
+ * - resolution fails / empty / failed assembly: pass through untouched
+ *   (the turn continues with zero Shared World records);
+ * - a frozen `complete` assembly: inject exactly the frozen block.
+ */
+export function withTurnContextAssembly<T extends object>(
+  model: T,
+  resolve: (scope: TurnAssemblyScope) => Promise<TurnStreamResolution>,
+): T {
+  const source = model as unknown as Record<string, unknown>;
+  if (typeof source['doStream'] !== 'function') {
+    return model;
+  }
+  // Capture the ORIGINAL doStream at wrap time (the deadline seam wraps
+  // this seam afterwards, so a call-time property read would recurse).
+  const originalDoStream = (source['doStream'] as (boundOptions: unknown) => Promise<unknown>).bind(
+    model,
+  );
+  const wrappedDoStream = async (callOptions: unknown): Promise<unknown> => {
+    const options = (callOptions ?? {}) as ContextStreamOptions;
+    const scope = readTurnAssemblyScope();
+    let nextOptions: ContextStreamOptions = options;
+    if (scope !== undefined) {
+      let resolution: TurnStreamResolution;
+      try {
+        resolution = await resolve(scope);
+      } catch {
+        resolution = { kind: 'pass', reason: 'ambiguous' };
+      }
+      if (resolution.kind === 'inject') {
+        const prompt = Array.isArray(options.prompt)
+          ? (options.prompt as ContextPromptMessage[])
+          : undefined;
+        if (prompt !== undefined) {
+          // Call-scoped request transformation: the ORIGINAL options and
+          // prompt array are never mutated; the injected message is never
+          // persisted anywhere (it exists only in this call).
+          nextOptions = Object.create(
+            Object.getPrototypeOf(options),
+            Object.getOwnPropertyDescriptors(options),
+          ) as ContextStreamOptions;
+          nextOptions['prompt'] = promptWithContext(prompt, resolution.block);
+        }
+      }
+    }
+    return originalDoStream(nextOptions);
+  };
+  Object.defineProperty(model, 'doStream', {
+    value: wrappedDoStream,
+    writable: true,
+    configurable: true,
+    enumerable: false,
+  });
+  return model;
 }
 
 /**

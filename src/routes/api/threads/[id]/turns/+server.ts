@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getQuellightRuntime } from '$lib/server/runtime';
+import { runWithTurnAssemblyScope } from '$lib/server/model-seam';
 import { VictControlError } from '@victframework/runtime';
 
 /**
@@ -12,7 +13,13 @@ import { VictControlError } from '@victframework/runtime';
  * - the turn crosses the VICT command boundary (agent.turn.start) with
  *   the caller's idempotency key per logical send (duplicate sends
  *   reconcile to exactly one turn);
- * - the model input is bounded (untrusted conversation data).
+ * - the model input is bounded (untrusted conversation data);
+ * - Q4 (frozen contract §8): the dispatch runs inside the Quellight-owned
+ *   assembly correlation scope carrying the SERVER-RESOLVED Shared World
+ *   thread id and Mastra conversation id — the model seam resolves the
+ *   in-flight turn identity from durable records only; the client and the
+ *   model supply no actor, thread, or turn authority. The detached turn
+ *   execution inherits this scope.
  */
 
 const MAX_INPUT_LENGTH = 8000;
@@ -58,17 +65,28 @@ export const POST: RequestHandler = async ({ request, params }) => {
     );
   }
   try {
+    // Narrowed values captured into consts: the dispatch closure below must
+    // see the validated string types (a `let` binding's narrowing does not
+    // survive into closures).
+    const input: string = body.input;
+    const idempotencyKey: string = body.idempotencyKey;
     // The correlation record is Quellight-owned; archived threads refuse
     // new turns (QLT_THREAD_ARCHIVED) before any VICT intent is created.
     const conversation = await runtime.composition.sharedWorld.ensureConversationLink(threadId);
     // ServerActorContext = AuthenticatedActorContext + the local token kind
     // marker; the authoritative context still derives from the directory.
     const actor = { ...runtime.composition.actor, presentedTokenKind: 'local-test' as const };
-    const outcome = await runtime.composition.commandService.dispatch(actor, {
-      command: 'agent.turn.start',
-      payload: { threadId: conversation.mastraThreadId, input: body.input },
-      idempotencyKey: body.idempotencyKey,
-    });
+    // Q4: the server-derived assembly correlation scope wraps the whole
+    // dispatch (the detached turn execution inherits it).
+    const outcome = await runWithTurnAssemblyScope(
+      { swThreadId: threadId, mastraThreadId: conversation.mastraThreadId },
+      () =>
+        runtime.composition.commandService.dispatch(actor, {
+          command: 'agent.turn.start',
+          payload: { threadId: conversation.mastraThreadId, input },
+          idempotencyKey,
+        }),
+    );
     if (!outcome.ok) {
       return json({ ok: false, code: outcome.code }, { status: 200 });
     }
