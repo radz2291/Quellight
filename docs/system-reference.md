@@ -1,13 +1,13 @@
 # Quellight system reference — Stage 07B/07C
 
-## Status (current, 2026-09-13 — Phase Q2 implemented)
+## Status (current, 2026-09-16 — Phase Q2 formally closed)
 
 ```text
 Stage 07B: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
 Stage 07C Phase Q1: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
-Stage 07C Phase Q2: IMPLEMENTED — AWAITING INDEPENDENT VERIFICATION (durable Shared World schema)
-Stage 07C Phases Q3–Q7: NOT BEGUN (Shared World meaning and ceremony unimplemented)
-Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 implemented; Q3–Q7, 07D, 07E remaining)
+Stage 07C Phase Q2: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (durable Shared World schema)
+Stage 07C Phases Q3–Q7: NOT BEGUN (Q3 contract and implementation planning permitted; Shared World meaning and ceremony unimplemented)
+Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3–Q7, 07D, 07E remaining)
 ```
 
 - The retained dependency is now the immutable coordinated release set
@@ -33,11 +33,18 @@ NON-BLOCKING ISSUES — PHASE Q1 FORMAL CLOSURE PERMITTED`,
   parallel mutation shortcut is removed and permanently gated.
 - Phase Q1 is formally closed against the independent verification.
   Phase Q2 — the durable Shared World schema foundation — is
-  IMPLEMENTED (2026-09-13;
+  independently verified (2026-09-16; verdict `VERIFIED WITH
+NON-BLOCKING ISSUES — READY FOR FORMAL CLOSURE`, audit commit
+  `95f03699572b7597be0bbe933964f0207e549c44` against the audited
+  implementation SHA `9076fb0dbfdb15beeebef64adaa4f699ba9b60b5`,
+  `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q2-INDEPENDENT-VERIFICATION.md`)
+  and FORMALLY CLOSED (2026-09-16;
+  `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q2-FORMAL-CLOSURE.md`;
+  implementation evidence at
   `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q2-DURABLE-SCHEMA-IMPLEMENTATION.md`,
   frozen contract at
-  `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q2-CONTRACT-FREEZE.md`) and
-  AWAITING INDEPENDENT VERIFICATION: additive migration 2
+  `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q2-CONTRACT-FREEZE.md`):
+  additive migration 2
   (`qlt-meaning-foundation`) creates the proposal/ceremony, epistemic
   claim, commitment, open loop, correction-lineage, and source-link
   record families (retention metadata on every table); the closed
@@ -49,12 +56,15 @@ NON-BLOCKING ISSUES — PHASE Q1 FORMAL CLOSURE PERMITTED`,
   proposal staleness, append-only lineage, and deterministic
   current-effective resolution; a permanent adversarial suite plus the
   focused `verify:q2` gate (wired into `verify:quellight` step 2c)
-  enforce it. Q2 wires NO production meaning or confirmation path — no
-  proposal/ceremony action, route, UI, agent tool, or context assembly
-  exists; the repository is exercised directly by tests only; any future
-  effectful write uses the governed VICT 0.2.0 boundary adopted in Q1.
-  Q3–Q7 remain pending; Shared World meaning and ceremony implementation
-  has not begun.
+  enforce it. The audit independently reproduced the adversarial surface
+  (75/75 checks) on top of the complete first-run ladder and found zero
+  Blocking/High/Medium issues. Q2 wires NO production meaning or
+  confirmation path — no proposal/ceremony action, route, UI, agent tool,
+  or context assembly exists; the repository is exercised directly by
+  tests only; any future effectful write uses the governed VICT 0.2.0
+  boundary adopted in Q1. Phase Q3 contract and implementation planning
+  is permitted but has not begun; Phases Q4–Q7 have not begun; Shared
+  World meaning and ceremony implementation has not begun.
 - Non-blocking debt carried forward: F-3 (open Low, `VICT_`-prefixed
   display-only code), F-4 (open Low, historical implementation-report
   placement), F-5 (open Low, cosmetic verifier output), F-6/F-7
@@ -63,12 +73,28 @@ NON-BLOCKING ISSUES — PHASE Q1 FORMAL CLOSURE PERMITTED`,
   ingress, proven harmless by the audit; the Q1 ingress itself is NOT
   modified by Q2, while every NEW Q2 Shared World input contract now
   defines explicit closed-field and prototype-key rejection behavior, as
-  that finding required) and TEST-1 (open Low — no permanent
-  browser-level replay-recovery test; must be resolved no later than
-  Phase Q3 verification, before the confirmation ceremony is accepted
-  as reliable). DOC-1 (the stale 0.1.0 statement in this document) was
-  resolved at formal closure. F-1, F-2, and the missing independent live
-  proof are remediated/resolved and independently verified closed.
+  that finding required; this observation remains separately open — Q2's
+  safe new contracts do not retroactively close it) and TEST-1 (open Low
+  — no permanent browser-level replay-recovery test; must be resolved no
+  later than Phase Q3 verification, before the confirmation ceremony is
+  accepted as reliable); from Phase Q2: F-Q2-1 (Low — historical
+  prose-index erratum: the frozen contract §2 and the implementation
+  report §6 name fifteen of the sixteen indexes, omitting
+  `idx_qlt_correction_subject`; the normative machine-readable inventory,
+  migration DDL, and 139 schema-introspection checks contain and enforce
+  all sixteen — a documentation erratum, NOT a schema defect; frozen
+  documents are not rewritten) and F-Q2-2 (Low — withdrawal is
+  user-attributed-only in this schema revision while frozen contract §8.2
+  prose admits either identity; strictly narrower, no excess authority,
+  no production withdrawal path exists; Phase Q3 must explicitly decide
+  withdrawal initiation and attribution before wiring any withdrawal
+  action and must not silently reinterpret the frozen discrepancy).
+  Binding Q3 inputs also include real turn correlation before production
+  enforcement of the one-open-proposal-per-turn rule (NULL turn
+  references remain distinct). DOC-1 (the stale 0.1.0 statement in this
+  document) was resolved at formal closure. F-1, F-2, and the missing
+  independent live proof are remediated/resolved and independently
+  verified closed.
 - The status sections below describe the delivered Stage 07B behavior;
   `docs/stage-07b-report.md` is the preserved historical implementation
   report (its issuance-time status wording is superseded by this
@@ -203,5 +229,9 @@ retention-metadata marking, never Shared World meaning deletion.
 - `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q2-CONTRACT-FREEZE.md` — the
   frozen Phase Q2 durable-schema contract
 - `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q2-DURABLE-SCHEMA-IMPLEMENTATION.md`
-  — Phase Q2 implementation evidence (implemented; awaiting independent
-  verification)
+  — Phase Q2 implementation evidence (historical implementation record;
+  status superseded by the closure below)
+- `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q2-INDEPENDENT-VERIFICATION.md`
+  — Phase Q2 independent verification (audit)
+- `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q2-FORMAL-CLOSURE.md` — Phase
+  Q2 formal closure

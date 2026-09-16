@@ -219,3 +219,43 @@ confirmation path: the declared action surface, `/api/act`, and the VICT
 alone never makes material canonical, model-visible, or user-confirmed.
 This entry remains the record of the Q1 adoption; the Q2 boundary notes
 live in the system reference and the two Q2 reports.
+
+**Status update (2026-09-16, Phase Q2 formal closure):** Phase Q2 — the
+durable Shared World schema foundation — is independently verified
+(verdict `VERIFIED WITH NON-BLOCKING ISSUES — READY FOR FORMAL CLOSURE`;
+audit at Quellight commit
+`95f03699572b7597be0bbe933964f0207e549c44` against the audited
+implementation SHA `9076fb0dbfdb15beeebef64adaa4f699ba9b60b5`;
+`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q2-INDEPENDENT-VERIFICATION.md`:
+zero Blocking/High/Medium findings, complete first-run verification
+ladder, 178-check `verify:q2`, independent 75/75 adversarial probe) and
+FORMALLY CLOSED (`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q2-FORMAL-CLOSURE.md`).
+No new decision identifier is created by this closure: formal closure is
+a governance act, not a new architectural decision, and Q2's normative
+artifact remains the frozen contract
+(`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q2-CONTRACT-FREEZE.md`, derived
+from the Stage 07C handoff and the ratified OQ6 addendum). Carried Low
+findings: F-Q2-1 (historical prose-index erratum — the frozen contract §2
+and implementation report §6 name fifteen of the sixteen indexes,
+omitting `idx_qlt_correction_subject`; the normative machine-readable
+inventory, migration DDL, and 139 schema-introspection checks contain and
+enforce all sixteen; recorded, not a schema defect, frozen documents not
+rewritten) and F-Q2-2 (withdrawal is user-attributed-only in this schema
+revision while frozen contract §8.2 prose admits either identity;
+strictly narrower, no excess authority, no production withdrawal path;
+Phase Q3 must explicitly decide withdrawal initiation and attribution
+before wiring any withdrawal action and must not silently reinterpret the
+frozen discrepancy). Binding Q3 inputs carried forward: real turn
+correlation before production enforcement of the
+one-open-proposal-per-turn rule (NULL turn references remain distinct);
+TEST-1 permanent browser replay recovery no later than Phase Q3
+verification, before the confirmation ceremony is accepted as reliable;
+Q2 remains storage-contract-only (no proposal, confirmation, withdrawal,
+correction, UI, route, agent-tool, or context-assembly path active); the
+Q1 FENCE-1 Low ingress observation remains separately open (Q2's safe new
+contracts do not retroactively close it). The D-10 boundary is unchanged:
+`/api/act` and the declared action surface are untouched, and every
+future effectful write uses the governed VICT 0.2.0 boundary adopted
+through this entry. Phase Q3 contract and implementation planning is
+permitted and NOT BEGUN; Phases Q4–Q7 have not begun; Stage 07C and
+Stage 07 remain In Progress.
