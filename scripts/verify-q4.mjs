@@ -738,13 +738,33 @@ console.log('\n[6] INVENTORY — Git-derived inventory vs the implementation rep
     reportText !== undefined,
   );
   if (reportText !== undefined && /^[0-9a-f]{40}$/.test(String(freezeSha))) {
-    const numstat = safeGit(['diff', '--numstat', String(freezeSha), 'HEAD'])
+    // H-1 remediation reconciliation (disclosed): the report's inventory
+    // describes the Q4 AUDITED TREE — the commits through the Q4
+    // implementation-report completion. The independent-verification
+    // report commit (and any later remediation commits) legitimately add
+    // files AFTER that tree, so the comparison is anchored to the Q4
+    // audited tree (the parent of the verification-report commit) instead
+    // of HEAD. The Q4 report and its inventory are NOT modified.
+    const auditSha = safeGit([
+      'log',
+      '--format=%H',
+      '--grep',
+      'docs(stage-07c): independently verify Phase Q4',
+      '-1',
+    ]);
+    let inventorySha = String(auditSha);
+    if (/^[0-9a-f]{40}$/.test(inventorySha)) {
+      inventorySha = safeGit(['rev-parse', `${inventorySha}~1`]);
+    } else {
+      inventorySha = 'HEAD';
+    }
+    const numstat = safeGit(['diff', '--numstat', String(freezeSha), inventorySha])
       .split('\n')
       .filter((line) => line.trim().length > 0)
       .map((line) => line.replace(/\t/g, ' ').trim());
     const inventoryBlock = extractInventoryBlock(reportText);
     check(
-      `the report inventory equals git diff --numstat freeze..HEAD (${numstat.length} files)`,
+      `the report inventory equals git diff --numstat freeze..the Q4 audited tree (${numstat.length} files)`,
       'inventory',
       inventoryBlock !== undefined && JSON.stringify(inventoryBlock) === JSON.stringify(numstat),
     );

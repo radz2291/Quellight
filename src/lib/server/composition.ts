@@ -71,6 +71,11 @@ import {
   type TurnContextServiceDeps,
 } from '../sharedworld/context-assembler';
 import {
+  createTurnAdmission,
+  QLT_TURN_ALREADY_OPEN,
+  type TurnAdmissionResult,
+} from './turn-admission';
+import {
   createProposalDraftCapability,
   type ProposalDraftInvocationContext,
 } from '../agent/proposal-capability';
@@ -264,6 +269,17 @@ export interface QuellightComposition {
       }
     | undefined
   >;
+  /**
+   * H-1 remediation: the race-safe per-conversation turn admission
+   * boundary (exactly one active turn per conversation). The dispatch
+   * runs inside the per-conversation critical section or is refused
+   * truthfully (`QLT_TURN_ALREADY_OPEN`) before any effect. Same-key
+   * retries pass through to VICT's idempotent disposition unchanged.
+   */
+  admitTurn<T>(
+    input: { mastraThreadId: string; idempotencyKey: string },
+    dispatch: () => Promise<T>,
+  ): Promise<TurnAdmissionResult<T>>;
   flush(): Promise<void>;
   close(): Promise<void>;
 }
@@ -397,6 +413,19 @@ export async function createQuellightComposition(
     clock,
   };
   const turnContext = createTurnContextService(turnContextDeps);
+
+  // ---- H-1 remediation: race-safe turn admission (exactly one active
+  // turn per conversation). The decision reads the DURABLE VICT turn
+  // store and the durable command-idempotency receipts (server-derived
+  // actor; never client-supplied authority). The dispatch runs inside
+  // the per-conversation critical section, so the check and the start
+  // are atomic for the supported single-process deployment.
+  const turnAdmission = createTurnAdmission({
+    listOpenTurns: () => agentStores.turns.listOpenTurns(),
+    getReceipt: (name) => agentStores.commandIdempotency.getReceipt(name),
+    localActorId: LOCAL_ACTOR_ID,
+    turnCommand: 'agent.turn.start',
+  });
 
   // ---- Actor boundary (single local actor) ----------------------------------
   const actorRecord: ActorRecord = {
@@ -838,6 +867,7 @@ export async function createQuellightComposition(
     async getThreadAssemblySummary(threadId: string) {
       return turnContext.summaryForThread(threadId);
     },
+    admitTurn: (input, dispatch) => turnAdmission.admitTurn(input, dispatch),
     async flush(): Promise<void> {
       await mastraComposition.productAgent.flush();
     },

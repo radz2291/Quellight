@@ -696,42 +696,39 @@ export function createTurnContextService(deps: TurnContextServiceDeps): {
       } catch {
         return { kind: 'pass', reason: 'ambiguous' };
       }
-      const byTurn = new Map<string, QltContextAssemblyRecord | undefined>();
-      const unrecorded: OpenTurnRecord[] = [];
-      const recorded: { turn: OpenTurnRecord; record: QltContextAssemblyRecord }[] = [];
-      for (const turn of openTurns) {
-        const pending = inFlight.get(turn.turnId);
-        if (pending !== undefined) {
-          return pending;
-        }
-        let record: QltContextAssemblyRecord | undefined;
-        try {
-          record = await deps.getAssemblyByTurn(turn.turnId);
-        } catch {
-          return { kind: 'pass', reason: 'ambiguous' };
-        }
-        byTurn.set(turn.turnId, record);
-        if (record === undefined) {
-          unrecorded.push(turn);
-        } else {
-          recorded.push({ turn, record });
-        }
+      // H-1 remediation backstop (remediation contract §2/§3): attribution
+      // requires EXACTLY ONE attributable open turn for this conversation
+      // and actor. Zero attributable open turns pass through untouched
+      // (existing safe pass-through); two or more open turns — in ANY
+      // recorded/unrecorded/in-flight combination — fail closed for EVERY
+      // stream in the scope: zero injection, no per-turn in-flight promise
+      // is consulted (a promise belonging to one turn must never be
+      // returned for another turn), and no new assembly is created
+      // (writing one would be a false attribution). This backstop holds
+      // even when the admission invariant is bypassed through a direct
+      // internal call, test fixture, future route, or corrupted state.
+      if (openTurns.length !== 1) {
+        return { kind: 'pass', reason: 'ambiguous' };
       }
-      if (unrecorded.length === 1) {
-        const turn = unrecorded[0]!;
-        const promise = assembleForTurn(scope, turn.turnId).finally(() => {
-          inFlight.delete(turn.turnId);
-        });
-        inFlight.set(turn.turnId, promise);
-        return promise;
+      const openTurn = openTurns[0]!;
+      const pending = inFlight.get(openTurn.turnId);
+      if (pending !== undefined) {
+        return pending;
       }
-      if (unrecorded.length === 0 && recorded.length === 1) {
-        return replayRecord(recorded[0]!.record);
+      let record: QltContextAssemblyRecord | undefined;
+      try {
+        record = await deps.getAssemblyByTurn(openTurn.turnId);
+      } catch {
+        return { kind: 'pass', reason: 'ambiguous' };
       }
-      // Zero open turns (nothing to attribute) or ambiguity (multiple
-      // record-less open turns / multiple recorded streams): fail closed
-      // with zero injection and no false record (freeze §6/§8).
-      return { kind: 'pass', reason: 'ambiguous' };
+      if (record !== undefined) {
+        return replayRecord(record);
+      }
+      const promise = assembleForTurn(scope, openTurn.turnId).finally(() => {
+        inFlight.delete(openTurn.turnId);
+      });
+      inFlight.set(openTurn.turnId, promise);
+      return promise;
     },
 
     async summaryForThread(threadId) {

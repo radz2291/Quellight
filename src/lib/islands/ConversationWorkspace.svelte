@@ -76,6 +76,7 @@
   let draft = $state('');
   let connection = $state<ConnectionState>('idle');
   let failureCode = $state<string | undefined>(undefined);
+  let turnOpenNotice = $state(false);
   let partialMarked = $state(false);
   let modelMode = $state<'offline-fixture' | 'live' | 'unavailable'>('unavailable');
   let busyCreating = $state(false);
@@ -164,6 +165,7 @@
     turns = [];
     failureCode = undefined;
     cancelError = undefined;
+    turnOpenNotice = false;
     stopIntentKey = undefined;
     partialMarked = false;
     connection = 'idle';
@@ -344,9 +346,11 @@
       return;
     }
     const input = draft.trim();
+    const restingConnection = connection;
     draft = '';
     failureCode = undefined;
     cancelError = undefined;
+    turnOpenNotice = false;
     // A new send is a NEW turn and therefore a NEW cancellation intent:
     // its Stop clicks must carry a fresh idempotency key.
     stopIntentKey = undefined;
@@ -364,6 +368,19 @@
       });
       const result = body as { ok: boolean; code?: string; data?: { turnId?: string; streamId?: string } };
       if (!result.ok || typeof result.data?.turnId !== 'string' || typeof result.data?.streamId !== 'string') {
+        if (result.code === 'QLT_TURN_ALREADY_OPEN') {
+          // H-1 remediation: the quiet, non-interruptive refusal. The
+          // optimistic local message is withdrawn (it never reached the
+          // durable transcript), the composer is restored, and the resting
+          // connection state is kept. No modal, no tray opening, no focus
+          // change, no queueing, no second turn.
+          messages.splice(messages.length - 1, 1);
+          draft = input;
+          connection = restingConnection;
+          turnOpenNotice = true;
+          announcement = 'A reply is already in progress for this conversation.';
+          return;
+        }
         connection = 'failed';
         failureCode = result.code ?? 'TURN_START_FAILED';
         announcement = `The turn did not start (${failureCode ?? 'unknown'}).`;
@@ -969,6 +986,13 @@
             Past turn outcome: {turns.at(-1)?.status ?? 'unknown'}{turns.at(-1)?.errorCode
               ? ` (${turns.at(-1)?.errorCode})`
               : ''}. Nothing was fabricated; a retry is a new send.
+          </p>
+        {/if}
+
+        {#if turnOpenNotice}
+          <p class="qlt-banner" role="status">
+            A reply is already in progress for this conversation. Your message was not sent and
+            nothing was queued.
           </p>
         {/if}
 

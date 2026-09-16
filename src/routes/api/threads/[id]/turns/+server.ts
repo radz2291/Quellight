@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getQuellightRuntime } from '$lib/server/runtime';
 import { runWithTurnAssemblyScope } from '$lib/server/model-seam';
+import { QLT_TURN_ALREADY_OPEN } from '$lib/server/turn-admission';
 import { VictControlError } from '@victframework/runtime';
 
 /**
@@ -20,6 +21,11 @@ import { VictControlError } from '@victframework/runtime';
  *   in-flight turn identity from durable records only; the client and the
  *   model supply no actor, thread, or turn authority. The detached turn
  *   execution inherits this scope.
+ * - H-1 remediation: the dispatch crosses the race-safe admission
+ *   boundary first — exactly ONE active agent turn per conversation; a
+ *   distinct overlapping request is refused truthfully with the stable
+ *   code `QLT_TURN_ALREADY_OPEN` and zero effect, while a same-key retry
+ *   preserves VICT's idempotent replay behavior.
  */
 
 const MAX_INPUT_LENGTH = 8000;
@@ -72,21 +78,41 @@ export const POST: RequestHandler = async ({ request, params }) => {
     const idempotencyKey: string = body.idempotencyKey;
     // The correlation record is Quellight-owned; archived threads refuse
     // new turns (QLT_THREAD_ARCHIVED) before any VICT intent is created.
+    // For an already-linked conversation this resolution is an idempotent
+    // server-side read: a refused request creates no VICT intent, no model
+    // call, no assembly, no transcript message, and no Shared World effect.
     const conversation = await runtime.composition.sharedWorld.ensureConversationLink(threadId);
     // ServerActorContext = AuthenticatedActorContext + the local token kind
     // marker; the authoritative context still derives from the directory.
     const actor = { ...runtime.composition.actor, presentedTokenKind: 'local-test' as const };
-    // Q4: the server-derived assembly correlation scope wraps the whole
-    // dispatch (the detached turn execution inherits it).
-    const outcome = await runWithTurnAssemblyScope(
-      { swThreadId: threadId, mastraThreadId: conversation.mastraThreadId },
+    // H-1 remediation: the race-safe admission boundary wraps the whole
+    // dispatch — exactly one active turn per conversation. The admission
+    // decision and the durable turn start are atomic for the supported
+    // single-process deployment; a distinct overlapping request is
+    // refused truthfully (`QLT_TURN_ALREADY_OPEN`) with zero effect, and
+    // a same-key retry passes through to VICT's idempotent disposition.
+    const admission = await runtime.composition.admitTurn(
+      { mastraThreadId: conversation.mastraThreadId, idempotencyKey },
       () =>
-        runtime.composition.commandService.dispatch(actor, {
-          command: 'agent.turn.start',
-          payload: { threadId: conversation.mastraThreadId, input },
-          idempotencyKey,
-        }),
+        // Q4: the server-derived assembly correlation scope wraps the
+        // dispatch (the detached turn execution inherits it).
+        runWithTurnAssemblyScope(
+          { swThreadId: threadId, mastraThreadId: conversation.mastraThreadId },
+          () =>
+            runtime.composition.commandService.dispatch(actor, {
+              command: 'agent.turn.start',
+              payload: { threadId: conversation.mastraThreadId, input },
+              idempotencyKey,
+            }),
+        ),
     );
+    if (admission.refused) {
+      // Stable, non-echoing, quiet refusal (remediation contract §3):
+      // the user-facing meaning is "A reply is already in progress for
+      // this conversation." — no queueing, no second turn, no effect.
+      return json({ ok: false, code: QLT_TURN_ALREADY_OPEN }, { status: 200 });
+    }
+    const outcome = admission.result;
     if (!outcome.ok) {
       return json({ ok: false, code: outcome.code }, { status: 200 });
     }
