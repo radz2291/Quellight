@@ -63,6 +63,7 @@ export const QLT_MEMORY_FIELDS: readonly {
 }[] = [
   { name: 'id', type: 'string', required: true, label: 'Id' },
   { name: 'kind', type: 'string', required: true, label: 'Kind' },
+  { name: 'proposalKind', type: 'string', required: true, label: 'Proposal kind' },
   { name: 'status', type: 'string', required: true, label: 'Status' },
   { name: 'title', type: 'string', required: true, label: 'Title' },
   { name: 'text', type: 'string', required: true, label: 'Text' },

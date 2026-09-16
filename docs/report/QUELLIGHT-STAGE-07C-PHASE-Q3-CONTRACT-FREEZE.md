@@ -128,9 +128,12 @@ identity:  { key: 'id' }
 Catalogue fields (the unified read projection over the four families):
 
 ```text
-id         string   stable record/proposal identifier
-kind       string   'proposal' | 'claim' | 'commitment' | 'open_loop'
-status     string   the family's closed lifecycle status (Q2 vocabularies)
+id            string   stable record/proposal identifier
+kind          string   'proposal' | 'claim' | 'commitment' | 'open_loop'
+proposalKind  string   for proposal rows: the drafted kind
+                       ('claim' | 'commitment' | 'open_loop'); ''
+                       for record rows (A-AMEND-2)
+status        string   the family's closed lifecycle status (Q2 vocabularies)
 title      string   presentation subject (claim/loop subject, commitment key,
                     proposal subject or kind label; bounded ≤ 200)
 text       string   presentation text (statement/detail; bounded by the Q2
@@ -565,7 +568,7 @@ on Escape and returns focus to the chip.
 | File                                                                                                                                                                                                                                                                                                     | Lane                                                     |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
 | `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q3-CONTRACT-FREEZE.md`, `src/lib/sharedworld/ceremony-contract.ts`                                                                                                                                                                                                | Phase 0 freeze (integration owner; frozen for all lanes) |
-| `src/lib/application/definition.ts`, `src/lib/server/application-server.ts`, `src/lib/server/composition.ts`, `src/lib/server/runtime.ts`, `src/lib/sharedworld/ceremony-actions.ts` (new), `src/lib/sharedworld/sqlite.ts` (read-only memory listing helper only — amendment A-AMEND-1)                                                                                                               | Lane A — governed application and persistence surface    |
+| `src/lib/application/definition.ts`, `src/lib/server/application-server.ts`, `src/lib/server/composition.ts`, `src/lib/server/runtime.ts`, `src/lib/sharedworld/ceremony-actions.ts` (new), `src/lib/sharedworld/sqlite.ts` (read-only memory listing helper only — amendment A-AMEND-1)                 | Lane A — governed application and persistence surface    |
 | `src/lib/agent/proposal-capability.ts` (new), `test/proposal-capability.test.ts` (new)                                                                                                                                                                                                                   | Lane B — agent proposal capability                       |
 | `src/lib/islands/ConversationWorkspace.svelte`, `test/ui/workspace.test.ts`, `test/ui/memory-inbox.test.ts` (new)                                                                                                                                                                                        | Lane C — quiet memory UX                                 |
 | `test/ceremony-authority.test.ts` (new), `scripts/verify-q3.mjs` (new), `package.json` (verify:q3 script), `scripts/verify-quellight.mjs` (aggregate steps), `scripts/verify-q2.mjs` (structural inventory reconciliation ONLY), `test/sharedworld-meaning.test.ts` (A-29 inventory reconciliation ONLY) | Lane D — contract-first adversarial tests + verifier     |
@@ -690,3 +693,16 @@ second WRITE/effect path (the single-effect-path rule governs writes and
 remains enforced). No other change: every other element of this freeze,
 including all frozen identifiers, contracts, codes, and the Q2 artifacts,
 is unchanged.
+
+### A-AMEND-2 (2026-09-16, during Lane C's first UI integration pass)
+
+The unified read projection (A-AMEND-1 context) carries no field naming a
+proposal's SPECIFIC drafted kind, but the tray must label it truthfully
+("Possible claim") and rebuild kind-shaped amendment content (freeze §5).
+The §3 catalogue gains ONE additive field: `proposalKind` (string) — for
+proposal rows the drafted kind (`claim` | `commitment` | `open_loop`);
+empty string on record rows. Declared view `v.memory` gains the same
+field; the adapter projection, the frozen module's `QLT_MEMORY_FIELDS`,
+and the UI consume it. Everything else is unchanged. Lane A's commit is
+amended in place (its files are the only code touched besides the frozen
+module data), and Lane C continues from the amended state.

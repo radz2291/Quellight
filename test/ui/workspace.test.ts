@@ -53,9 +53,15 @@ describe('conversation workspace island', () => {
     await new Promise((resolvePromise) => setTimeout(resolvePromise, 30));
     const text = textOf(host);
     // Truthful product language: no continuity or memory-of-meaning claims.
+    // Stage 07C Phase Q3: the disclosure names the user-governed memory
+    // inbox and states that confirmed memory is never visible to the
+    // assistant in this stage.
     expect(text).toContain('Quellight');
     expect(text).toContain('Offline deterministic fixture');
-    expect(text).toContain('Durable partnership meaning is not implemented');
+    expect(text).toContain('transcript persistence is not memory');
+    expect(text).toContain('only you can confirm, amend, reject, or withdraw them');
+    expect(text).toContain('confirmed memory is never visible to the assistant');
+    expect(text).not.toContain('transcript persistence is not Shared World continuity. Durable');
     // A live region announces streaming state to assistive technology.
     const liveRegion = host.querySelector('[role="status"][aria-live="polite"]');
     expect(liveRegion).not.toBeNull();
