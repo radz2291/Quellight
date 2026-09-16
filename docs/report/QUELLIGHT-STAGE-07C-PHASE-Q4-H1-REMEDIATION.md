@@ -22,7 +22,7 @@ required before any Q4 closure.
 | Remediation-contract commit (alone, before executable changes) | `2b519d2…` (`docs(stage-07c): freeze the Q4 H-1 remediation contract`; exactly one new file)                                          |
 | Implementation commit                                          | `e9ac36a…` (`fix(stage-07c): prevent overlapping-turn context crossover`)                                                             |
 | Test commit                                                    | `a49be65…` (`test(stage-07c): lock overlapping-turn isolation`)                                                                       |
-| Documentation commit                                           | this commit                                                                                                                           |
+| Documentation commits                                          | `163086c…`, `7ec5dfa…` (formatting), `c5a5fb1…` (inventory alignment), and this results-recording commit                              |
 | Final remote SHA                                               | recorded in the completion response after the normal fast-forward push                                                                |
 | VICT read-only SHA                                             | `6e3e10d8114216d19c1d338494a6cafeb67ae6f9` (`HEAD == origin/main`; pre-existing untracked `.pi/` untouched; ZERO VICT files modified) |
 | Audited Q4 implementation tree                                 | `c4896befa64e7499b85cd751d2d4393482f2e7f0` (untouched; no historical report rewritten; the frozen Q4 contract byte-identical)         |
