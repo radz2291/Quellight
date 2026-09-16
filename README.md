@@ -14,8 +14,10 @@ Stage 07B: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
 Stage 07C Phase Q1: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
 Stage 07C Phase Q2: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (durable Shared World schema)
 Stage 07C Phase Q3: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (governed confirmation ceremony and quiet memory inbox)
-Stage 07C Phases Q4–Q7: NOT BEGUN (Shared World meaning remains unavailable to the agent; Q4 contract and implementation planning is PERMITTED — NOT BEGUN)
-Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4–Q7, 07D, 07E remaining)
+Stage 07C Phase Q3: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (governed confirmation ceremony and quiet memory inbox)
+Stage 07C Phase Q4: IMPLEMENTED — AWAITING INDEPENDENT VERIFICATION (deterministic Shared World context assembly)
+Stage 07C Phases Q5–Q7: NOT BEGUN (full record-by-record context inspection remains Q5; Q5 implementation has not begun)
+Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 implemented, awaiting independent verification; Q5–Q7, 07D, 07E remaining)
 ```
 
 Stage 07B is formally closed (2026-09-10) against the audited evidence
@@ -89,9 +91,44 @@ otherwise prohibited request keys closed with the stable
 `QLT_INGRESS_PROHIBITED_FIELD` code. TEST-1 permanently proves the
 ceremony recovery in a real browser (`scripts/browser-ceremony-check.mjs`;
 `npm run verify:browser-ceremony`). Confirmed Shared World meaning
-remains unavailable to the agent — that is Phase Q4, whose contract and
-implementation planning is PERMITTED but has not begun.
-0.2.0 boundary. Phases Q4–Q7 have not begun; VICT `0.1.0`/`0.1.1` remain published but
+remains unavailable to the agent — that is Phase Q4. Phase Q4 (2026-09-16)
+was contract-frozen and implemented under FastGate; it is recorded as
+`IMPLEMENTED — AWAITING INDEPENDENT VERIFICATION` — not verified, not
+closed; see `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-CONTRACT-FREEZE.md`
+(freeze SHA `b4bf759…`, no amendments) and
+`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-CONTEXT-ASSEMBLY-IMPLEMENTATION.md`.
+Q4 activates read-side continuity with NO new model-facing capability:
+every new agent turn deterministically selects only user-confirmed,
+current-effective Shared World records (three frozen layers — current-
+thread, global, other-thread; classes open loops → commitments → claims;
+`updatedAt DESC, id ASC`; budgets 8 records / 4096 UTF-8 bytes with
+whole-record skipping), freezes the selection for that turn, persists an
+immutable per-turn assembly record (additive migration 3, UNIQUE turn_id,
+deterministic SHA-256 fingerprint, server-derived turn identity,
+retries converge), and delivers the snapshot at the Quellight-owned model
+seam as ONE user-role message (one text part) inserted immediately before
+the trailing user message — bounded data, never authority; the durable
+transcript is never touched; the agent envelope remains EXACTLY
+`qlt.proposal.draft@1` with no read/list/search power. The serializer is
+deterministic and delimiter-safe (no `<`, `>`, `&`, or unescaped `/` byte
+inside record content, so markers cannot be forged); conflicts supported
+by structured identity are excluded as a group (`conflict-ambiguous`);
+assembly failure means zero-memory operation with the truthful `failed`
+record and the quiet `Memory unavailable for this turn` tray line
+(`Your last reply here used N memories.` / `No memories used`). Carried
+Q3 obligations closed in Q4: M-2 (real Escape-to-close with focus return,
+component- and browser-proven), L-1 (ordering repaired to
+`updatedAt DESC, id ASC`; sort surface restricted to exactly `updatedAt`),
+L-2 (real-browser stale refusal through the real governed boundary in the
+EXTENDED ceremony script), L-3 (Git-derived changed-file inventory,
+independently re-derived and compared by the new `verify:q4` gate wired
+into `verify:quellight` step 2e). M-1 remains recorded with its hard
+deadline (the truthful noncanonical/proposal VICT effect-class correction
+must land before the Phase Q6 live-provider proof and the Stage 07C final
+audit). Q4 has no live-provider path; live-model injection resistance
+remains Q6. Phase Q5 has not begun.
+0.2.0 boundary. Phases Q5–Q7 have not begun; VICT `0.1.0`/`0.1.1` remain
+published but
 are not adopted — any later change requires an explicit compatibility
 decision and fresh verification.
 

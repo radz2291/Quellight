@@ -1,14 +1,16 @@
 # Quellight system reference — Stage 07B/07C
 
-## Status (current, 2026-09-16 — Phase Q3 formally closed)
+## Status (current, 2026-09-16 — Phase Q4 implemented, awaiting independent verification)
 
 ```text
 Stage 07B: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
 Stage 07C Phase Q1: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
 Stage 07C Phase Q2: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (durable Shared World schema)
 Stage 07C Phase Q3: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (governed confirmation ceremony and quiet memory inbox)
-Stage 07C Phases Q4–Q7: NOT BEGUN (Shared World meaning remains unavailable to the agent; Q4 contract and implementation planning is PERMITTED — NOT BEGUN)
-Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4–Q7, 07D, 07E remaining)
+Stage 07C Phase Q3: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (governed confirmation ceremony and quiet memory inbox)
+Stage 07C Phase Q4: IMPLEMENTED — AWAITING INDEPENDENT VERIFICATION (deterministic Shared World context assembly)
+Stage 07C Phases Q5–Q7: NOT BEGUN (Q5 implementation has not begun)
+Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 implemented, awaiting independent verification; Q5–Q7, 07D, 07E remaining)
 ```
 
 - The retained dependency is now the immutable coordinated release set
@@ -154,7 +156,40 @@ NON-BLOCKING ISSUES — READY FOR FORMAL CLOSURE`, audit commit
   Withdraw with edit=amend, direct Save as immediate canonical
   confirmation, API-level exit verbs without Q3 UI, and FENCE-1. The
   agent still cannot read, list, search, or assemble confirmed Shared
-  World material — that remains Q4 (permitted, not begun).
+  World material — that remains superseded by the Q4 entry below.
+- **Phase Q4 — deterministic Shared World context assembly (2026-09-16):
+  IMPLEMENTED — AWAITING INDEPENDENT VERIFICATION (not verified, not
+  closed).** Contract freeze `b4bf759…` (frozen data module
+  `src/lib/sharedworld/context-contract.ts`; no amendments) and
+  implementation report
+  `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-CONTEXT-ASSEMBLY-IMPLEMENTATION.md`.
+  Q4 delivers: additive migration 3 (`qlt-context-assembly`; immutable
+  per-turn assembly record, UNIQUE turn_id, deterministic SHA-256
+  fingerprint, outcome/failure CHECK); the deterministic assembler
+  (three selection layers current-thread → global → other-thread,
+  classes open_loop → commitment → claim, `updatedAt DESC, id ASC`
+  (L-1), budgets 8 records / 4096 UTF-8 bytes with whole-record
+  skipping, closed exclusion vocabulary incl. structured-identity
+  `conflict-ambiguous` groups (D-Q4-4)); the model-seam injection as ONE
+  user-role message (one text part) immediately before the trailing user
+  message, call-scoped, with server-derived turn correlation from
+  durable open-turn records, frozen-snapshot replay across multi-call
+  turns, retry convergence, and fail-closed identity ambiguity; the
+  delimiter-safe serializer (content escaping makes `<`, `>`, `&`, and
+  `/` unrepresentable inside record content; hostile confirmed content
+  remains quoted data with zero authority); zero-transcript-pollution
+  proofs; the quiet tray transparency line (used/none/unavailable) via
+  the read-only `/api/threads/[id]/assembly` route (D-Q4-6); M-2 closed
+  (real Escape-to-close with focus return, component- and browser-
+  proven); L-2 proven in the EXTENDED real-browser ceremony script
+  (stale refusal through the real governed boundary; one disclosed
+  seeding fixture); L-3 Git-derived inventory independently re-derived
+  and compared by the new `verify:q4` gate (`verify:quellight` step 2e);
+  the Q3 §12 correction-proposal deferral remains beyond Q4. M-1 stays
+  recorded with its hard deadline (before the Phase Q6 live-provider
+  proof and the Stage 07C final audit). The agent envelope remains
+  EXACTLY `qlt.proposal.draft@1`; no read/list/search capability exists.
+  Live-model injection resistance remains Q6. Q5 has not begun.
 - The status sections below describe the delivered Stage 07B behavior;
   `docs/stage-07b-report.md` is the preserved historical implementation
   report (its issuance-time status wording is superseded by this

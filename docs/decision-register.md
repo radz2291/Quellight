@@ -327,7 +327,52 @@ inventory erratum (actual 26 files +6551/−102 vs the claimed 22 files
 +6106/−93). D-Q3-1…D-Q3-6 stand as ratified; the carried F-Q2-2
 discrepancy is resolved by D-Q3-1; the Q1-era FENCE-1 Low finding is
 resolved by D-Q3-6 and the TEST-1 Low debt is satisfied and
-independently verified closed. Confirmed Shared World meaning remains
-unavailable to the agent. Phase Q4 contract and implementation planning
-is PERMITTED and NOT BEGUN; Phases Q5–Q7 have not begun; Stage 07C and
-Stage 07 remain In Progress.
+independently verified closed. Confirmed Shared World meaning is now
+available to the agent ONLY through the deterministic, bounded,
+per-turn context snapshots of Phase Q4 (D-Q4-1…D-Q4-6 below). Phase Q4
+is IMPLEMENTED — AWAITING INDEPENDENT VERIFICATION; Phases Q5–Q7 have
+not begun; Stage 07C and Stage 07 remain In Progress.
+
+## D-Q4-1…D-Q4-6 — Phase Q4 owner decisions (frozen; recorded)
+
+Ratified in `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-CONTRACT-FREEZE.md`
+(freeze SHA `b4bf759…`, committed alone, no amendments):
+
+- **D-Q4-1 (injection point).** The Quellight-owned model seam at the
+  per-turn model boundary; ONE user-role message (one text part)
+  immediately before the trailing user message, call-scoped; the durable
+  transcript is never modified; record content never enters the fixed
+  system-instruction string; no static working memory or semantic
+  recall.
+- **D-Q4-2 (agent access).** The agent receives only the assembled
+  snapshot; the capability envelope remains EXACTLY
+  `qlt.proposal.draft@1`; no read/list/search tool, no lookup, no
+  embeddings, no semantic retrieval, no second model call. The Q3 §12
+  agent-originated-correction deferral therefore remains beyond Q4.
+- **D-Q4-3 (cross-thread continuity).** `sourceThreadId` records origin,
+  never access scope; three selection layers (current-thread, global,
+  other-thread), classes open_loop → commitment → claim, `updatedAt
+  DESC, id ASC`; the 8-record/4096-byte budget prevents whole-World
+  prompts; explicit user-controlled scope remains a possible Q5
+  enhancement (nothing hidden was invented).
+- **D-Q4-4 (conflicts).** The assembler performs no semantic conflict
+  detection; only structured-identity duplicate-current groups are
+  excluded, AS A GROUP, with `conflict-ambiguous`; invalid provenance or
+  corrupt lineage fails closed; the model may see two truthful records
+  in tension but receives no durable resolution authority.
+- **D-Q4-5 (M-1 timing).** The VICT effect-class correction is recorded
+  (never implemented inside Q4) with the hard deadline: before the
+  Phase Q6 live-provider proof, and therefore before the Stage 07C final
+  audit.
+- **D-Q4-6 (transparency).** A quiet, non-interruptive usage line inside
+  the user-opened memory tray only (`used N` / `none` / `unavailable`);
+  no transcript annotation, no auto-open, no focus stealing, no full
+  inspection UI (Q5).
+
+Q4 disposition (2026-09-16): implemented as frozen; recorded as
+`IMPLEMENTED — AWAITING INDEPENDENT VERIFICATION`; the two disclosed Q3
+re-pins (migration bookkeeping `[1,2,3]`, assembler-location
+authorization) strengthened assertions and never weakened them. The
+carried M-2/L-1/L-2/L-3 findings are closed in Q4 as recorded in the
+implementation report; M-1 and M-3 obligations remain tracked (M-3
+honored: no amendment commits were needed).
