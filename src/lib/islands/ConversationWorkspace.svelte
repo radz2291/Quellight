@@ -1421,7 +1421,7 @@
   .qlt-memory-empty {
     margin: 0;
     font-size: 0.8rem;
-    opacity: 0.75;
+    color: var(--vict-color-muted, #575757);
   }
   .qlt-memory-error {
     margin: 0;
@@ -1445,7 +1445,7 @@
     gap: 0.3rem;
   }
   .qlt-memory-item--decided {
-    opacity: 0.75;
+    background: var(--vict-color-surface, #f6f6f7);
   }
   .qlt-memory-item-head {
     display: flex;
@@ -1457,7 +1457,7 @@
     font-size: 0.72rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    opacity: 0.65;
+    color: var(--vict-color-muted, #575757);
   }
   .qlt-memory-status {
     font-size: 0.72rem;
@@ -1492,7 +1492,7 @@
   .qlt-memory-provenance {
     margin: 0;
     font-size: 0.72rem;
-    opacity: 0.65;
+    color: var(--vict-color-muted, #575757);
   }
   .qlt-memory-actions {
     display: flex;

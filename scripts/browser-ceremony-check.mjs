@@ -250,8 +250,14 @@ try {
     if (serious.length > 0) {
       fail(
         `${viewport.name}: axe serious/critical violations: ${serious
-          .map((violation) => `${violation.id}(${violation.nodes.length})`)
-          .join(', ')}`,
+          .map(
+            (violation) =>
+              `${violation.id}(${violation.nodes.length}): ${violation.nodes
+                .map((node) => node.target.join(' '))
+                .slice(0, 4)
+                .join(' | ')}`,
+          )
+          .join('; ')}`,
       );
     } else {
       note(`${viewport.name}: axe clean with the memory tray open`);
