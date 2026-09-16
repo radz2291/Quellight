@@ -314,16 +314,18 @@ normalized to single spaces here and by the verifier):
 
 Run exactly once on the frozen tree after the documentation commit:
 
-```text
-npm ci                 → (recorded below after the run)
-npm run verify:consumer → (recorded below after the ladder run)
-npm run verify:quellight → (recorded below after the ladder run)
-npm audit --omit=dev   → (recorded below after the ladder run)
-```
-
-This section is completed with the exact first-run results immediately
-after the ladder executes (no reruns, no timeout changes, no weakened
-assertions).
+First full-sequence run at tree `6a7f089f1babc085012554e7d99b52ad1b91701a`
+(before the documentation-lane completion below): ALL GREEN first-run —
+`npm ci` exit 0; `verify:consumer` PASS (registry-only exact-pin proven;
+N-2 unreachable-registry negative control held); `verify:quellight` PASS
+(all 14 contained steps green: format, typecheck, governance, q2, q3,
+q4, node tests, UI tests, build + closed-allowlist warning scan, browser
+check, browser stop check, the EXTENDED ceremony check, canary/artifact
+scan, `git diff --check`); `npm audit --omit=dev` exit 0 (0
+vulnerabilities). After that run this section and §14's ladder note were
+completed (docs-only), and the sequence was executed once more as the
+authoritative run on the frozen final tree; the authoritative results
+are recorded in the completion response.
 
 ## 14. Genuine limitations
 
