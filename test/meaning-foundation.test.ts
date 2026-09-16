@@ -267,7 +267,10 @@ describe('Q2 meaning foundation: migration and schema (A-01..A-05)', () => {
           .prepare('SELECT version FROM quellight_shared_world_migrations ORDER BY version;')
           .all() as Array<{ version: number }>
       ).map((row) => row.version),
-    ).toEqual([1, 2]);
+      // Q4 reconciliation (frozen Q4 contract §12): migration 3
+      // (qlt-context-assembly) is applied on top of migrations 1–2; this
+      // assertion is re-pinned to the amended frozen reality, never weakened.
+    ).toEqual([1, 2, QLT_SHARED_WORLD_SCHEMA_VERSION]);
     assertTableMatchesInventory(rawAfter);
     rawAfter.close();
   });
@@ -287,7 +290,11 @@ describe('Q2 meaning foundation: migration and schema (A-01..A-05)', () => {
         version: number;
       }>
     ).map((row) => row.version);
-    expect(bookkeeping).toEqual([1]);
+    expect(bookkeeping).toEqual([1, QLT_SHARED_WORLD_SCHEMA_VERSION]);
+    // Q4 reconciliation: `buildQ1EraStore` applies migrations 1–3 before the
+    // simulated downgrade, so the pre-existing bookkeeping [1,3] must be
+    // untouched by the FAILED migration-2 attempt (the rollback assertion
+    // is unchanged: no version-2 row may appear and no partial schema).
     const meaningTables = QLT_MEANING_TABLES.filter((table) => table !== 'qlt_claim');
     for (const table of meaningTables) {
       const row = db
@@ -312,7 +319,9 @@ describe('Q2 meaning foundation: migration and schema (A-01..A-05)', () => {
           version: number;
         }>
       ).map((row) => row.version),
-    ).toEqual([1, QLT_SHARED_WORLD_SCHEMA_VERSION]);
+      // Q4 reconciliation (frozen Q4 contract §12): the clean migration
+      // path now applies migrations 1–3.
+    ).toEqual([1, 2, QLT_SHARED_WORLD_SCHEMA_VERSION]);
     assertTableMatchesInventory(raw);
     raw.close();
     store.close();

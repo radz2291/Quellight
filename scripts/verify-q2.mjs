@@ -187,15 +187,19 @@ console.log('\n[1] SCHEMA — frozen inventory introspection, bookkeeping, resta
         .prepare('SELECT version FROM quellight_shared_world_migrations ORDER BY version;')
         .all()
         .map((row) => row.version);
+      // Q4 reconciliation (frozen Q4 contract §12): migration 3
+      // (qlt-context-assembly) is applied on top of the frozen Q2 schema;
+      // the bookkeeping assertion is re-pinned to the full applied list.
+      // The frozen Q2 inventory checks above are unchanged.
       check(
-        `migration bookkeeping is [1, ${QLT_SHARED_WORLD_SCHEMA_VERSION}]`,
+        `migration bookkeeping is [1, 2, ${QLT_SHARED_WORLD_SCHEMA_VERSION}]`,
         'schema',
-        JSON.stringify(bookkeeping) === JSON.stringify([1, QLT_SHARED_WORLD_SCHEMA_VERSION]),
+        JSON.stringify(bookkeeping) === JSON.stringify([1, 2, QLT_SHARED_WORLD_SCHEMA_VERSION]),
       );
       check(
-        `QLT_SHARED_WORLD_SCHEMA_VERSION === 2`,
+        `QLT_SHARED_WORLD_SCHEMA_VERSION === 3 (Q4 additive migration)`,
         'schema',
-        QLT_SHARED_WORLD_SCHEMA_VERSION === 2,
+        QLT_SHARED_WORLD_SCHEMA_VERSION === 3,
       );
       check(
         'PRAGMA foreign_keys enforced on the connection',

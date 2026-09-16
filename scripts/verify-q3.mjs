@@ -288,13 +288,22 @@ console.log('\n[4] ISOLATION — one effect path; no context assembly; no model 
   }
   check('no route/island/component touches the meaning store or SQLite', 'isolation', uiClean);
   const srcFiles = walk(join('src'));
+  // Q4 re-pin (frozen Q4 contract §12): the deterministic context assembler
+  // is now AUTHORIZED in its frozen location. The check asserts that the
+  // assembler lives ONLY in the frozen Lane A/Lane B-owned files and that
+  // no other module claims assembly behavior.
+  const authorizedAssemblerFiles = new Set(
+    ['context-assembler.ts', 'context-contract.ts'].map((name) =>
+      join('src', 'lib', 'sharedworld', name),
+    ),
+  );
   const assemblerFiles = srcFiles.filter((file) =>
     /context-assembl|assembleContext|buildContextBlock|memory-context/i.test(file),
   );
   check(
-    'no context-assembler module exists (Q4 not begun)',
+    'context-assembler modules exist only in the frozen Q4 location',
     'isolation',
-    assemblerFiles.length === 0,
+    assemblerFiles.length > 0 && assemblerFiles.every((file) => authorizedAssemblerFiles.has(file)),
   );
   const agentDirFiles = walk(join('src', 'lib', 'agent'));
   const agentClean = agentDirFiles.every((file) => {

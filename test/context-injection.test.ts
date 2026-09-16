@@ -299,7 +299,7 @@ describe('Q4 model-seam injection (composition level)', () => {
     // records — but in the layer order of ITS OWN thread: the current-
     // thread record is always first. A wrong-assembly substitution would
     // show the wrong record first.
-    const orderOf = (prompt: RecordedPrompt): string[] => {
+    const orderOf = (prompt: RecordedPrompt): [number, number] => {
       const block = prompt.texts[prompt.texts.length - 2]!;
       const withA = block.indexOf('Thread A exclusive memory.');
       const withB = block.indexOf('Thread B exclusive memory.');
