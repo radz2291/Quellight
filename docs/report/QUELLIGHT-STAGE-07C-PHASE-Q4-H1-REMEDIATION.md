@@ -214,8 +214,10 @@ npm audit --omit=dev
 git diff --check
 ```
 
-First-run results are recorded in §11 (recorded after the run by the
-disclosed docs-only completion commit; see the identity note there).
+First-run results are recorded in §11. The ladder ran on the frozen
+remediation tree `c5a5fb13a43b05d1fc33c6ce3cd17d0f9709aee1` (the pushed
+remote tip at run time); its results are additionally recorded durably
+by the ONE disclosed docs-only commit that follows it.
 `verify:quellight` permanently includes the new H-1 regression coverage
 through the node-side test step (`test/**/*.test.ts` includes
 `test/turn-overlap-isolation.test.ts`) — NO duplicate browser boot and
@@ -242,7 +244,7 @@ FREEZE-SHA (remediation start): `821d4f880ae160200f262dacb49560f71c528dca0`
 49 3 README.md
 71 0 docs/decision-register.md
 173 0 docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-H1-REMEDIATION-CONTRACT.md
-340 0 docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-H1-REMEDIATION.md
+342 0 docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-H1-REMEDIATION.md
 67 4 docs/system-reference.md
 22 2 scripts/verify-q4.mjs
 24 0 src/lib/islands/ConversationWorkspace.svelte
@@ -253,7 +255,7 @@ FREEZE-SHA (remediation start): `821d4f880ae160200f262dacb49560f71c528dca0`
 852 0 test/turn-overlap-isolation.test.ts
 ```
 
-TOTALS: 12 files, +1846, −51. Derived from `git diff --numstat
+TOTALS: 12 files, +1848, −51. Derived from `git diff --numstat
 821d4f880ae160200f262dacb49560f71c528dca0..HEAD` (Git only; the report's
 own self-row is the file's exact insertion count). Not verifier-compared
 (no verifier consumes the remediation report inventory; the Q4 report's
@@ -267,10 +269,10 @@ inventory comparison remains anchored to the Q4 audited tree per §8).
 - **L-2 (implementation-identity lag):** reconciled additively: the Q4
   audited implementation tree is `c4896bef…`; executable content was
   unchanged since `bf7fec3`; the audit-report commit is `821d4f8…`. The
-  ladder below is executed on the frozen remediation tree and its
-  results are recorded by the disclosed docs-only completion commit —
-  the exact run-tree SHA and the final-tree SHA are both named in the
-  completion response so no silent identity lag recurs.
+  ladder ran on the frozen remediation tree `c5a5fb1…` and its results
+  are recorded by the ONE disclosed docs-only commit that follows it —
+  both the run-tree SHA (`c5a5fb1…`) and the final-tree SHA are named
+  in the completion response so no silent identity lag recurs.
 - **L-3 (correction-kind proposal confirmation rollback):** recorded as
   a Q5/backlog obligation ONLY (see D-Q4-H1-1 in the decision register):
   confirming a `correction`-kind proposal through `confirmProposal`
@@ -293,13 +295,13 @@ inventory comparison remains anchored to the Q4 audited tree per §8).
 
 ## 11. Authoritative ladder (first run; frozen tree)
 
-| Command                    | Result (first run)                  |
-| -------------------------- | ----------------------------------- |
-| `npm ci`                   | recorded in the completion response |
-| `npm run verify:consumer`  | recorded in the completion response |
-| `npm run verify:quellight` | recorded in the completion response |
-| `npm audit --omit=dev`     | recorded in the completion response |
-| `git diff --check`         | recorded in the completion response |
+| Command                    | Result (first run)                                                                                                                                           |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `npm ci`                   | exit 0                                                                                                                                                       |
+| `npm run verify:consumer`  | exit 0 PASS (release-set identity re-derived)                                                                                                                |
+| `npm run verify:quellight` | exit 0 PASS, first run — all steps green (incl. the re-anchored verify:q4, the new H-1 suite in test:node, all real-browser checks, artifact scan 199 files) |
+| `npm audit --omit=dev`     | exit 0 — 0 vulnerabilities                                                                                                                                   |
+| `git diff --check`         | exit 0                                                                                                                                                       |
 
 No rerun, no timeout increase, no output suppression, no weakened
 assertion is permitted; any permitted rerun must name its cause and
