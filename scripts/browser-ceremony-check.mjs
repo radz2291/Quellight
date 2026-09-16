@@ -398,7 +398,10 @@ try {
     await chipNow.focus();
     await page.keyboard.press('Enter');
     await trayNow.waitFor({ state: 'visible', timeout: 20_000 });
-    await trayNow.locator('.qlt-memory-item').first().waitFor({ state: 'visible', timeout: 20_000 });
+    await trayNow
+      .locator('.qlt-memory-item')
+      .first()
+      .waitFor({ state: 'visible', timeout: 20_000 });
   };
   await openOldestThreadTray();
 
