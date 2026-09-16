@@ -240,7 +240,7 @@ FREEZE-SHA (remediation start): `821d4f880ae160200f262dacb49560f71c528dca0`
 
 ```text
 49 3 README.md
-73 0 docs/decision-register.md
+71 0 docs/decision-register.md
 173 0 docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-H1-REMEDIATION-CONTRACT.md
 340 0 docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-H1-REMEDIATION.md
 67 4 docs/system-reference.md
@@ -253,7 +253,7 @@ FREEZE-SHA (remediation start): `821d4f880ae160200f262dacb49560f71c528dca0`
 852 0 test/turn-overlap-isolation.test.ts
 ```
 
-TOTALS: 12 files, +1848, −51. Derived from `git diff --numstat
+TOTALS: 12 files, +1846, −51. Derived from `git diff --numstat
 821d4f880ae160200f262dacb49560f71c528dca0..HEAD` (Git only; the report's
 own self-row is the file's exact insertion count). Not verifier-compared
 (no verifier consumes the remediation report inventory; the Q4 report's
