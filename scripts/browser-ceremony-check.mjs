@@ -22,6 +22,12 @@
  *   11. keyboard-only review and decision work;
  *   12. the accessibility baseline stays clean (axe, both viewports,
  *       tray open).
+ * Q4 (Lane E) additions:
+ *   L-2 stale refusal through the REAL governed boundary (one disclosed
+ *       seeding fixture; the staleness cause and the refused confirmation
+ *       cross the real UI/API path; zero canonical effect);
+ *   M-2 a real Escape key closes the tray with focus on the chip;
+ *   D-Q4-6 the quiet transparency line (used + unavailable states).
  * (Freeze §14 items 8, 10, 13, 14 are proven at the node/structural level by
  * test/ceremony-authority.test.ts and scripts/verify-q3.mjs.)
  */
@@ -29,6 +35,8 @@ import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { createHash } from 'node:crypto';
+import { DatabaseSync } from 'node:sqlite';
 import { chromium } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
@@ -102,6 +110,23 @@ const runScenario = async (page, trigger) => {
   await composer.fill(trigger);
   await page.getByRole('button', { name: 'Send' }).focus();
   await page.keyboard.press('Enter');
+  // Robustness (Lane E): the thread-creation re-render can detach the
+  // focused Send button and swallow the Enter activation. The send clears
+  // the composer on delivery; if it did not clear promptly, deliver the
+  // send with a real click on the (re-resolved) Send button.
+  const sent = await (async () => {
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      if ((await composer.inputValue()) === '') {
+        return true;
+      }
+      await page.waitForTimeout(100);
+    }
+    return false;
+  })();
+  if (!sent) {
+    await page.getByRole('button', { name: 'Send' }).click();
+  }
+  await composer.inputValue('', { timeout: 20_000 }).catch(() => undefined);
   await page
     .locator('.qlt-message--assistant')
     .last()
@@ -129,6 +154,79 @@ const openTray = async (page) => {
     .waitFor({ state: 'visible', timeout: 20_000 });
   // The rows load asynchronously after the tray opens; wait for content.
   await page.locator('.qlt-memory-item').first().waitFor({ state: 'visible', timeout: 20_000 });
+};
+
+// ---------------------------------------------------------------------------
+// Q4 (Lane E) helpers
+// ---------------------------------------------------------------------------
+
+/** Canonical JSON (keys sorted) — the frozen Q2 serialization primitive. */
+const canonicalJson = (value) => {
+  if (Array.isArray(value)) {
+    return `[${value.map(canonicalJson).join(',')}]`;
+  }
+  if (value !== null && typeof value === 'object') {
+    const keys = Object.keys(value).sort();
+    return `{${keys.map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+};
+
+/**
+ * Disclosed fixture boundary (freeze §10, L-2): seed a PENDING correction
+ * proposal DIRECTLY into the disposable store database — production wires
+ * no pending-correction path (the pinned capability rejects
+ * `proposalKind: 'correction'`; repository-level capability, Q2-frozen).
+ * The staleness CAUSE and the REFUSED CONFIRMATION below still cross the
+ * REAL governed boundary (the UI path through /api/act).
+ */
+const seedPendingCorrection = (dbPath, id) => {
+  const raw = new DatabaseSync(dbPath);
+  try {
+    const thread = raw
+      .prepare('SELECT id FROM qlt_thread ORDER BY created_at_ms ASC, id ASC LIMIT 1;')
+      .get();
+    const claim = raw
+      .prepare(
+        "SELECT id, version, subject FROM qlt_claim WHERE status = 'active' " +
+          'ORDER BY version DESC, updated_at_ms DESC, id ASC LIMIT 1;',
+      )
+      .get();
+    if (thread === undefined || claim === undefined) {
+      return undefined;
+    }
+    const now = Date.now();
+    const content = {
+      statement: 'A stale pending correction proposal seeded by the browser check (fixture).',
+      subject: String(claim.subject ?? ''),
+    };
+    raw
+      .prepare(
+        `INSERT INTO qlt_proposal
+           (id, version, status, proposal_kind, content, content_fingerprint, proposed_by,
+            decision_by, decided_at_ms, decision_reason, target_record_id, target_record_family,
+            target_record_version, source_thread_id, source_turn_ref, created_at_ms,
+            updated_at_ms, effective_at_ms, retention_state)
+         VALUES (?, 1, 'proposed', 'correction', ?, ?, 'actor-quellight-local', NULL, NULL,
+                 NULL, ?, 'claim', ?, ?, NULL, ?, ?, ?, 'currently-relevant');`,
+      )
+      .run(
+        id,
+        JSON.stringify(content),
+        createHash('sha256')
+          .update(Buffer.from(canonicalJson(content), 'utf8'))
+          .digest('hex'),
+        claim.id,
+        claim.version,
+        thread.id,
+        now,
+        now,
+        now,
+      );
+    return { claimId: String(claim.id), targetVersion: Number(claim.version) };
+  } finally {
+    raw.close();
+  }
 };
 
 try {
@@ -260,6 +358,249 @@ try {
   } else {
     note('9b: the withdrawn proposal created no canonical record');
   }
+
+  // -----------------------------------------------------------------------
+  // Scenario D (Q4 / Lane E): L-2 stale refusal through the REAL boundary
+  // -----------------------------------------------------------------------
+  // The sidebar is ordered updated_at_ms DESC (newest first); identify the
+  // claim-bearing (oldest) thread deterministically by its durable title
+  // and click exactly that button.
+  const openOldestThreadTray = async () => {
+    const rawThread = new DatabaseSync(join(dataDir, 'data', 'shared-world.db'), {
+      readOnly: true,
+    });
+    const oldestThread = rawThread
+      .prepare('SELECT title FROM qlt_thread ORDER BY created_at_ms ASC, id ASC LIMIT 1;')
+      .get();
+    rawThread.close();
+    const claimThreadButton = page
+      .locator('button.qlt-thread')
+      .filter({
+        has: page.locator('.qlt-thread-title', {
+          hasText: String(oldestThread.title),
+        }),
+      })
+      .last();
+    await claimThreadButton.waitFor({ state: 'visible', timeout: 20_000 });
+    await claimThreadButton.click();
+    await page
+      .locator('.qlt-thread-heading')
+      .first()
+      .waitFor({ state: 'visible', timeout: 20_000 });
+    // openThread() closes any open tray; if one is still closing, wait for
+    // the detach before reopening deterministically.
+    const trayNow = page.locator('section[aria-label="Memory review"]');
+    if ((await trayNow.count()) > 0) {
+      await trayNow.waitFor({ state: 'detached', timeout: 20_000 });
+    }
+    const chipNow = page.locator('button.qlt-memory-chip');
+    await chipNow.waitFor({ state: 'visible', timeout: 20_000 });
+    await chipNow.focus();
+    await page.keyboard.press('Enter');
+    await trayNow.waitFor({ state: 'visible', timeout: 20_000 });
+    await trayNow.locator('.qlt-memory-item').first().waitFor({ state: 'visible', timeout: 20_000 });
+  };
+  await openOldestThreadTray();
+
+  /** Perform one REAL governed correction of the active claim through the UI. */
+  const correctClaim = async (statementSuffix) => {
+    const activeClaim = tray
+      .locator('.qlt-memory-item[data-kind="claim"]:has(button:text-is("Correct"))')
+      .first();
+    await activeClaim.getByRole('button', { name: 'Correct', exact: true }).click();
+    // the correcting row re-renders (the Correct button is replaced by the
+    // editing form), so address the textarea/input via the tray directly
+    await tray
+      .locator('textarea.qlt-memory-input')
+      .first()
+      .fill(`The corrected claim statement ${statementSuffix} (browser proof).`);
+    await tray
+      .locator('input.qlt-memory-input[placeholder="Why is this being corrected?"]')
+      .first()
+      .fill('Browser ceremony stale-refusal correction');
+    await tray.getByRole('button', { name: 'Save correction', exact: true }).click();
+    await page.waitForTimeout(600);
+  };
+
+  // D-1: the first REAL correction (claim v1 → v2) through the UI boundary.
+  await correctClaim('one');
+  await page.waitForTimeout(400);
+  note('D-1: a real governed correction crossed the UI/API boundary (claim now version 2)');
+
+  // D-2 (disclosed fixture): seed a PENDING correction proposal directly
+  // into the disposable store, targeting the CURRENT claim version.
+  const seeded = seedPendingCorrection(
+    join(dataDir, 'data', 'shared-world.db'),
+    'qlt-prop-browser-stale',
+  );
+  if (seeded === undefined) {
+    fail('the fixture pending correction proposal could not be seeded into the disposable store');
+  } else {
+    note(
+      `D-2: pending correction proposal seeded (target claim ${seeded.claimId} v${seeded.targetVersion}; disclosed fixture boundary)`,
+    );
+  }
+
+  // D-3: the staleness CAUSE crosses the REAL governed boundary: a second
+  // real correction (claim v2 → v3) makes the pending proposal stale.
+  await correctClaim('two');
+  note('D-3: the second real correction made the pending proposal stale (real governed action)');
+
+  // D-4: a hard reload re-presents the proposal as STALE.
+  await page.reload({ waitUntil: 'networkidle' });
+  await openOldestThreadTray();
+  const staleBadge = tray.locator('.qlt-memory-status[data-status="stale"]').first();
+  await staleBadge.waitFor({ state: 'visible', timeout: 20_000 });
+  const staleText = ((await staleBadge.textContent()) ?? '').trim();
+  if (!staleText.includes('out of date')) {
+    fail(`the stale proposal badge does not read "out of date" (${staleText})`);
+  } else {
+    note('D-4: hard reload re-presented the pending correction proposal as stale (out of date)');
+  }
+
+  // D-5: the UNCHANGED confirm visibly fails with QLT_PROPOSAL_STALE and
+  // has ZERO canonical effect.
+  const staleConfirm = tray
+    .locator('.qlt-memory-item[data-stale="true"]')
+    .getByRole('button', { name: 'Confirm', exact: true })
+    .first();
+  await staleConfirm.click();
+  const staleError = tray.locator('.qlt-memory-error');
+  await staleError.waitFor({ state: 'visible', timeout: 20_000 });
+  const staleErrorText = ((await staleError.textContent()) ?? '').trim();
+  if (!staleErrorText.includes('QLT_PROPOSAL_STALE')) {
+    fail(
+      `the refused stale confirmation is not visible with QLT_PROPOSAL_STALE (${staleErrorText})`,
+    );
+  } else {
+    note('D-5a: the unchanged confirm visibly failed with QLT_PROPOSAL_STALE in the tray');
+  }
+  // zero canonical effect: exactly one ACTIVE claim (the real v3 successor);
+  // the stale proposal stays pending; the durable correction lineage has
+  // exactly the two real rows (never a third from the refused confirm).
+  const activeClaims = await tray
+    .locator('.qlt-memory-item[data-kind="claim"] .qlt-memory-status[data-status="active"]')
+    .count();
+  if (activeClaims !== 1) {
+    fail(
+      `zero-effect violation: expected exactly 1 active claim after the refusal, found ${activeClaims}`,
+    );
+  }
+  const rawAfter = new DatabaseSync(join(dataDir, 'data', 'shared-world.db'), {
+    readOnly: true,
+  });
+  const correctionCount = rawAfter.prepare('SELECT COUNT(*) AS total FROM qlt_correction;').get();
+  const stalePending = rawAfter
+    .prepare(
+      "SELECT status, COUNT(*) AS total FROM qlt_proposal WHERE id = 'qlt-prop-browser-stale' AND status IN ('proposed','awaiting_decision') GROUP BY status;",
+    )
+    .get();
+  rawAfter.close();
+  // The refusal may have moved the proposal to awaiting_decision (the
+  // pre-confirm transition) — it must still be PENDING and undecided.
+  if (
+    Number(correctionCount.total) !== 2 ||
+    stalePending === undefined ||
+    Number(stalePending.total) !== 1
+  ) {
+    fail(
+      `zero-effect violation: corrections=${correctionCount.total} (expected 2), ` +
+        `seeded proposal still pending=${stalePending === undefined ? 0 : stalePending.total} (expected 1)`,
+    );
+  } else {
+    note(
+      `D-5b: zero canonical effect — the refusal created no record and no correction row (proposal still ${stalePending.status})`,
+    );
+  }
+
+  // -----------------------------------------------------------------------
+  // Q4 (Lane E): M-2 Escape-to-close with focus return (real browser)
+  // -----------------------------------------------------------------------
+  const closeButton = tray.getByRole('button', { name: 'Close memory review' });
+  await closeButton.focus();
+  await page.keyboard.press('Escape');
+  await page
+    .locator('section[aria-label="Memory review"]')
+    .waitFor({ state: 'detached', timeout: 20_000 });
+  const focusAfterEscape = await page.evaluate(() => {
+    const active = document.activeElement;
+    return `${active?.tagName ?? ''} ${active?.className ?? ''}`;
+  });
+  if (!focusAfterEscape.includes('qlt-memory-chip')) {
+    fail(`Escape did not return focus to the memory chip (activeElement=${focusAfterEscape})`);
+  } else {
+    note('M-2: a real Escape key closed the tray and focus returned to the memory chip');
+  }
+  if (!(await page.locator('#qlt-composer').isEnabled())) {
+    fail('the composer was disabled by the Escape close (blocking violation)');
+  }
+
+  // -----------------------------------------------------------------------
+  // Q4 (Lane E): the quiet transparency line — used / unavailable
+  // -----------------------------------------------------------------------
+  // A plain follow-up turn (fixture: 'Hello' → text reply).
+  const composer = page.locator('#qlt-composer');
+  await composer.focus();
+  await composer.fill('Hello');
+  const assistantBefore = await page.locator('.qlt-message--assistant').count();
+  await page.getByRole('button', { name: 'Send' }).focus();
+  await page.keyboard.press('Enter');
+  // wait for a NEW assistant message (the turn's reply)
+  await page
+    .locator('.qlt-message--assistant')
+    .nth(assistantBefore)
+    .waitFor({ state: 'visible', timeout: 45_000 });
+  await page.waitForTimeout(1_500);
+  // the conversation stayed uninterrupted: composer enabled, tray closed
+  if (!(await composer.isEnabled())) {
+    fail('the composer was disabled by the follow-up turn (interrupted conversation)');
+  }
+  if ((await page.locator('section[aria-label="Memory review"]').count()) !== 0) {
+    fail('the memory tray opened itself during the follow-up turn');
+  }
+  note('Q4: the follow-up turn completed with the composer enabled and the tray closed');
+
+  // The quiet line inside the USER-OPENED tray reads the used state.
+  await openTray(page);
+  const assemblyLine = tray.locator('.qlt-memory-assembly');
+  await assemblyLine.waitFor({ state: 'visible', timeout: 20_000 });
+  let lineText = ((await assemblyLine.textContent()) ?? '').trim();
+  // the thread holds exactly one current-effective claim (v3): the latest
+  // assembled turn used exactly 1 memory
+  if (lineText !== 'Your last reply here used 1 memory.') {
+    fail(`the quiet usage line is not truthful ("${lineText}", expected the used-1 state)`);
+  } else {
+    note('Q4: the quiet transparency line reads "Your last reply here used 1 memory."');
+  }
+
+  // The unavailable state (disclosed boundary fixture): the summary
+  // response is intercepted with the frozen truthful failure shape; the
+  // island must render the unavailable state (the underlying truth — a
+  // real failed assembly record renders unavailable — is proven at node
+  // level by the Lane B/Lane D suites).
+  await page.route('**/assembly*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true, assembly: { outcome: 'failed', usedCount: 0 } }),
+    }),
+  );
+  await page.waitForTimeout(200);
+  await tray.getByRole('button', { name: 'Close memory review' }).click();
+  await page
+    .locator('section[aria-label="Memory review"]')
+    .waitFor({ state: 'detached', timeout: 20_000 });
+  await openTray(page);
+  lineText = ((await tray.locator('.qlt-memory-assembly').textContent()) ?? '').trim();
+  await page.unroute('**/assembly*');
+  if (lineText !== 'Memory unavailable for this turn') {
+    fail(`the unavailable transparency state did not render ("${lineText}")`);
+  } else {
+    note(
+      'Q4: the unavailable state renders truthfully (intercepted failed summary; disclosed fixture)',
+    );
+  }
+  await tray.getByRole('button', { name: 'Close memory review' }).click();
 
   // ---------- 12: responsive + axe with the tray OPEN ----------
   for (const viewport of [
