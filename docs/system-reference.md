@@ -1,13 +1,14 @@
 # Quellight system reference — Stage 07B/07C
 
-## Status (current, 2026-09-16 — Phase Q2 formally closed)
+## Status (current, 2026-09-16 — Phase Q3 implemented)
 
 ```text
 Stage 07B: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
 Stage 07C Phase Q1: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
 Stage 07C Phase Q2: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (durable Shared World schema)
-Stage 07C Phases Q3–Q7: NOT BEGUN (Q3 contract and implementation planning permitted; Shared World meaning and ceremony unimplemented)
-Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3–Q7, 07D, 07E remaining)
+Stage 07C Phase Q3: IMPLEMENTED — AWAITING INDEPENDENT VERIFICATION (governed confirmation ceremony and quiet memory inbox)
+Stage 07C Phases Q4–Q7: NOT BEGUN (Shared World meaning remains unavailable to the agent)
+Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 implemented; Q4–Q7, 07D, 07E remaining)
 ```
 
 - The retained dependency is now the immutable coordinated release set
@@ -95,6 +96,37 @@ NON-BLOCKING ISSUES — READY FOR FORMAL CLOSURE`, audit commit
   document) was resolved at formal closure. F-1, F-2, and the missing
   independent live proof are remediated/resolved and independently
   verified closed.
+- Phase Q3 — the governed confirmation ceremony and quiet memory inbox —
+  is IMPLEMENTED and AWAITING INDEPENDENT VERIFICATION (not verified, not
+  formally closed; Q4 has not begun). Reports:
+  `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q3-CONTRACT-FREEZE.md` (with
+  dated amendments A-AMEND-1…4) and
+  `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q3-CONFIRMATION-CEREMONY-IMPLEMENTATION.md`.
+  Q3 delivers: the `qlt.memory@1` application resource (one query +
+  thirteen mutation ops; a 19-action plan inventory gated by the focused
+  `verify:q3` check, wired into `verify:quellight`); exactly one pinned
+  agent capability `qlt.proposal.draft@1` (profile revision 2,
+  `maxToolCalls: 2` fail-closed budget-gated, server-derived
+  turn/thread correlation, one open proposal per thread/turn/kind,
+  keyed idempotency, zero Shared World read or decision power for the
+  agent); the quiet memory inbox inside the existing conversation
+  workspace (user-opened tray; never a modal, never auto-opened, never
+  focus-stealing, never blocking; Confirm/Edit/Reject/Withdraw; direct
+  "Remember this" Save; user correction; stale/already-decided/
+  validation states; keyboard and screen-reader support); the API-level
+  lifecycle exit verbs (claim retire, commitment release, loop
+  resolve/abandon/transform; dedicated UI exits remain deferred to Q5);
+  FENCE-1 ingress hardening (D-Q3-6) with the stable
+  `QLT_INGRESS_PROHIBITED_FIELD` code and permanent regression controls;
+  and TEST-1, the permanent real-browser ceremony recovery proof
+  (`scripts/browser-ceremony-check.mjs`; `verify:quellight` step 6c).
+  Owner decisions for Q3 are D-Q3-1…D-Q3-6 (see the decision register):
+  user-only durable withdrawal (resolving the F-Q2-2 discrepancy
+  explicitly), the quiet never-blocking inbox, Confirm/Edit/Reject/
+  Withdraw with edit=amend, direct Save as immediate canonical
+  confirmation, API-level exit verbs without Q3 UI, and FENCE-1. The
+  agent still cannot read, list, search, or assemble confirmed Shared
+  World material — that remains Q4 (not begun).
 - The status sections below describe the delivered Stage 07B behavior;
   `docs/stage-07b-report.md` is the preserved historical implementation
   report (its issuance-time status wording is superseded by this

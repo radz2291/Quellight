@@ -13,8 +13,9 @@ linked, or patched.
 Stage 07B: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
 Stage 07C Phase Q1: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
 Stage 07C Phase Q2: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (durable Shared World schema)
-Stage 07C Phases Q3–Q7: NOT BEGUN (Q3 contract and implementation planning permitted; Shared World meaning and ceremony unimplemented)
-Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3–Q7, 07D, 07E remaining)
+Stage 07C Phase Q3: IMPLEMENTED — AWAITING INDEPENDENT VERIFICATION (governed confirmation ceremony and quiet memory inbox)
+Stage 07C Phases Q4–Q7: NOT BEGUN (Shared World meaning remains unavailable to the agent)
+Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 implemented; Q4–Q7, 07D, 07E remaining)
 ```
 
 Stage 07B is formally closed (2026-09-10) against the audited evidence
@@ -53,9 +54,27 @@ representation decision). Q2 wires NO production meaning or confirmation
 path: schema existence alone never makes material canonical,
 model-visible, or user-confirmed; `/api/act` and the declared action
 surface are unchanged; any future effectful write uses the governed VICT
-0.2.0 boundary. Q3 contract and implementation planning is permitted but
-has not begun; Phases Q4–Q7 have not begun; Shared World meaning and
-ceremony remain unimplemented; VICT `0.1.0`/`0.1.1` remain published but
+Phase Q3 — the governed confirmation ceremony and quiet memory inbox
+(2026-09-16) — is IMPLEMENTED and AWAITING INDEPENDENT VERIFICATION
+(`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q3-CONFIRMATION-CEREMONY-IMPLEMENTATION.md`;
+frozen contract:
+`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q3-CONTRACT-FREEZE.md`, including
+dated amendments A-AMEND-1…4). Q3 activates the safe doorway from
+conversation into the Shared World: the agent can draft epistemically
+inert pending proposals through exactly one pinned capability
+(`qlt.proposal.draft@1`, server-derived turn/thread correlation, budget-
+gated, with no Shared World read or decision power); the user reviews
+them in a quiet, user-opened memory inbox inside the existing workspace
+and can Confirm, Edit, Reject, Withdraw, direct-Save ("Remember this"),
+and correct confirmed records — all through the governed `/api/act`
+boundary and the Q2 store's keyed idempotency and version-staleness
+rules. FENCE-1 ingress hardening (D-Q3-6) fails prototype-named or
+otherwise prohibited request keys closed with the stable
+`QLT_INGRESS_PROHIBITED_FIELD` code. TEST-1 permanently proves the
+ceremony recovery in a real browser (`scripts/browser-ceremony-check.mjs`;
+`npm run verify:browser-ceremony`). Confirmed Shared World meaning
+remains unavailable to the agent — that is Phase Q4, which has not begun.
+0.2.0 boundary. Phases Q4–Q7 have not begun; VICT `0.1.0`/`0.1.1` remain published but
 are not adopted — any later change requires an explicit compatibility
 decision and fresh verification.
 
@@ -93,7 +112,9 @@ store layout.
 npm run verify:consumer        # registry-only dependency proof (N-1/N-2; 0.2.0 set)
 npm run verify:governance      # governed mutation boundary structural gate (Phase Q1)
 npm run verify:q2              # Q2 durable-schema conformance gate (schema/deterministic/repository/structural)
-npm run verify:quellight       # full deterministic offline gate (N-20, incl. Q1 gates + Q2 gate)
+npm run verify:q3              # Q3 governed-ceremony structural + deterministic gate
+npm run verify:browser-ceremony # TEST-1 real-browser ceremony recovery proof (Q3)
+npm run verify:quellight       # full deterministic offline gate (N-20, incl. Q1/Q2/Q3 gates + TEST-1)
 npm run verify:live-provider   # bounded live proof (requires explicit gate)
 ```
 

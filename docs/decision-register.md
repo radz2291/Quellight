@@ -259,3 +259,43 @@ future effectful write uses the governed VICT 0.2.0 boundary adopted
 through this entry. Phase Q3 contract and implementation planning is
 permitted and NOT BEGUN; Phases Q4–Q7 have not begun; Stage 07C and
 Stage 07 remain In Progress.
+
+**Status update (2026-09-16, Phase Q3 implementation):** Phase Q3 — the
+governed confirmation ceremony and quiet memory inbox — is IMPLEMENTED
+and AWAITING INDEPENDENT VERIFICATION (see
+`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q3-CONFIRMATION-CEREMONY-IMPLEMENTATION.md`;
+frozen contract:
+`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q3-CONTRACT-FREEZE.md`, with dated
+amendments A-AMEND-1…4). The six Phase Q3 owner decisions are recorded in
+the frozen contract §2 as D-Q3-1…D-Q3-6 and are not new architectural
+decision entries of this register (they are product-level phase
+decisions derived from the ratified OQ6/D-10 framework, mirroring the Q2
+convention of not minting new register identifiers without a normative
+architectural change): D-Q3-1 withdrawal is durable user-attributed only
+(explicitly resolving the carried F-Q2-2 discrepancy in the narrower
+direction, with no agent withdrawal authority and no Q2 CHECK change);
+D-Q3-2 the memory inbox is quiet, user-opened, never auto-opening,
+never focus-stealing, never blocking conversation, and never requires a
+decision; D-Q3-3 pending agent proposals support Confirm, Edit (which
+amends — closing the original as `amended` and creating a new pending
+proposal — and never silently confirms), Reject, and durable Withdraw;
+D-Q3-4 direct "Remember this" Save is a first-party, user-attributed UI
+action that is immediately canonical without a second ceremony, and
+ordinary model interpretation of natural language can never reach it;
+D-Q3-5 the claim/commitment/open-loop exit verbs exist at the API level
+with dedicated UI controls deferred to Q5; D-Q3-6 the Q1 FENCE-1 ingress
+observation is hardened in Q3 (prototype-named or otherwise prohibited
+request keys fail closed with the stable non-echoing
+`QLT_INGRESS_PROHIBITED_FIELD` code, all previously valid declared-field
+behavior preserved, permanent positive and negative regression controls,
+recorded openly rather than retrofitted into Q2 history). The A-AMEND-4
+reconciliation additionally fixed a latent Q2 store defect exposed by
+Lane E (keyed reconciliation payloads crashed on absent optional
+fields; fingerprints for provided-field calls are unchanged). The agent
+retains NO Shared World read, list, search, assembly, or decision power
+in Q3; its only Shared World outcome is the immediate bounded result of
+its own proposal-draft invocation. TEST-1 (the permanent real-browser
+ceremony recovery proof) is wired into `verify:quellight` alongside the
+focused `verify:q3` gate. Phase Q3 is not verified or formally closed
+by this update; Phases Q4–Q7 have not begun; Stage 07C and Stage 07
+remain In Progress.

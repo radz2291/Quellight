@@ -85,7 +85,9 @@ const watchConsole = (page) => {
   });
   page.on('response', (response) => {
     if (response.status() >= 500) {
-      consoleProblems.push(`http ${response.status()} on ${response.request().method()} ${response.url()}`);
+      consoleProblems.push(
+        `http ${response.status()} on ${response.request().method()} ${response.url()}`,
+      );
     }
   });
 };
@@ -100,7 +102,10 @@ const runScenario = async (page, trigger) => {
   await composer.fill(trigger);
   await page.getByRole('button', { name: 'Send' }).focus();
   await page.keyboard.press('Enter');
-  await page.locator('.qlt-message--assistant').last().waitFor({ state: 'visible', timeout: 45_000 });
+  await page
+    .locator('.qlt-message--assistant')
+    .last()
+    .waitFor({ state: 'visible', timeout: 45_000 });
   // The quiet pending chip appears (1 pending proposal on the fresh thread).
   const chip = page.locator('button.qlt-memory-chip');
   await chip.waitFor({ state: 'visible', timeout: 20_000 });
@@ -119,7 +124,9 @@ const openTray = async (page) => {
   await chip.waitFor({ state: 'visible', timeout: 20_000 });
   await chip.focus();
   await page.keyboard.press('Enter');
-  await page.locator('section[aria-label="Memory review"]').waitFor({ state: 'visible', timeout: 20_000 });
+  await page
+    .locator('section[aria-label="Memory review"]')
+    .waitFor({ state: 'visible', timeout: 20_000 });
   // The rows load asynchronously after the tray opens; wait for content.
   await page.locator('.qlt-memory-item').first().waitFor({ state: 'visible', timeout: 20_000 });
 };
@@ -150,7 +157,9 @@ try {
   if (trayDuringStream !== 0) {
     fail('the memory tray opened by itself (auto-open violation)');
   }
-  const activeAfterTurn = await page.evaluate(() => document.activeElement?.id ?? document.activeElement?.tagName);
+  const activeAfterTurn = await page.evaluate(
+    () => document.activeElement?.id ?? document.activeElement?.tagName,
+  );
   if (activeAfterTurn === 'qlt-memory-chip' || /memory/i.test(String(activeAfterTurn))) {
     fail(`focus was stolen by the memory surface (activeElement=${activeAfterTurn})`);
   }
@@ -170,7 +179,16 @@ try {
   await openTray(page);
   const tray = page.locator('section[aria-label="Memory review"]');
   const trayText = (await tray.textContent()) ?? '';
-  for (const expected of ['Possible claim', 'Deep work preferences', 'Drafted by the assistant', 'Confirm', 'Edit', 'Reject', 'Withdraw', 'Remember this']) {
+  for (const expected of [
+    'Possible claim',
+    'Deep work preferences',
+    'Drafted by the assistant',
+    'Confirm',
+    'Edit',
+    'Reject',
+    'Withdraw',
+    'Remember this',
+  ]) {
     if (!trayText.includes(expected)) {
       fail(`the review tray is missing expected content: ${expected}`);
     }
@@ -178,7 +196,10 @@ try {
   const confirmButton = tray.getByRole('button', { name: 'Confirm', exact: true }).first();
   await confirmButton.focus();
   await page.keyboard.press('Enter');
-  await tray.locator('.qlt-memory-status[data-status="confirmed"]').first().waitFor({ state: 'visible', timeout: 20_000 });
+  await tray
+    .locator('.qlt-memory-status[data-status="confirmed"]')
+    .first()
+    .waitFor({ state: 'visible', timeout: 20_000 });
   note('5 + 11: keyboard-only review and confirm crossed the governed boundary');
 
   // 6 + 7: hard reload around the commit boundary converges on the truth;
@@ -186,13 +207,20 @@ try {
   await page.reload({ waitUntil: 'networkidle' });
   await openThreadAt(page, 0);
   await openTray(page);
-  await tray.locator('.qlt-memory-status[data-status="confirmed"]').first().waitFor({ state: 'visible', timeout: 20_000 });
-  const recordBadges = tray.locator('.qlt-memory-item[data-kind="claim"] .qlt-memory-status[data-status="active"]');
+  await tray
+    .locator('.qlt-memory-status[data-status="confirmed"]')
+    .first()
+    .waitFor({ state: 'visible', timeout: 20_000 });
+  const recordBadges = tray.locator(
+    '.qlt-memory-item[data-kind="claim"] .qlt-memory-status[data-status="active"]',
+  );
   const claimCount = await recordBadges.count();
   if (claimCount !== 1) {
     fail(`expected EXACTLY one confirmed claim record after the ceremony, found ${claimCount}`);
   } else {
-    note('6 + 7: hard reload converged on the truthful confirmed state; exactly one claim record exists');
+    note(
+      '6 + 7: hard reload converged on the truthful confirmed state; exactly one claim record exists',
+    );
   }
   await tray.getByRole('button', { name: 'Close memory review' }).click();
 
@@ -201,8 +229,13 @@ try {
   await openTray(page);
   await tray.getByRole('button', { name: 'Reject', exact: true }).first().focus();
   await page.keyboard.press('Enter');
-  await tray.locator('.qlt-memory-status[data-status="rejected"]').first().waitFor({ state: 'visible', timeout: 20_000 });
-  const rejectedClaims = await tray.locator('.qlt-memory-item[data-kind="commitment"] .qlt-memory-status[data-status="active"]').count();
+  await tray
+    .locator('.qlt-memory-status[data-status="rejected"]')
+    .first()
+    .waitFor({ state: 'visible', timeout: 20_000 });
+  const rejectedClaims = await tray
+    .locator('.qlt-memory-item[data-kind="commitment"] .qlt-memory-status[data-status="active"]')
+    .count();
   if (rejectedClaims !== 0) {
     fail('a rejected proposal produced a canonical record (authority violation)');
   } else {
@@ -215,8 +248,13 @@ try {
   await openTray(page);
   await tray.getByRole('button', { name: 'Withdraw', exact: true }).first().focus();
   await page.keyboard.press('Enter');
-  await tray.locator('.qlt-memory-status[data-status="withdrawn"]').first().waitFor({ state: 'visible', timeout: 20_000 });
-  const withdrawnLoops = await tray.locator('.qlt-memory-item[data-kind="open_loop"] .qlt-memory-status[data-status="open"]').count();
+  await tray
+    .locator('.qlt-memory-status[data-status="withdrawn"]')
+    .first()
+    .waitFor({ state: 'visible', timeout: 20_000 });
+  const withdrawnLoops = await tray
+    .locator('.qlt-memory-item[data-kind="open_loop"] .qlt-memory-status[data-status="open"]')
+    .count();
   if (withdrawnLoops !== 0) {
     fail('a withdrawn proposal produced a canonical record (authority violation)');
   } else {
