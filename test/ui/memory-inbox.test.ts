@@ -39,7 +39,7 @@ type MemoryRowInput = Record<string, unknown>;
 
 function makeFetch(
   memoryRows: MemoryRowInput[],
-  options: { memoryFails?: boolean } = {},
+  options: { memoryFails?: boolean; assembly?: Record<string, unknown> } = {},
 ): ReturnType<typeof vi.fn> {
   return vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
     const urlText = typeof url === 'string' ? url : url instanceof Request ? url.url : url.href;
@@ -47,6 +47,8 @@ function makeFetch(
     let payload: unknown = { ok: false, code: 'NO_MOCK' };
     if (urlText.includes('/api/health')) {
       payload = { ok: true, modelMode: 'offline-fixture' };
+    } else if (urlText.includes('/assembly')) {
+      payload = options.assembly ?? { ok: true };
     } else if (urlText.includes('/api/act')) {
       if (bodyText.includes('act.queryThreads')) {
         payload = { ok: true, value: { rows: [THREAD_ROW], total: 1 } };
@@ -76,7 +78,7 @@ afterEach(() => {
 
 async function mountWith(
   memoryRows: MemoryRowInput[],
-  options: { memoryFails?: boolean } = {},
+  options: { memoryFails?: boolean; assembly?: Record<string, unknown> } = {},
 ): Promise<HTMLElement> {
   vi.stubGlobal('fetch', makeFetch(memoryRows, options));
   const host = document.createElement('div');
@@ -144,9 +146,86 @@ describe('quiet memory inbox (Q3)', () => {
     // The chip is a real keyboard-operable button.
     expect(chip.tagName).toBe('BUTTON');
 
-    // Escape closes via the Close control being a real button as well.
+    // The Close control is a real, labelled button; Escape (the M-2 fix,
+    // tested below) also closes the tray with focus returning to the chip.
     const close = host.querySelector('button.qlt-memory-close') as HTMLButtonElement;
     expect(close).not.toBeNull();
+  });
+
+  it('M-2 (Q4): a real Escape keydown closes the tray and focus returns to the chip', async () => {
+    const host = await mountWith([PROPOSAL_ROW]);
+    const threadButton = Array.from(host.querySelectorAll('button.qlt-thread')).at(0) as
+      HTMLButtonElement | undefined;
+    threadButton!.click();
+    await new Promise((resolvePromise) => setTimeout(resolvePromise, 60));
+    const chip = host.querySelector('button.qlt-memory-chip') as HTMLButtonElement;
+    chip.click();
+    await new Promise((resolvePromise) => setTimeout(resolvePromise, 60));
+    const tray = host.querySelector('[aria-label="Memory review"]') as HTMLElement | null;
+    expect(tray).not.toBeNull();
+
+    // Focus a control INSIDE the tray (the Close button), then press the
+    // REAL Escape key on it — the keydown bubbles to the tray handler.
+    const close = host.querySelector('button.qlt-memory-close') as HTMLButtonElement;
+    close.focus();
+    expect(document.activeElement).toBe(close);
+    const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
+    close.dispatchEvent(event);
+    await new Promise((resolvePromise) => setTimeout(resolvePromise, 60));
+
+    expect(host.querySelector('[aria-label="Memory review"]')).toBeNull();
+    // Focus returns to the memory chip.
+    expect(document.activeElement).toBe(chip);
+    // The composer is unaffected (message composition remains enabled).
+    const composer = host.querySelector('#qlt-composer') as HTMLTextAreaElement;
+    expect(composer.disabled).toBe(false);
+  });
+
+  it('Q4 (D-Q4-6): the quiet context-usage line renders the used state truthfully', async () => {
+    const host = await mountWith([PROPOSAL_ROW], {
+      assembly: { ok: true, assembly: { outcome: 'complete', usedCount: 3 } },
+    });
+    await openThreadAndTray(host);
+    const line = host.querySelector('.qlt-memory-assembly') as HTMLElement | null;
+    expect(line).not.toBeNull();
+    expect((line!.textContent ?? '').trim()).toBe('Your last reply here used 3 memories.');
+    expect(line!.getAttribute('data-assembly')).toBe('complete');
+  });
+
+  it('Q4 (D-Q4-6): the line renders the singular, none, and unavailable states truthfully', async () => {
+    // singular form
+    const singular = await mountWith([PROPOSAL_ROW], {
+      assembly: { ok: true, assembly: { outcome: 'complete', usedCount: 1 } },
+    });
+    await openThreadAndTray(singular);
+    let line = singular.querySelector('.qlt-memory-assembly') as HTMLElement | null;
+    expect((line!.textContent ?? '').trim()).toBe('Your last reply here used 1 memory.');
+    unmount(singular as never);
+
+    // empty outcome renders "No memories used"
+    const none = await mountWith([PROPOSAL_ROW], {
+      assembly: { ok: true, assembly: { outcome: 'empty', usedCount: 0 } },
+    });
+    await openThreadAndTray(none);
+    line = none.querySelector('.qlt-memory-assembly') as HTMLElement;
+    expect((line!.textContent ?? '').trim()).toBe('No memories used');
+    unmount(none as never);
+
+    // failed outcome renders the truthful unavailable state
+    const failed = await mountWith([PROPOSAL_ROW], {
+      assembly: { ok: true, assembly: { outcome: 'failed', usedCount: 0 } },
+    });
+    await openThreadAndTray(failed);
+    line = failed.querySelector('.qlt-memory-assembly') as HTMLElement;
+    expect((line!.textContent ?? '').trim()).toBe('Memory unavailable for this turn');
+  });
+
+  it('Q4 (D-Q4-6): with no assembly yet the line truthfully reads "No memories used"', async () => {
+    const host = await mountWith([PROPOSAL_ROW], { assembly: { ok: true } });
+    await openThreadAndTray(host);
+    const line = host.querySelector('.qlt-memory-assembly') as HTMLElement | null;
+    expect(line).not.toBeNull();
+    expect((line!.textContent ?? '').trim()).toBe('No memories used');
   });
 
   it('pending, stale, and decided states render distinctly', async () => {

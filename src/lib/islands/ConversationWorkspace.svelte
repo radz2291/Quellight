@@ -184,6 +184,7 @@
     correctingId = undefined;
     lastPendingAnnounced = -1;
     await refreshMemory();
+    await refreshAssembly();
     const composer = document.getElementById('qlt-composer');
     composer?.focus();
   }
@@ -498,7 +499,9 @@
     }
     // The turn may have drafted a pending proposal: quiet, non-blocking
     // refresh of the memory indicator (never opens or focuses the tray).
+    // Q4: the quiet context-usage line refreshes with the same discipline.
     await refreshMemory();
+    await refreshAssembly();
   }
 
   // ---- Quiet memory inbox (Stage 07C Phase Q3; freeze §11) ----------------
@@ -538,6 +541,66 @@
   let saveSubject = $state('');
   let saveText = $state('');
   let chipButton: HTMLButtonElement | undefined = undefined;
+
+  // ---- Q4 quiet context-usage line (frozen contract §9; D-Q4-6) ----------
+  // One quiet, non-interruptive line inside the USER-OPENED tray only,
+  // derived from the thread's latest durable assembly record. Exact frozen
+  // strings; the transcript is never annotated and the tray never opens
+  // itself.
+  interface AssemblySummary {
+    outcome: 'complete' | 'empty' | 'failed';
+    usedCount: number;
+  }
+  let assemblySummary = $state<AssemblySummary | undefined>(undefined);
+
+  function assemblyLine(summary: AssemblySummary | undefined): string {
+    if (summary === undefined) {
+      return 'No memories used';
+    }
+    if (summary.outcome === 'failed') {
+      return 'Memory unavailable for this turn';
+    }
+    if (summary.outcome === 'complete' && summary.usedCount > 0) {
+      return summary.usedCount === 1
+        ? 'Your last reply here used 1 memory.'
+        : `Your last reply here used ${summary.usedCount} memories.`;
+    }
+    return 'No memories used';
+  }
+
+  async function refreshAssembly(): Promise<void> {
+    if (selectedThreadId === undefined) {
+      assemblySummary = undefined;
+      return;
+    }
+    try {
+      const { body } = await fetchJson(
+        `/api/threads/${encodeURIComponent(selectedThreadId)}/assembly`,
+        { method: 'GET' },
+      );
+      const result = body as {
+        ok: boolean;
+        assembly?: { outcome?: unknown; usedCount?: unknown };
+      };
+      if (result.ok && result.assembly !== undefined && result.assembly !== null) {
+        const outcome = result.assembly.outcome;
+        const usedCount = result.assembly.usedCount;
+        if (
+          (outcome === 'complete' || outcome === 'empty' || outcome === 'failed') &&
+          typeof usedCount === 'number' &&
+          Number.isSafeInteger(usedCount) &&
+          usedCount >= 0
+        ) {
+          assemblySummary = { outcome, usedCount };
+        }
+      } else if (result.ok) {
+        assemblySummary = undefined;
+      }
+      // A failed summary fetch keeps the last known state (nothing fabricated).
+    } catch {
+      /* quiet: the last known state stands */
+    }
+  }
 
   const pendingProposals = $derived(
     memoryRows.filter(
@@ -794,6 +857,7 @@
     memoryOpen = true;
     announcement = 'Memory review opened. Pending proposals are listed; deciding is optional.';
     void refreshMemory();
+    void refreshAssembly();
   }
 
   $effect(() => {
@@ -945,7 +1009,20 @@
         {/if}
 
         {#if memoryOpen}
-          <section class="qlt-memory" role="region" aria-label="Memory review">
+          <section
+            class="qlt-memory"
+            role="region"
+            aria-label="Memory review"
+            onkeydown={(event) => {
+              // M-2 (frozen Q4 contract §10): a real Escape keydown inside
+              // the tray closes it; focus returns to the memory chip; the
+              // composer is unaffected.
+              if (event.key === 'Escape') {
+                event.preventDefault();
+                closeMemory();
+              }
+            }}
+          >
             <div class="qlt-memory-head">
               <h3 class="qlt-memory-title">Memory review</h3>
               <button
@@ -960,6 +1037,9 @@
             <p class="qlt-memory-hint">
               Deciding is optional and nothing is confirmed by waiting. Pending proposals stay
               pending until you decide.
+            </p>
+            <p class="qlt-memory-assembly" role="status" data-assembly={assemblySummary === undefined ? 'none' : assemblySummary.outcome}>
+              {assemblyLine(assemblySummary)}
             </p>
             {#if memoryError !== ''}
               <p class="qlt-memory-error" role="status">The last memory action did not complete ({memoryError}). You can retry.</p>
@@ -1422,6 +1502,13 @@
     margin: 0;
     font-size: 0.8rem;
     color: var(--vict-color-muted, #575757);
+  }
+  /* Q4 quiet context-usage line: subdued, never interruptive. */
+  .qlt-memory-assembly {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--vict-color-muted, #575757);
+    font-style: italic;
   }
   .qlt-memory-error {
     margin: 0;
