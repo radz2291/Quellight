@@ -425,9 +425,13 @@ describe('Quellight composition — offline deterministic conversation (WP-4)', 
     const { composition, dir } = await compose({
       'who are you?': { kind: 'text', text: 'Quellight, in foundation stage.' },
     });
-    // The pinned authority envelope is EMPTY: the model has no tools and
-    // therefore no governed capability that could touch any store.
-    expect(composition.activation.capabilities.length).toBe(0);
+    // Phase Q3 (A-AMEND-3 of the frozen Q3 contract): the pinned authority
+    // envelope is EXACTLY the one inert proposal-draft capability — the
+    // model has no ceremony capability that could confirm, reject, amend,
+    // withdraw, correct, or read any store content.
+    expect(composition.activation.capabilities.length).toBe(1);
+    expect(composition.activation.capabilities[0].id).toBe('qlt.proposal.draft');
+    expect(composition.activation.capabilities[0].revision).toBe('1');
 
     const thread = await composition.sharedWorld.createThread({ title: 'Isolation thread' });
     const before = await composition.sharedWorld.listThreads();

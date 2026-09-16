@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Quellight — a persistent cognitive partner (long-term). Stage 07B delivers the conversation foundation: streaming conversation over persistent threads through the released VICT packages.",
+  "description": "Quellight \u2014 a persistent cognitive partner (long-term). Stage 07B delivers the conversation foundation: streaming conversation over persistent threads through the released VICT packages.",
   "license": "UNLICENSED",
   "engines": {
     "node": ">=22.13.0"
@@ -22,11 +22,13 @@
     "verify:consumer": "node scripts/verify-consumer.mjs",
     "verify:quellight": "node scripts/verify-quellight.mjs",
     "verify:browser": "node scripts/browser-check.mjs",
+    "verify:browser-ceremony": "node scripts/browser-ceremony-check.mjs",
     "verify:stop": "node scripts/browser-stop-check.mjs",
     "verify:live-provider": "node --import tsx scripts/verify-live-provider.mjs",
     "scaffold:host": "node scripts/scaffold-host.mjs",
     "verify:governance": "node --import tsx scripts/verify-governance.mjs",
-    "verify:q2": "node --import tsx scripts/verify-q2.mjs"
+    "verify:q2": "node --import tsx scripts/verify-q2.mjs",
+    "verify:q3": "node --import tsx scripts/verify-q3.mjs"
   },
   "dependencies": {
     "@victframework/application": "0.2.0",

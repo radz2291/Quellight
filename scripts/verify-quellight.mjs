@@ -6,7 +6,8 @@
  *
  *   1. format check            (npm run format:check)
  *   2. typecheck               (npm run typecheck)
- *   3. node-side tests         (composition, sharedworld, restart, reconnect)
+ *   3. node-side tests         (composition, sharedworld, ceremony authority,
+ *                                 restart, reconnect)
  *   4. browser-side island tests (happy-dom)
  *   5. production build        (npm run build) with a BUILD-LOG scan:
  *      any warning that is not on the closed allowlist fails (N-17/N-18)
@@ -73,6 +74,16 @@ record(
     maxBuffer: 16 * 1024 * 1024,
   }),
 );
+
+step('2d. Q3 governed ceremony conformance gate (Phase Q3)');
+record(
+  'verify:q3',
+  spawnSync(process.execPath, ['--import', 'tsx', 'scripts/verify-q3.mjs'], {
+    encoding: 'utf8',
+    timeout: 300_000,
+    maxBuffer: 16 * 1024 * 1024,
+  }),
+);
 step('3. node-side tests (composition, sharedworld, restart, reconnect)');
 record('test:node', runNpm('test:node'));
 
@@ -130,6 +141,17 @@ step('6b. real-browser Stop regression (F-1): old-commit negative control + real
 record(
   'browser-stop-check',
   spawnSync(process.execPath, ['scripts/browser-stop-check.mjs'], {
+    encoding: 'utf8',
+    timeout: 600_000,
+    maxBuffer: 32 * 1024 * 1024,
+  }),
+);
+
+// 6c. TEST-1: the permanent real-browser ceremony recovery proof (Phase Q3).
+step('6c. TEST-1 real-browser ceremony recovery (Phase Q3, offline deterministic fixture)');
+record(
+  'browser-ceremony-check',
+  spawnSync(process.execPath, ['scripts/browser-ceremony-check.mjs'], {
     encoding: 'utf8',
     timeout: 600_000,
     maxBuffer: 32 * 1024 * 1024,

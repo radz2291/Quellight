@@ -25,10 +25,11 @@
  *                       refusal.
  *   4. STRUCTURAL     — no route/island/component references the meaning
  *                       store; the compiled plan carries EXACTLY the five
- *                       declared thread actions; the thread resource
- *                       declares exactly its four mutations; no
- *                       proposal/ceremony vocabulary anywhere in the
- *                       Application Definition.
+ *                       declared thread actions plus the frozen Q3 memory
+ *                       inventory (re-pinned by the Q3 contract freeze
+ *                       §16/§18 — never weakened); the thread resource
+ *                       declares exactly its four mutations and the Q3
+ *                       memory resource exactly its thirteen ops.
  *   5. PINS           — package.json @victframework/* deps all exactly
  *                       0.2.0; installed @victframework/server is 0.2.0
  *                       (the full gate remains `verify:consumer`).
@@ -510,7 +511,7 @@ console.log('\n[3] REPOSITORY SMOKE — ceremony, correction, idempotency, refus
 // 4. STRUCTURAL NO-WIRING
 // ---------------------------------------------------------------------------
 console.log('\n[4] STRUCTURAL — no production path reaches the meaning repository');
-{
+await (async () => {
   const forbidden = ['meaning-store', 'meaning-contract', 'sharedWorld.meaning', '.meaning'];
   const roots = ['src/routes', 'src/lib/islands', 'src/lib/components'];
   const files = [];
@@ -535,24 +536,35 @@ console.log('\n[4] STRUCTURAL — no production path reaches the meaning reposit
   }
   check('no route/island/component references the meaning store', 'structural', clean);
 
+  // Phase Q3 reconciliation (frozen Q3 contract §16, §18): the compiled
+  // plan now legitimately carries the Q3 ceremony surface alongside the
+  // UNCHANGED five thread actions. The Q2-era 'exactly five actions' pin is
+  // re-pinned to the frozen Q3 inventory — never weakened: the thread
+  // surface and the ceremony ops are both exact-inventory enforced, and the
+  // dynamic no-meaning-store scan above is unchanged.
+  const ceremony = await import('../src/lib/sharedworld/ceremony-contract.ts');
   const plan = getCompiledPlan();
   const actionIds = Object.keys(plan.actions).sort();
+  const threadActionIds = Object.keys(plan.actions)
+    .filter((id) => plan.actions[id].resourceId === 'qlt.threads')
+    .sort();
   check(
-    'the compiled plan carries EXACTLY the five declared thread actions',
+    'the compiled plan still carries EXACTLY the five declared thread actions',
     'structural',
-    JSON.stringify(actionIds) ===
-      JSON.stringify([
-        'act.archiveThread',
-        'act.createThread',
-        'act.queryThreads',
-        'act.renameThread',
-        'act.reopenThread',
-      ]),
+    JSON.stringify(threadActionIds) === JSON.stringify([...ceremony.QLT_THREAD_ACTION_IDS].sort()),
   );
   check(
-    'every plan action targets qlt.threads',
+    'the compiled plan carries EXACTLY the frozen Q3 action inventory',
     'structural',
-    Object.values(plan.actions).every((action) => action.resourceId === 'qlt.threads'),
+    JSON.stringify(actionIds) ===
+      JSON.stringify([...ceremony.QLT_THREAD_ACTION_IDS, ...ceremony.QLT_MEMORY_ACTION_IDS].sort()),
+  );
+  check(
+    'every plan action targets qlt.threads or the Q3 qlt.memory resource',
+    'structural',
+    Object.values(plan.actions).every((action) =>
+      ['qlt.threads', 'qlt.memory'].includes(action.resourceId),
+    ),
   );
   check(
     'the thread resource declares exactly its four mutations',
@@ -561,14 +573,17 @@ console.log('\n[4] STRUCTURAL — no production path reaches the meaning reposit
       JSON.stringify(['archive', 'create', 'rename', 'reopen']),
   );
   check(
-    'no action id carries proposal/ceremony vocabulary',
+    'the Q3 memory resource declares exactly the frozen thirteen mutation ops',
     'structural',
-    actionIds.every(
-      (id) => !/proposal|confirm|reject|amend|withdraw|ceremony|commitment|claim|loop/i.test(id),
-    ),
+    JSON.stringify(
+      Object.values(plan.actions)
+        .filter((action) => action.resourceId === 'qlt.memory' && action.kind === 'mutation')
+        .map((action) => action.op)
+        .sort(),
+    ) === JSON.stringify([...ceremony.QLT_MEMORY_MUTATION_OPS].sort()),
   );
   console.log(`  structural: ${sections.structural} checks`);
-}
+})();
 
 // ---------------------------------------------------------------------------
 // 5. RELEASE PINS (light; the full gate remains verify:consumer)

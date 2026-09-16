@@ -1617,8 +1617,8 @@ describe('A-28: credential canaries never persist (when rejected) and never echo
   });
 });
 
-describe('A-29: no production path reaches the meaning repository', () => {
-  it('no route, island, or component references the meaning store; the plan has exactly the five thread actions', () => {
+describe('A-29: no production path reaches the meaning repository outside the governed Q3 surface', () => {
+  it('no route, island, or component references the meaning store; the plan carries exactly the five thread actions plus the frozen Q3 inventory', async () => {
     const roots = ['src/routes', 'src/lib/islands', 'src/lib/components'];
     const forbidden = ['meaning-store', 'meaning-contract', 'sharedWorld.meaning', '.meaning'];
     const files: string[] = [];
@@ -1643,25 +1643,34 @@ describe('A-29: no production path reaches the meaning repository', () => {
       }
     }
 
+    // Phase Q3 reconciliation (frozen Q3 contract §16): the plan now
+    // legitimately carries the governed ceremony surface; the Q2-era
+    // assertions are re-pinned to the frozen Q3 inventory — never weakened
+    // (the thread surface, the memory query, and the thirteen ceremony ops
+    // are all exact-inventory enforced; the no-meaning-store scan above is
+    // unchanged).
+    const ceremony = await import('../src/lib/sharedworld/ceremony-contract');
     const plan = getCompiledPlan();
     const actionIds = Object.keys(plan.actions).sort();
-    expect(actionIds).toEqual([
-      'act.archiveThread',
-      'act.createThread',
-      'act.queryThreads',
-      'act.renameThread',
-      'act.reopenThread',
-    ]);
-    for (const action of Object.values(plan.actions)) {
-      expect((action as { resourceId?: string }).resourceId).toBe('qlt.threads');
-    }
+    expect(actionIds).toEqual(
+      [...ceremony.QLT_THREAD_ACTION_IDS, ...ceremony.QLT_MEMORY_ACTION_IDS].sort(),
+    );
+    expect(actionIds).toHaveLength(19);
+    const threadActionIds = actionIds.filter(
+      (id) => (plan.actions[id] as { resourceId?: string }).resourceId === 'qlt.threads',
+    );
+    expect(new Set(threadActionIds)).toEqual(new Set(ceremony.QLT_THREAD_ACTION_IDS));
     const mutationOps = (threadResource.mutations ?? []).map((mutation) => mutation.op).sort();
     expect(mutationOps).toEqual(['archive', 'create', 'rename', 'reopen']);
-    for (const id of actionIds) {
-      expect(id).not.toMatch(
-        /proposal|confirm|reject|amend|withdraw|ceremony|commitment|claim|loop/i,
-      );
-    }
+    const memoryMutationOps = Object.values(plan.actions)
+      .filter(
+        (action) =>
+          (action as { resourceId?: string }).resourceId === 'qlt.memory' &&
+          (action as { kind?: string }).kind === 'mutation',
+      )
+      .map((action) => (action as { op: string }).op)
+      .sort();
+    expect(memoryMutationOps).toEqual([...ceremony.QLT_MEMORY_MUTATION_OPS].sort());
   });
 });
 
