@@ -299,3 +299,35 @@ ceremony recovery proof) is wired into `verify:quellight` alongside the
 focused `verify:q3` gate. Phase Q3 is not verified or formally closed
 by this update; Phases Q4–Q7 have not begun; Stage 07C and Stage 07
 remain In Progress.
+
+**Status update (2026-09-16, Phase Q3 independent verification and formal
+closure):** Phase Q3 was independently verified with the verdict
+`VERIFIED WITH NON-BLOCKING ISSUES — READY FOR FORMAL CLOSURE`
+(zero Blocking/High findings; three Medium, three Low, two Observations,
+all non-blocking;
+`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q3-INDEPENDENT-VERIFICATION.md`,
+audit commit `a8b702f…`, audited implementation tree `2e494723…`) and is
+FORMALLY CLOSED
+(`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q3-FORMAL-CLOSURE.md`; audited
+executable SHA unchanged). The carried findings are recorded in the
+closure with their obligations: M-1 the disclosed `read` effect-class
+metadata on the pinned capability (framework-change proposal owed to the
+VICT owners; the durable invocation record shows `effect: 'read'` for a
+durable creation until it lands); M-2 the frozen Escape-to-close
+interaction item is unimplemented (truthful test or owner-approved
+deviation owed in the next inbox change); M-3 process discipline
+(amendment commit `8dc0032` bundled with Lane C's implementation; content
+verified conformant; future amendments must not share a commit with
+consuming implementation); L-1 documentary errata (amendment lane
+misname; `id DESC` tie-break against the frozen `id ASC` text; extra
+accepted sort field `createdAt`); L-2 the real browser never exercises a
+stale proposal end-to-end (the frozen containment map authorized the
+node/component split); L-3 the implementation report's changed-file
+inventory erratum (actual 26 files +6551/−102 vs the claimed 22 files
++6106/−93). D-Q3-1…D-Q3-6 stand as ratified; the carried F-Q2-2
+discrepancy is resolved by D-Q3-1; the Q1-era FENCE-1 Low finding is
+resolved by D-Q3-6 and the TEST-1 Low debt is satisfied and
+independently verified closed. Confirmed Shared World meaning remains
+unavailable to the agent. Phase Q4 contract and implementation planning
+is PERMITTED and NOT BEGUN; Phases Q5–Q7 have not begun; Stage 07C and
+Stage 07 remain In Progress.

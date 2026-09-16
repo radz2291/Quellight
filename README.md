@@ -13,9 +13,9 @@ linked, or patched.
 Stage 07B: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
 Stage 07C Phase Q1: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
 Stage 07C Phase Q2: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (durable Shared World schema)
-Stage 07C Phase Q3: IMPLEMENTED — AWAITING INDEPENDENT VERIFICATION (governed confirmation ceremony and quiet memory inbox)
-Stage 07C Phases Q4–Q7: NOT BEGUN (Shared World meaning remains unavailable to the agent)
-Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 implemented; Q4–Q7, 07D, 07E remaining)
+Stage 07C Phase Q3: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (governed confirmation ceremony and quiet memory inbox)
+Stage 07C Phases Q4–Q7: NOT BEGUN (Shared World meaning remains unavailable to the agent; Q4 contract and implementation planning is PERMITTED — NOT BEGUN)
+Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4–Q7, 07D, 07E remaining)
 ```
 
 Stage 07B is formally closed (2026-09-10) against the audited evidence
@@ -55,7 +55,23 @@ path: schema existence alone never makes material canonical,
 model-visible, or user-confirmed; `/api/act` and the declared action
 surface are unchanged; any future effectful write uses the governed VICT
 Phase Q3 — the governed confirmation ceremony and quiet memory inbox
-(2026-09-16) — is IMPLEMENTED and AWAITING INDEPENDENT VERIFICATION
+(2026-09-16) — was independently verified on 2026-09-16 (verdict
+`VERIFIED WITH NON-BLOCKING ISSUES — READY FOR FORMAL CLOSURE`, audit
+commit `a8b702f…`,
+`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q3-INDEPENDENT-VERIFICATION.md`;
+zero Blocking/High findings; three Medium and three Low non-blocking
+findings carried to the closure) and is FORMALLY CLOSED
+(`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q3-FORMAL-CLOSURE.md`; audited
+implementation tree `2e494723…`; full first-run verification ladder
+green incl. TEST-1 and `npm audit --omit=dev` clean). The carried
+non-blocking findings: M-1 the pinned capability's disclosed `read`
+effect-class metadata (the framework-change proposal remains owed to
+the VICT owners); M-2 the frozen Escape-to-close interaction item is
+unimplemented (Close control and focus-return exist; truthful test owed
+in the next inbox change); M-3 process discipline — commit `8dc0032`
+bundled the A-AMEND-2 amendment with Lane C UI/test implementation
+(content verified conformant; amendment and consuming implementation
+must never share a commit in future freezes). The Q3 surface:
 (`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q3-CONFIRMATION-CEREMONY-IMPLEMENTATION.md`;
 frozen contract:
 `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q3-CONTRACT-FREEZE.md`, including
@@ -73,7 +89,8 @@ otherwise prohibited request keys closed with the stable
 `QLT_INGRESS_PROHIBITED_FIELD` code. TEST-1 permanently proves the
 ceremony recovery in a real browser (`scripts/browser-ceremony-check.mjs`;
 `npm run verify:browser-ceremony`). Confirmed Shared World meaning
-remains unavailable to the agent — that is Phase Q4, which has not begun.
+remains unavailable to the agent — that is Phase Q4, whose contract and
+implementation planning is PERMITTED but has not begun.
 0.2.0 boundary. Phases Q4–Q7 have not begun; VICT `0.1.0`/`0.1.1` remain published but
 are not adopted — any later change requires an explicit compatibility
 decision and fresh verification.

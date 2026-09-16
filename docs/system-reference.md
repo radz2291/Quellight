@@ -1,14 +1,14 @@
 # Quellight system reference — Stage 07B/07C
 
-## Status (current, 2026-09-16 — Phase Q3 implemented)
+## Status (current, 2026-09-16 — Phase Q3 formally closed)
 
 ```text
 Stage 07B: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
 Stage 07C Phase Q1: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
 Stage 07C Phase Q2: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (durable Shared World schema)
-Stage 07C Phase Q3: IMPLEMENTED — AWAITING INDEPENDENT VERIFICATION (governed confirmation ceremony and quiet memory inbox)
-Stage 07C Phases Q4–Q7: NOT BEGUN (Shared World meaning remains unavailable to the agent)
-Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 implemented; Q4–Q7, 07D, 07E remaining)
+Stage 07C Phase Q3: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (governed confirmation ceremony and quiet memory inbox)
+Stage 07C Phases Q4–Q7: NOT BEGUN (Shared World meaning remains unavailable to the agent; Q4 contract and implementation planning is PERMITTED — NOT BEGUN)
+Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4–Q7, 07D, 07E remaining)
 ```
 
 - The retained dependency is now the immutable coordinated release set
@@ -65,7 +65,12 @@ NON-BLOCKING ISSUES — READY FOR FORMAL CLOSURE`, audit commit
   tests only; any future effectful write uses the governed VICT 0.2.0
   boundary adopted in Q1. Phase Q3 contract and implementation planning
   is permitted but has not begun; Phases Q4–Q7 have not begun; Shared
-  World meaning and ceremony implementation has not begun.
+  World meaning and ceremony implementation has not begun. (Superseded
+  2026-09-16: Q3 is implemented, independently verified, and formally
+  closed — see the Phase Q3 entry below; the carried FENCE-1 Low finding
+  was resolved in Q3 as D-Q3-6 and the TEST-1 Low debt was satisfied by
+  the permanent real-browser ceremony recovery proof; both were
+  independently verified closed.)
 - Non-blocking debt carried forward: F-3 (open Low, `VICT_`-prefixed
   display-only code), F-4 (open Low, historical implementation-report
   placement), F-5 (open Low, cosmetic verifier output), F-6/F-7
@@ -97,11 +102,34 @@ NON-BLOCKING ISSUES — READY FOR FORMAL CLOSURE`, audit commit
   independent live proof are remediated/resolved and independently
   verified closed.
 - Phase Q3 — the governed confirmation ceremony and quiet memory inbox —
-  is IMPLEMENTED and AWAITING INDEPENDENT VERIFICATION (not verified, not
-  formally closed; Q4 has not begun). Reports:
+  was independently verified on 2026-09-16 (verdict
+  `VERIFIED WITH NON-BLOCKING ISSUES — READY FOR FORMAL CLOSURE`, audit
+  commit `a8b702f…`,
+  `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q3-INDEPENDENT-VERIFICATION.md`;
+  zero Blocking/High findings; carried non-blocking findings M-1/M-2/M-3
+  and L-1/L-2/L-3) and is FORMALLY CLOSED
+  (`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q3-FORMAL-CLOSURE.md`; audited
+  implementation tree `2e494723…`; audited executable SHA unchanged;
+  Q4 contract and implementation planning is PERMITTED and NOT BEGUN).
+  Reports:
   `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q3-CONTRACT-FREEZE.md` (with
-  dated amendments A-AMEND-1…4) and
-  `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q3-CONFIRMATION-CEREMONY-IMPLEMENTATION.md`.
+  dated amendments A-AMEND-1…4),
+  `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q3-CONFIRMATION-CEREMONY-IMPLEMENTATION.md`,
+  and the independent verification / formal closure reports above.
+  Carried obligations: M-1 the disclosed `read` effect-class metadata on
+  the pinned capability (framework-change proposal owed to the VICT
+  owners; the durable invocation record shows `effect:'read'` for a
+  durable creation until it lands); M-2 the frozen Escape-to-close
+  interaction item is unimplemented (Close control and focus-return
+  exist; truthful test owed in the next inbox change); M-3 process
+  discipline — commit `8dc0032` bundled the A-AMEND-2 amendment with
+  Lane C's UI/test implementation (content verified conformant); L-1
+  documentary errata (amendment lane misname; `id DESC` tie-break vs the
+  frozen `id ASC` text; extra accepted sort field `createdAt`); L-2 the
+  real browser never exercises a stale proposal end-to-end (stale badge
+  component-proven, refusal node-proven per the frozen containment map);
+  L-3 the implementation report's changed-file inventory erratum
+  (claims 22 files +6106/−93; actual 26 files +6551/−102).
   Q3 delivers: the `qlt.memory@1` application resource (one query +
   thirteen mutation ops; a 19-action plan inventory gated by the focused
   `verify:q3` check, wired into `verify:quellight`); exactly one pinned
@@ -126,7 +154,7 @@ NON-BLOCKING ISSUES — READY FOR FORMAL CLOSURE`, audit commit
   Withdraw with edit=amend, direct Save as immediate canonical
   confirmation, API-level exit verbs without Q3 UI, and FENCE-1. The
   agent still cannot read, list, search, or assemble confirmed Shared
-  World material — that remains Q4 (not begun).
+  World material — that remains Q4 (permitted, not begun).
 - The status sections below describe the delivered Stage 07B behavior;
   `docs/stage-07b-report.md` is the preserved historical implementation
   report (its issuance-time status wording is superseded by this
