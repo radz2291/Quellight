@@ -509,6 +509,7 @@
   interface MemoryRow {
     id: string;
     kind: 'proposal' | 'claim' | 'commitment' | 'open_loop';
+    proposalKind: string;
     status: string;
     title: string;
     text: string;
@@ -553,10 +554,13 @@
   const memoryRecords = $derived(memoryRows.filter((row) => row.kind !== 'proposal'));
 
   function contentPayload(row: MemoryRow, text: string): Record<string, string> {
-    if (row.kind === 'commitment') {
+    // For proposals the SPECIFIC drafted kind governs the content shape;
+    // for records the family does.
+    const kind = row.kind === 'proposal' ? row.proposalKind : row.kind;
+    if (kind === 'commitment') {
       return { commitmentKey: row.title, statement: text };
     }
-    if (row.kind === 'open_loop') {
+    if (kind === 'open_loop') {
       return { subject: row.title, detail: text };
     }
     return { subject: row.title, statement: text };
@@ -661,7 +665,8 @@
     return row.status;
   }
 
-  function kindLabel(kind: string): string {
+  function kindLabel(row: MemoryRow): string {
+    const kind = row.kind === 'proposal' ? row.proposalKind : row.kind;
     if (kind === 'claim') return 'Possible claim';
     if (kind === 'commitment') return 'Possible commitment';
     if (kind === 'open_loop') return 'Possible open question';
@@ -862,16 +867,18 @@
             <button type="button" class="qlt-btn" onclick={() => (renaming = false)}>Cancel</button>
           {:else}
             <h2 class="qlt-thread-heading">{selectedThread.title}</h2>
-            {#if pendingCount > 0}
+    {#if pendingCount > 0 || memoryRows.length > 0}
               <button
                 type="button"
                 class="qlt-memory-chip"
                 bind:this={chipButton}
-                aria-label="Memory review, {pendingCount} pending {pendingCount === 1 ? 'proposal' : 'proposals'}"
+                aria-label={pendingCount > 0
+                  ? `Memory review, ${pendingCount} pending ${pendingCount === 1 ? 'proposal' : 'proposals'}`
+                  : 'Memory review'}
                 aria-expanded={memoryOpen}
                 onclick={toggleMemory}
               >
-                Memory · {pendingCount} pending
+                {pendingCount > 0 ? `Memory · ${pendingCount} pending` : 'Memory'}
               </button>
             {/if}
             <button type="button" class="qlt-btn" onclick={startRename} disabled={archived}>Rename</button>
@@ -966,7 +973,7 @@
               {#each pendingProposals as row (row.id)}
                 <li class="qlt-memory-item" data-stale={row.stale}>
                   <div class="qlt-memory-item-head">
-                    <span class="qlt-memory-kind">{kindLabel(row.kind)}</span>
+                    <span class="qlt-memory-kind">{kindLabel(row)}</span>
                     <span class="qlt-memory-status" data-status={row.stale === 'true' ? 'stale' : 'pending'}>
                       {statusLabel(row)}
                     </span>
@@ -1035,7 +1042,7 @@
               {#each decidedProposals as row (row.id)}
                 <li class="qlt-memory-item qlt-memory-item--decided" data-status={row.status}>
                   <div class="qlt-memory-item-head">
-                    <span class="qlt-memory-kind">{kindLabel(row.kind)}</span>
+                    <span class="qlt-memory-kind">{kindLabel(row)}</span>
                     <span class="qlt-memory-status" data-status={row.status}>{statusLabel(row)}</span>
                   </div>
                   <p class="qlt-memory-title-text">{row.title}</p>

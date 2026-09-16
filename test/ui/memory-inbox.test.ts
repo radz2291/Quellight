@@ -12,6 +12,7 @@ import ConversationWorkspace from '$lib/islands/ConversationWorkspace.svelte';
 const PROPOSAL_ROW = {
   id: 'qlt-prop-1',
   kind: 'proposal',
+  proposalKind: 'claim',
   status: 'proposed',
   title: 'Deep work preferences',
   text: 'The user does their most important work in focused morning sessions.',
@@ -87,8 +88,7 @@ async function mountWith(
 
 async function openThreadAndTray(host: HTMLElement): Promise<void> {
   const threadButton = Array.from(host.querySelectorAll('button.qlt-thread')).at(0) as
-    | HTMLButtonElement
-    | undefined;
+    HTMLButtonElement | undefined;
   expect(threadButton).not.toBeUndefined();
   threadButton!.click();
   await new Promise((resolvePromise) => setTimeout(resolvePromise, 60));
@@ -109,8 +109,7 @@ describe('quiet memory inbox (Q3)', () => {
   it('the chip shows the pending count, opening is user-only, and the composer stays enabled', async () => {
     const host = await mountWith([PROPOSAL_ROW]);
     const threadButton = Array.from(host.querySelectorAll('button.qlt-thread')).at(0) as
-      | HTMLButtonElement
-      | undefined;
+      HTMLButtonElement | undefined;
     threadButton!.click();
     await new Promise((resolvePromise) => setTimeout(resolvePromise, 60));
 
@@ -207,8 +206,7 @@ describe('quiet memory inbox (Q3)', () => {
   it('memory query failures stay quiet and truthful (no fabricated count, no blocked conversation)', async () => {
     const host = await mountWith([], { memoryFails: true });
     const threadButton = Array.from(host.querySelectorAll('button.qlt-thread')).at(0) as
-      | HTMLButtonElement
-      | undefined;
+      HTMLButtonElement | undefined;
     threadButton!.click();
     await new Promise((resolvePromise) => setTimeout(resolvePromise, 60));
     // No chip without a truthful count; no tray auto-opened.
