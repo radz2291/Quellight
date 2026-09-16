@@ -706,3 +706,17 @@ field; the adapter projection, the frozen module's `QLT_MEMORY_FIELDS`,
 and the UI consume it. Everything else is unchanged. Lane A's commit is
 amended in place (its files are the only code touched besides the frozen
 module data), and Lane C continues from the amended state.
+
+### A-AMEND-3 (2026-09-16, during Lane D's adversarial run)
+
+The Q1-era live test `test/composition.test.ts` (N-12) pins the agent
+authority envelope as EMPTY (`capabilities.length === 0`) — true for 07B
+through Q2, superseded by the frozen Q3 §3 envelope of exactly ONE
+capability. Lane D's file map gains `test/composition.test.ts` for ONE
+bounded reconciliation: the N-12 envelope assertion is re-pinned from
+"empty" to "exactly the pinned proposal-draft capability" (the same
+single-entry envelope, id + revision asserted); every other N-12
+assertion (no thread mutation by a text-only turn; store survival) is
+unchanged and stays green. This continues the same reconciliation
+principle recorded in §16 for the Q2-era structural gates: re-pinning
+to the amended frozen reality, never weakening.
