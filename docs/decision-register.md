@@ -352,7 +352,7 @@ Ratified in `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-CONTRACT-FREEZE.md`
 - **D-Q4-3 (cross-thread continuity).** `sourceThreadId` records origin,
   never access scope; three selection layers (current-thread, global,
   other-thread), classes open_loop → commitment → claim, `updatedAt
-  DESC, id ASC`; the 8-record/4096-byte budget prevents whole-World
+DESC, id ASC`; the 8-record/4096-byte budget prevents whole-World
   prompts; explicit user-controlled scope remains a possible Q5
   enhancement (nothing hidden was invented).
 - **D-Q4-4 (conflicts).** The assembler performs no semantic conflict

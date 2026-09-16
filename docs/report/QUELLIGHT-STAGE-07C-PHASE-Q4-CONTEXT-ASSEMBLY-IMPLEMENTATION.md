@@ -184,7 +184,7 @@ level by the Lane B/D suites).
   an amendment commit.
 - **L-1 (ordering/query surface): REPAIRED.** Every unified record
   listing orders `updatedAt DESC, id ASC` (`ORDER BY updated_at_ms
-  DESC, id ASC` verified in the store and pinned by tests); the accepted
+DESC, id ASC` verified in the store and pinned by tests); the accepted
   query-sort surface is restricted to exactly `updatedAt`
   (`QLT_CONTEXT_QUERY_SORT_FIELDS`; `ceremony-actions.ts` rejects other
   sort fields). Q3 historical reports and frozen documents were NOT
@@ -257,6 +257,7 @@ partial is ever fabricated.
 
 `scripts/browser-ceremony-check.mjs` (TEST-1) now also proves, against
 the production build with the deterministic offline fixture:
+
 - the L-2 stale-refusal chain (Scenario D, see §8);
 - M-2: a real Escape key closes the tray with focus on the memory chip;
   the composer is unaffected;
@@ -268,10 +269,10 @@ the production build with the deterministic offline fixture:
 - the Q3-era proofs remain green (chip counts, keyboard-only ceremony,
   reject/withdraw zero-effect, hard-reload convergence, axe clean in
   both viewports, zero console warnings/errors).
-One Q3-era flake was diagnosed and fixed in the script itself (the
-thread-creation re-render could swallow the Send activation; the send is
-now confirmed by the composer clearing, with a re-resolved click as the
-fallback) — disclosed as a script robustness fix, not a product change.
+  One Q3-era flake was diagnosed and fixed in the script itself (the
+  thread-creation re-render could swallow the Send activation; the send is
+  now confirmed by the composer clearing, with a re-resolved click as the
+  fallback) — disclosed as a script robustness fix, not a product change.
 
 ## 12. Changed-file inventory (Git-derived)
 
@@ -305,7 +306,7 @@ normalized to single spaces here and by the verifier):
 82 3 test/ui/memory-inbox.test.ts
 42 5 README.md
 49 4 docs/decision-register.md
-369 0 docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-CONTEXT-ASSEMBLY-IMPLEMENTATION.md
+370 0 docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-CONTEXT-ASSEMBLY-IMPLEMENTATION.md
 39 4 docs/system-reference.md
 ```
 
