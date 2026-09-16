@@ -39,6 +39,8 @@ import {
 import type { SharedWorldMeaningStore } from './meaning-contract.js';
 import { createSharedWorldMeaningStore } from './meaning-store.js';
 import { runSharedWorldMigrations } from './migrations.js';
+import type { ContextCandidateRow, QltContextAssemblyRecord } from './context-assembler.js';
+import { QLT_CONTEXT_MAX_RECORDS, QLT_CONTEXT_SCAN_LIMIT_PER_FAMILY } from './context-contract.js';
 
 const MAX_TITLE_LENGTH = 200;
 const MAX_ID_LENGTH = 128;
@@ -239,6 +241,26 @@ export interface SharedWorldSqlite extends SharedWorldPort {
    * correlation record. READ-ONLY; undefined when no link exists.
    */
   getThreadIdByConversation(mastraThreadId: string): Promise<string | undefined>;
+
+  // ---- Q4 per-turn context-assembly reads (all bounded; READ-ONLY over
+  // record rows; the assembly family itself is the ONLY new write family
+  // and it is append-only immutable evidence) ---------------------------
+
+  /**
+   * The bounded candidate scan for the context assembler: per family the
+   * most recent currently-relevant rows (`updated_at_ms DESC, id ASC`, at
+   * most QLT_CONTEXT_SCAN_LIMIT_PER_FAMILY each), with the lineage
+   * successor flag resolved in SQL. Never scans proposals or corrections.
+   */
+  listContextCandidates(): Promise<readonly ContextCandidateRow[]>;
+  /** Re-read specific candidate rows by id (replay rendering). */
+  getContextRowsByIds(ids: readonly string[]): Promise<readonly ContextCandidateRow[]>;
+  /** Insert-or-get the immutable per-turn assembly record (UNIQUE turn). */
+  recordContextAssembly(record: QltContextAssemblyRecord): Promise<QltContextAssemblyRecord>;
+  getContextAssemblyByTurn(turnId: string): Promise<QltContextAssemblyRecord | undefined>;
+  getLatestContextAssemblyForThread(
+    threadId: string,
+  ): Promise<QltContextAssemblyRecord | undefined>;
 }
 
 export function createSharedWorldSqlite(options: SharedWorldSqliteOptions): SharedWorldSqlite {
@@ -1055,13 +1077,14 @@ export function createSharedWorldSqlite(options: SharedWorldSqliteOptions): Shar
       }
     }
     // Deterministic global ordering across the requested families
-    // (updated_at_ms DESC, id ASC), then bounded pagination.
+    // (updated_at_ms DESC, id ASC — the frozen ordering; the Q4 L-1
+    // correction re-pins the tie-break to id ASC), then bounded pagination.
     rows.sort((left, right) =>
       left.updatedAtMs === right.updatedAtMs
         ? left.id < right.id
-          ? 1
+          ? -1
           : left.id > right.id
-            ? -1
+            ? 1
             : 0
         : right.updatedAtMs - left.updatedAtMs,
     );
@@ -1082,6 +1105,208 @@ export function createSharedWorldSqlite(options: SharedWorldSqliteOptions): Shar
     return row === undefined ? undefined : row.thread_id;
   }
 
+  // ---- Q4 per-turn context-assembly surface (Lane A) -----------------------
+
+  const CONTEXT_FAMILY_TABLES = {
+    claim: 'qlt_claim',
+    commitment: 'qlt_commitment',
+    open_loop: 'qlt_open_loop',
+  } as const;
+
+  function candidateRowOf(
+    family: keyof typeof CONTEXT_FAMILY_TABLES,
+    row: Record<string, unknown>,
+  ): ContextCandidateRow {
+    return {
+      family,
+      id: String(row['id'] ?? ''),
+      version: Number(row['version'] ?? 0),
+      status: String(row['status'] ?? ''),
+      subject: family === 'commitment' ? null : (row['subject'] as string | null),
+      commitmentKey: family === 'commitment' ? (row['commitment_key'] as string | null) : null,
+      loopKind: family === 'open_loop' ? (row['loop_kind'] as string | null) : null,
+      epistemicType: family === 'claim' ? (row['epistemic_type'] as string | null) : null,
+      honestyState: family === 'claim' ? (row['honesty_state'] as string | null) : null,
+      confidence: family === 'claim' ? (row['confidence'] as string | null) : null,
+      content: String(row['content'] ?? ''),
+      contentFingerprint: String(row['content_fingerprint'] ?? ''),
+      sourceThreadId: (row['source_thread_id'] as string | null) ?? null,
+      createdBy: String(row['created_by'] ?? ''),
+      updatedAtMs: Number(row['updated_at_ms'] ?? 0),
+      hasSuccessor: Number(row['has_successor'] ?? 0) === 1,
+    };
+  }
+
+  async function listContextCandidates(): Promise<readonly ContextCandidateRow[]> {
+    const rows: ContextCandidateRow[] = [];
+    for (const family of Object.keys(CONTEXT_FAMILY_TABLES) as Array<
+      keyof typeof CONTEXT_FAMILY_TABLES
+    >) {
+      const table = CONTEXT_FAMILY_TABLES[family];
+      const raw = db
+        .prepare(
+          `SELECT t.*, EXISTS(
+             SELECT 1 FROM ${table} s WHERE s.supersedes_id = t.id
+           ) AS has_successor
+           FROM ${table} t
+           WHERE t.retention_state = 'currently-relevant'
+           ORDER BY t.updated_at_ms DESC, t.id ASC
+           LIMIT ?;`,
+        )
+        .all(QLT_CONTEXT_SCAN_LIMIT_PER_FAMILY) as unknown as Array<Record<string, unknown>>;
+      for (const row of raw) {
+        rows.push(candidateRowOf(family, row));
+      }
+    }
+    return rows;
+  }
+
+  async function getContextRowsByIds(
+    ids: readonly string[],
+  ): Promise<readonly ContextCandidateRow[]> {
+    if (ids.length === 0 || ids.length > QLT_CONTEXT_MAX_RECORDS) {
+      return [];
+    }
+    for (const id of ids) {
+      if (!assertBoundedIdSilent(id)) {
+        return [];
+      }
+    }
+    const rows: ContextCandidateRow[] = [];
+    for (const family of Object.keys(CONTEXT_FAMILY_TABLES) as Array<
+      keyof typeof CONTEXT_FAMILY_TABLES
+    >) {
+      const table = CONTEXT_FAMILY_TABLES[family];
+      const placeholders = ids.map(() => '?').join(',');
+      const raw = db
+        .prepare(
+          `SELECT t.*, EXISTS(
+             SELECT 1 FROM ${table} s WHERE s.supersedes_id = t.id
+           ) AS has_successor
+           FROM ${table} t
+           WHERE t.id IN (${placeholders});`,
+        )
+        .all(...ids) as unknown as Array<Record<string, unknown>>;
+      for (const row of raw) {
+        rows.push(candidateRowOf(family, row));
+      }
+    }
+    return rows;
+  }
+
+  function assertBoundedIdSilent(id: string): boolean {
+    return (
+      typeof id === 'string' &&
+      id.length > 0 &&
+      id.length <= MAX_ID_LENGTH &&
+      /^[A-Za-z0-9][A-Za-z0-9._:-]*$/.test(id)
+    );
+  }
+
+  function assemblyRecordOf(row: Record<string, unknown>): QltContextAssemblyRecord {
+    const failureCode = row['failure_code'];
+    return {
+      id: String(row['id'] ?? ''),
+      turnId: String(row['turn_id'] ?? ''),
+      threadId: String(row['thread_id'] ?? ''),
+      assemblerVersion: String(row['assembler_version'] ?? ''),
+      outcome: row['outcome'] as QltContextAssemblyRecord['outcome'],
+      selectedIds: JSON.parse(
+        String(row['selected_ids'] ?? '[]'),
+      ) as QltContextAssemblyRecord['selectedIds'],
+      excluded: JSON.parse(String(row['excluded'] ?? '[]')) as QltContextAssemblyRecord['excluded'],
+      orderingIdentity: String(row['ordering_identity'] ?? '[]'),
+      maxRecords: Number(row['max_records'] ?? 0),
+      maxBytes: Number(row['max_bytes'] ?? 0),
+      renderedBytes: Number(row['rendered_bytes'] ?? 0),
+      fingerprint: String(row['fingerprint'] ?? ''),
+      ...(failureCode !== null && failureCode !== undefined
+        ? { failureCode: String(failureCode) }
+        : {}),
+      createdAtMs: Number(row['created_at_ms'] ?? 0),
+    };
+  }
+
+  async function recordContextAssembly(
+    record: QltContextAssemblyRecord,
+  ): Promise<QltContextAssemblyRecord> {
+    const existing = await getContextAssemblyByTurn(record.turnId);
+    if (existing !== undefined) {
+      return existing;
+    }
+    const selectedJson = JSON.stringify(record.selectedIds);
+    const excludedJson = JSON.stringify(record.excluded);
+    if (
+      selectedJson.length > 4096 ||
+      excludedJson.length > 8192 ||
+      record.orderingIdentity.length > 4096
+    ) {
+      throw new Error('the assembly evidence exceeded the frozen record bounds');
+    }
+    try {
+      db.prepare(
+        `INSERT INTO qlt_context_assembly
+           (id, turn_id, thread_id, assembler_version, outcome, selected_ids, excluded,
+            ordering_identity, max_records, max_bytes, rendered_bytes, fingerprint,
+            failure_code, created_at_ms)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+      ).run(
+        record.id,
+        record.turnId,
+        record.threadId,
+        record.assemblerVersion,
+        record.outcome,
+        selectedJson,
+        excludedJson,
+        record.orderingIdentity,
+        record.maxRecords,
+        record.maxBytes,
+        record.renderedBytes,
+        record.fingerprint,
+        record.failureCode ?? null,
+        record.createdAtMs,
+      );
+      return record;
+    } catch (cause) {
+      const message = String((cause as { message?: string }).message ?? '');
+      if (message.includes('UNIQUE')) {
+        // Converged: another assembly for the same turn already persisted.
+        const winner = await getContextAssemblyByTurn(record.turnId);
+        if (winner !== undefined) {
+          return winner;
+        }
+      }
+      throw cause;
+    }
+  }
+
+  async function getContextAssemblyByTurn(
+    turnId: string,
+  ): Promise<QltContextAssemblyRecord | undefined> {
+    if (typeof turnId !== 'string' || turnId.length === 0 || turnId.length > 128) {
+      return undefined;
+    }
+    const row = db
+      .prepare('SELECT * FROM qlt_context_assembly WHERE turn_id = ?;')
+      .get(turnId) as unknown as Record<string, unknown> | undefined;
+    return row === undefined ? undefined : assemblyRecordOf(row);
+  }
+
+  async function getLatestContextAssemblyForThread(
+    threadId: string,
+  ): Promise<QltContextAssemblyRecord | undefined> {
+    if (!assertBoundedIdSilent(threadId)) {
+      return undefined;
+    }
+    const row = db
+      .prepare(
+        `SELECT * FROM qlt_context_assembly WHERE thread_id = ?
+         ORDER BY created_at_ms DESC, turn_id ASC LIMIT 1;`,
+      )
+      .get(threadId) as unknown as Record<string, unknown> | undefined;
+    return row === undefined ? undefined : assemblyRecordOf(row);
+  }
+
   return {
     ...port,
     id: adapter.id,
@@ -1092,5 +1317,10 @@ export function createSharedWorldSqlite(options: SharedWorldSqliteOptions): Shar
     meaning,
     listMemoryRows,
     getThreadIdByConversation,
+    listContextCandidates,
+    getContextRowsByIds,
+    recordContextAssembly,
+    getContextAssemblyByTurn,
+    getLatestContextAssemblyForThread,
   };
 }

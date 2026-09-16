@@ -217,10 +217,51 @@ const MIGRATION_0002_MEANING_FOUNDATION: QuellightMigration = {
   },
 };
 
+/**
+ * Migration 3: the 07C Phase Q4 per-turn context-assembly family (frozen
+ * contract:
+ * docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-CONTRACT-FREEZE.md §7;
+ * machine-readable inventory: `context-contract.ts`
+ * QLT_CONTEXT_ASSEMBLY_SCHEMA_INVENTORY). ADDITIVE `CREATE TABLE`/
+ * `CREATE INDEX` only — it neither reads nor writes pre-existing rows and
+ * is incapable of deleting or rewriting existing user data. The assembly
+ * family is IMMUTABLE, append-only evidence: exactly one row per logical
+ * turn (UNIQUE turn_id), no record CONTENT is ever stored (ids, kinds,
+ * versions, bounded exclusion reasons, counts only).
+ */
+const MIGRATION_0003_CONTEXT_ASSEMBLY: QuellightMigration = {
+  version: 3,
+  name: 'qlt-context-assembly',
+  up: (db) => {
+    db.exec(`
+      CREATE TABLE qlt_context_assembly (
+        id TEXT NOT NULL PRIMARY KEY,
+        turn_id TEXT NOT NULL UNIQUE,
+        thread_id TEXT NOT NULL REFERENCES qlt_thread (id),
+        assembler_version TEXT NOT NULL CHECK (length(assembler_version) > 0 AND length(assembler_version) <= 32),
+        outcome TEXT NOT NULL CHECK (outcome IN ('complete','empty','failed')),
+        selected_ids TEXT NOT NULL CHECK (length(selected_ids) > 0 AND length(selected_ids) <= 4096),
+        excluded TEXT NOT NULL CHECK (length(excluded) > 0 AND length(excluded) <= 8192),
+        ordering_identity TEXT NOT NULL CHECK (length(ordering_identity) > 0 AND length(ordering_identity) <= 4096),
+        max_records INTEGER NOT NULL CHECK (max_records > 0),
+        max_bytes INTEGER NOT NULL CHECK (max_bytes > 0),
+        rendered_bytes INTEGER NOT NULL CHECK (rendered_bytes >= 0),
+        fingerprint TEXT NOT NULL CHECK (length(fingerprint) = 64),
+        failure_code TEXT NULL CHECK ((failure_code IS NULL) OR (length(failure_code) <= 64)),
+        created_at_ms INTEGER NOT NULL,
+        CHECK ((outcome = 'failed') = (failure_code IS NOT NULL))
+      );
+      CREATE UNIQUE INDEX uq_qlt_context_assembly_turn ON qlt_context_assembly (turn_id);
+      CREATE INDEX idx_qlt_context_assembly_thread ON qlt_context_assembly (thread_id, created_at_ms);
+    `);
+  },
+};
+
 /** The ordered, forward-only migration list. */
 export const QLT_SHARED_WORLD_MIGRATIONS: readonly QuellightMigration[] = [
   MIGRATION_0001_FOUNDATION,
   MIGRATION_0002_MEANING_FOUNDATION,
+  MIGRATION_0003_CONTEXT_ASSEMBLY,
 ];
 
 /** The current schema version of this build. */

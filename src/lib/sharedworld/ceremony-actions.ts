@@ -53,6 +53,7 @@ import {
   QLT_MEMORY_SORT_FIELDS,
   type QltContractSpec,
 } from './ceremony-contract.js';
+import { QLT_CONTEXT_QUERY_SORT_FIELDS } from './context-contract.js';
 import type { QltMemoryListOptions } from './sqlite.js';
 import type { QltThread } from './port.js';
 import type { QltStalenessTarget } from './meaning.js';
@@ -422,7 +423,14 @@ export function createMemorySurface(deps: MemorySurfaceDeps): {
       }
     }
     const sort = request.sort?.at(0);
-    if (sort !== undefined && !(QLT_MEMORY_SORT_FIELDS as readonly string[]).includes(sort.field)) {
+    // L-1 correction (Q4): the accepted query-sort surface is EXACTLY the
+    // Q4-frozen `updatedAt` single-field set — the extra `createdAt`
+    // acceptance carried by the frozen Q3 data is withdrawn at this
+    // executable boundary (the frozen Q3 module is not rewritten).
+    if (
+      sort !== undefined &&
+      !(QLT_CONTEXT_QUERY_SORT_FIELDS as readonly string[]).includes(sort.field)
+    ) {
       return {
         ok: false,
         code: 'DATA_UNSUPPORTED_QUERY',
@@ -532,14 +540,16 @@ export function createMemorySurface(deps: MemorySurfaceDeps): {
       }
     }
 
-    // Deterministic unified ordering: updatedAt DESC, id DESC tie-break.
+    // Deterministic unified ordering (L-1 correction, Q4): updatedAt DESC,
+    // id ASC — the frozen ordering, tie-break repaired from the Q3
+    // implementation erratum (id DESC) without rewriting any frozen text.
     rows.sort((left, right) => {
       const leftUpdated = left['updatedAt'] as number;
       const rightUpdated = right['updatedAt'] as number;
       if (leftUpdated !== rightUpdated) {
         return rightUpdated - leftUpdated;
       }
-      return (right['id'] as string) < (left['id'] as string) ? -1 : 1;
+      return (left['id'] as string) < (right['id'] as string) ? -1 : 1;
     });
     const sliced = rows.slice(offset, offset + limit);
     return { ok: true, rows: sliced, total };
