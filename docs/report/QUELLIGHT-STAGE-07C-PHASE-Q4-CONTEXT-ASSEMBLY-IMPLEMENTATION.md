@@ -282,6 +282,10 @@ compares this block exactly; tab-separated numstat columns are
 normalized to single spaces here and by the verifier):
 
 ```text
+42 5 README.md
+49 4 docs/decision-register.md
+370 0 docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-CONTEXT-ASSEMBLY-IMPLEMENTATION.md
+39 4 docs/system-reference.md
 2 1 package.json
 344 0 scripts/browser-ceremony-check.mjs
 8 4 scripts/verify-q2.mjs
@@ -304,10 +308,6 @@ normalized to single spaces here and by the verifier):
 12 3 test/meaning-foundation.test.ts
 4 1 test/sharedworld.test.ts
 82 3 test/ui/memory-inbox.test.ts
-42 5 README.md
-49 4 docs/decision-register.md
-370 0 docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-CONTEXT-ASSEMBLY-IMPLEMENTATION.md
-39 4 docs/system-reference.md
 ```
 
 ## 13. Final verification ladder
