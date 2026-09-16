@@ -36,7 +36,7 @@
 
 | Input                                                      | Value                                                                                                                                                |
 | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Remediation freeze starting SHA                            | `821d4f880ae160200f262dacb49560f71c528dca0` (`HEAD == origin/main`, fetch-verified; fetch advanced nothing)                                          |
+| Remediation freeze starting SHA                            | `821d4f80ae160200f262dacb49560f71c528dca0` (`HEAD == origin/main`, fetch-verified; fetch advanced nothing)                                           |
 | VICT read-only SHA                                         | `6e3e10d8114216d19c1d338494a6cafeb67ae6f9` (`HEAD == origin/main`; pre-existing untracked `.pi/` untouched)                                          |
 | Audited Q4 implementation tree                             | `c4896befa64e7499b85cd751d2d4393482f2e7f0` (audit-report commit `821d4f8…` adds only the verification report)                                        |
 | Conflicting remediation/closure/Q5 work                    | none found on either remote (histories inspected after fresh fetch; no competing H-1 remediation, closure, Q5, or later phase work exists)           |

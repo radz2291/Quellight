@@ -18,7 +18,7 @@ required before any Q4 closure.
 
 | Item                                                           | Value                                                                                                                                 |
 | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Remediation starting SHA                                       | `821d4f880ae160200f262dacb49560f71c528dca0` (`HEAD == origin/main`, fetch-verified; fetch advanced nothing)                           |
+| Remediation starting SHA                                       | `821d4f80ae160200f262dacb49560f71c528dca0` (`HEAD == origin/main`, fetch-verified; fetch advanced nothing)                            |
 | Remediation-contract commit (alone, before executable changes) | `2b519d2…` (`docs(stage-07c): freeze the Q4 H-1 remediation contract`; exactly one new file)                                          |
 | Implementation commit                                          | `e9ac36a…` (`fix(stage-07c): prevent overlapping-turn context crossover`)                                                             |
 | Test commit                                                    | `a49be65…` (`test(stage-07c): lock overlapping-turn isolation`)                                                                       |
@@ -192,9 +192,9 @@ first turn genuinely open for the real race):
     request is admitted, and the rule holds while the new turn is
     active.
 
-Full node suite: 216 tests green (14 files; 205 pre-existing tests were
-green before the remediation with 194 tests in 13 files — none weakened;
-the new file adds 11).
+Full node suite: 205 tests green (14 files; 194 pre-existing tests were
+green before the remediation in 13 files — none weakened; the new file
+adds 11).
 
 ## 7. Verification (FastGate; focused during development)
 
@@ -238,13 +238,13 @@ green). No other verifier changed.
 
 ## 9. Changed-file inventory (Git-derived)
 
-FREEZE-SHA (remediation start): `821d4f880ae160200f262dacb49560f71c528dca0`
+FREEZE-SHA (remediation start): `821d4f80ae160200f262dacb49560f71c528dca0`
 
 ```text
 49 3 README.md
 71 0 docs/decision-register.md
 173 0 docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-H1-REMEDIATION-CONTRACT.md
-342 0 docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-H1-REMEDIATION.md
+374 0 docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-H1-REMEDIATION.md
 67 4 docs/system-reference.md
 22 2 scripts/verify-q4.mjs
 24 0 src/lib/islands/ConversationWorkspace.svelte
@@ -255,8 +255,8 @@ FREEZE-SHA (remediation start): `821d4f880ae160200f262dacb49560f71c528dca0`
 852 0 test/turn-overlap-isolation.test.ts
 ```
 
-TOTALS: 12 files, +1848, −51. Derived from `git diff --numstat
-821d4f880ae160200f262dacb49560f71c528dca0..HEAD` (Git only; the report's
+TOTALS: 12 files, +1880, −51. Derived from `git diff --numstat
+821d4f80ae160200f262dacb49560f71c528dca0..HEAD` (Git only; the report's
 own self-row is the file's exact insertion count). Not verifier-compared
 (no verifier consumes the remediation report inventory; the Q4 report's
 inventory comparison remains anchored to the Q4 audited tree per §8).
@@ -340,3 +340,35 @@ worktree, its junction, and all temporary files/databases were removed;
 `git status --porcelain` is clean at report time. Untracked material
 outside the repositories (including VICT's pre-existing `.pi/`) was
 never read or modified.
+
+## 15. Evidence erratum (documentation-only correction)
+
+A later documentation-only truthfulness correction (no executable,
+test, script, package, VICT, or product-behavior change; the §11
+authoritative ladder was NOT rerun) fixed two evidence identities that
+the committed documents recorded wrongly:
+
+1. Remediation-start SHA. The documents contained a nonexistent
+   41-character value. The actual audit-report/remediation-start commit
+   is `821d4f80ae160200f262dacb49560f71c528dca0`, proven three ways:
+   `git rev-parse` resolves it; it is an ancestor of this tree (the
+   remediation-contract commit `2b519d2…` is its direct child on the
+   path to this tree); and its content adds exactly the Phase Q4
+   independent-verification report. Four occurrences corrected: one in
+   the remediation contract, three in this report. The contract
+   correction is a mechanical evidence-identity erratum ONLY: it
+   changes no policy, state matrix, acceptance requirement,
+   implementation meaning, or frozen semantic decision; no other
+   frozen-contract content changed.
+2. Node-test count (§6). The first recording said 216 total with 205
+   pre-existing. The truthful count is 205 total tests green across 14
+   files: 194 pre-existing in 13 files + 11 new in the new H-1 file.
+   Reconciled by ONE disclosed diagnostic `npm run test:node` run (no
+   raw first-run output survives), exit 0, reporting `Test Files 14 passed (14)`
+   and `Tests 205 passed (205)`. The diagnostic run resolves the
+   documentary discrepancy only; it does not replace or rerun the
+   authoritative §11 aggregate ladder; no test was changed or weakened.
+
+After these corrections the §9 self-row and totals were re-derived
+mechanically from the corrected start SHA. Q4 remains not Verified and
+not formally closed; Phase Q5 remains not begun.
