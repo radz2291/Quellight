@@ -116,9 +116,12 @@ const openThreadAt = async (page, index) => {
 
 const openTray = async (page) => {
   const chip = page.locator('button.qlt-memory-chip');
+  await chip.waitFor({ state: 'visible', timeout: 20_000 });
   await chip.focus();
   await page.keyboard.press('Enter');
-  await page.locator('[aria-label="Memory review"]').waitFor({ state: 'visible', timeout: 20_000 });
+  await page.locator('section[aria-label="Memory review"]').waitFor({ state: 'visible', timeout: 20_000 });
+  // The rows load asynchronously after the tray opens; wait for content.
+  await page.locator('.qlt-memory-item').first().waitFor({ state: 'visible', timeout: 20_000 });
 };
 
 try {
@@ -143,7 +146,7 @@ try {
   }
 
   // 3: the inbox did NOT open or steal focus automatically.
-  const trayDuringStream = await page.locator('[aria-label="Memory review"]').count();
+  const trayDuringStream = await page.locator('section[aria-label="Memory review"]').count();
   if (trayDuringStream !== 0) {
     fail('the memory tray opened by itself (auto-open violation)');
   }
@@ -165,7 +168,7 @@ try {
 
   // 5 + 11: keyboard-only review and confirm.
   await openTray(page);
-  const tray = page.locator('[aria-label="Memory review"]');
+  const tray = page.locator('section[aria-label="Memory review"]');
   const trayText = (await tray.textContent()) ?? '';
   for (const expected of ['Possible claim', 'Deep work preferences', 'Drafted by the assistant', 'Confirm', 'Edit', 'Reject', 'Withdraw', 'Remember this']) {
     if (!trayText.includes(expected)) {
