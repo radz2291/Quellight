@@ -1,16 +1,15 @@
 # Quellight system reference — Stage 07B/07C
 
-## Status (current, 2026-09-16 — Phase Q4 implemented, awaiting independent verification)
+## Status (current, 2026-09-16 — Phase Q4 verified with one High finding; H-1 remediated; awaiting fresh independent re-verification)
 
 ```text
 Stage 07B: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
 Stage 07C Phase Q1: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
 Stage 07C Phase Q2: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (durable Shared World schema)
 Stage 07C Phase Q3: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (governed confirmation ceremony and quiet memory inbox)
-Stage 07C Phase Q3: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (governed confirmation ceremony and quiet memory inbox)
-Stage 07C Phase Q4: IMPLEMENTED — AWAITING INDEPENDENT VERIFICATION (deterministic Shared World context assembly)
+Stage 07C Phase Q4: VERIFIED WITH ONE HIGH FINDING (H-1) — H-1 REMEDIATED — AWAITING FRESH INDEPENDENT RE-VERIFICATION (deterministic Shared World context assembly)
 Stage 07C Phases Q5–Q7: NOT BEGUN (Q5 implementation has not begun)
-Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 implemented, awaiting independent verification; Q5–Q7, 07D, 07E remaining)
+Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 verified with one High finding, H-1 remediated, awaiting fresh independent re-verification; Q5–Q7, 07D, 07E remaining)
 ```
 
 - The retained dependency is now the immutable coordinated release set
@@ -190,6 +189,70 @@ NON-BLOCKING ISSUES — READY FOR FORMAL CLOSURE`, audit commit
   proof and the Stage 07C final audit). The agent envelope remains
   EXACTLY `qlt.proposal.draft@1`; no read/list/search capability exists.
   Live-model injection resistance remains Q6. Q5 has not begun.
+- **Phase Q4 H-1 remediation (2026-09-16): H-1 REMEDIATED — AWAITING
+  FRESH INDEPENDENT RE-VERIFICATION (Q4 not Verified, not closed).** The
+  independent verification (audit commit `821d4f8…`) found the High
+  finding H-1 (same-conversation turn-overlap snapshot crossover) and
+  permitted no closure. The owner decision made the rule binding —
+  **exactly one active agent turn per conversation; a distinct request
+  arriving while a reply remains active is rejected truthfully and
+  creates no second turn; a retry of the same logical request preserves
+  VICT's existing idempotent replay behavior** — and the remediation
+  contract
+  (`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-H1-REMEDIATION-CONTRACT.md`,
+  committed alone before any executable change) froze the state matrix.
+  The remediation
+  (`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-H1-REMEDIATION.md`)
+  implemented BOTH layers: (1) race-safe admission control at the
+  Quellight-owned turn-start boundary (`src/lib/server/
+turn-admission.ts`; the turns route wraps the dispatch): the admission
+  decision and the durable turn start are atomic for the supported
+  single-process deployment (a per-conversation critical section — the
+  dispatch that durably creates the turn intent runs INSIDE the
+  section, so a concurrent admission decision for the same conversation
+  can never interleave); a distinct overlapping request is refused with
+  the stable, non-echoing code `QLT_TURN_ALREADY_OPEN` and ZERO effect
+  (no VICT intent, no model call, no assembly, no transcript message,
+  no Shared World effect), surfaced quietly in the workspace (a quiet
+  banner and polite announcement — no modal, no tray opening, no focus
+  change; the optimistic local message is withdrawn and the composer is
+  restored; nothing is queued); same-key retries pass through to VICT's
+  truthful idempotent disposition unchanged (replay / in-progress /
+  digest conflict), so a legitimate same-key replay is never
+  misclassified; different conversations run concurrently. (2) A
+  model-seam defensive backstop in `resolveForStream`: attribution
+  requires EXACTLY ONE attributable open turn for the conversation and
+  actor — exactly one record-less turn assembles, exactly one recorded
+  turn replays, zero open turns pass through, and ≥2 open turns in ANY
+  recorded/unrecorded/in-flight combination fail closed with zero
+  injection, no per-turn in-flight promise borrowing, and no new
+  assembly (no falsely attributed record) — effective even when the
+  admission invariant is bypassed through a direct internal call, test
+  fixture, future route, or corrupted state. The permanent regression
+  suite `test/turn-overlap-isolation.test.ts` (11 tests; real stores,
+  real route handler, deliberately delayed offline model) locks the
+  frozen state matrix. Audit-finding dispositions carried by the
+  remediation documentation pass: L-1 (the duplicated Q3 status line in
+  this document and the README) corrected additively by this pass; L-2
+  (implementation-identity lag) reconciled additively — the Q4 audited
+  implementation tree is `c4896bef…` (executable content unchanged
+  since `bf7fec3`), the audit-report commit is `821d4f8…`; L-3
+  (pre-existing Q3 latent defect: correction-kind proposal confirmation
+  through `confirmProposal` always rolls back `QLT_RECORD_EXISTS` due
+  to a duplicate source-thread link; the active production correction
+  path remains `applyCorrection`) recorded as a Q5/backlog obligation
+  ONLY and NOT repaired here; O-1/O-2/O-3 preserved as observations;
+  the pending-correction fixture limitation and the Q3
+  correction-proposal deferral preserved; M-1 unchanged with its hard
+  deadline (before the Phase Q6 live-provider proof and the Stage 07C
+  final audit). A FUTURE turn-steering direction is RECORDED in the
+  decision register as a deferred design input (explicit operation
+  targeting the exact active turn — never a second overlapping turn;
+  requires its own future contract covering target-turn identity,
+  append-vs-restart semantics, durable event/transcript truth,
+  idempotency, restart/reconnect, context-snapshot consequences,
+  provider support, and user-visible state); steering, queuing, and
+  parallel replies are NOT implemented.
 - The status sections below describe the delivered Stage 07B behavior;
   `docs/stage-07b-report.md` is the preserved historical implementation
   report (its issuance-time status wording is superseded by this

@@ -376,3 +376,76 @@ authorization) strengthened assertions and never weakened them. The
 carried M-2/L-1/L-2/L-3 findings are closed in Q4 as recorded in the
 implementation report; M-1 and M-3 obligations remain tracked (M-3
 honored: no amendment commits were needed).
+
+## D-Q4-H1-1 — One active agent turn per conversation (owner decision;
+## binding; implemented by the H-1 remediation)
+
+The Phase Q4 independent verification (audit commit `821d4f8…`,
+`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-INDEPENDENT-VERIFICATION.md`)
+confirmed the High finding **H-1** (same-conversation turn-overlap
+snapshot crossover) and permitted no formal closure. The owner decision
+is now binding:
+
+> Quellight permits exactly one active agent turn per conversation. A
+> distinct request arriving while a reply remains active is rejected
+> truthfully and creates no second turn. A retry of the same logical
+> request preserves VICT's existing idempotent replay behavior.
+
+Applies to the current single-process Quellight product scope. The second
+message is NOT queued; parallel replies in one conversation are NOT
+permitted; different conversations may continue concurrently.
+
+The remediation contract
+(`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-H1-REMEDIATION-CONTRACT.md`,
+committed alone before any executable change, dated 2026-09-16; the
+frozen Q4 contract is NOT rewritten) freezes the state matrix, the
+stable non-echoing refusal code `QLT_TURN_ALREADY_OPEN` ("A reply is
+already in progress for this conversation." — quiet, non-interruptive:
+no modal, no tray opening, no focus change), and the two required
+layers (race-safe admission control at the Quellight-owned turn-start
+boundary, atomic for the single-process deployment; the model-seam
+defensive backstop). Implemented in
+`src/lib/server/turn-admission.ts`, the turns route, and the
+`resolveForStream` backstop; permanent regression coverage in
+`test/turn-overlap-isolation.test.ts`. Status after implementation:
+`Q4 H-1 REMEDIATED — AWAITING FRESH INDEPENDENT RE-VERIFICATION` — Q4
+is NOT Verified and NOT formally closed by the remediation.
+
+Audit-finding dispositions recorded by the remediation documentation
+pass (additive; no historical report rewritten): **L-1** (duplicated Q3
+status line in README/system-reference) corrected in this pass; **L-2**
+(implementation-identity lag) reconciled additively — the Q4 audited
+implementation tree is `c4896bef…` (executable content unchanged since
+`bf7fec3`), the audit-report commit is `821d4f8…`; **L-3** (pre-existing
+Q3 latent defect: confirming a `correction`-kind proposal through
+`confirmProposal` always fails `QLT_RECORD_EXISTS` —
+`applyCorrectionInTransaction` already writes the successor's
+source-thread link and the confirmation loop writes it again, so the
+transaction rolls back; dormant because the active production correction
+path is `applyCorrection` and the capability rejects correction
+proposals) is recorded as a **Q5/backlog obligation only** and is NOT
+repaired by this remediation; **O-1/O-2/O-3** remain observations; the
+pending-correction fixture limitation and the Q3 correction-proposal
+deferral remain preserved; **M-1** remains open with its hard deadline
+(the truthful noncanonical/proposal VICT effect-class correction and
+Quellight repin must complete before the Phase Q6 live-provider proof
+and the Stage 07C final audit).
+
+## D-FUTURE-STEERING-1 — Future turn steering (deferred product
+## direction; recorded, NOT implemented)
+
+Deferred product direction, not an implementation requirement of the
+H-1 remediation:
+
+> In the future, Quellight may allow the user to steer an answer while
+> it is being generated. Steering must be an explicit operation
+> targeting the exact active turn — not a second overlapping turn.
+
+Future steering requires a separate contract covering: exact target-turn
+identity; append-guidance versus cancel-and-restart semantics; durable
+event and transcript truth; idempotency; restart/reconnect behavior;
+context-snapshot consequences; provider support; and user-visible
+state. Nothing is implemented: no steering, no queuing, no parallel
+replies, no cancellation redesign, and no provider behavior exist in
+this remediation. This entry is a future design input only; it invents
+no requirement claims beyond the direction recorded here.

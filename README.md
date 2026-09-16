@@ -14,10 +14,9 @@ Stage 07B: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
 Stage 07C Phase Q1: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
 Stage 07C Phase Q2: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (durable Shared World schema)
 Stage 07C Phase Q3: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (governed confirmation ceremony and quiet memory inbox)
-Stage 07C Phase Q3: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (governed confirmation ceremony and quiet memory inbox)
-Stage 07C Phase Q4: IMPLEMENTED — AWAITING INDEPENDENT VERIFICATION (deterministic Shared World context assembly)
+Stage 07C Phase Q4: VERIFIED WITH ONE HIGH FINDING — H-1 REMEDIATED — AWAITING FRESH INDEPENDENT RE-VERIFICATION (deterministic Shared World context assembly)
 Stage 07C Phases Q5–Q7: NOT BEGUN (full record-by-record context inspection remains Q5; Q5 implementation has not begun)
-Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 implemented, awaiting independent verification; Q5–Q7, 07D, 07E remaining)
+Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 verified with one High finding, H-1 remediated, awaiting fresh independent re-verification; Q5–Q7, 07D, 07E remaining)
 ```
 
 Stage 07B is formally closed (2026-09-10) against the audited evidence
@@ -127,6 +126,53 @@ deadline (the truthful noncanonical/proposal VICT effect-class correction
 must land before the Phase Q6 live-provider proof and the Stage 07C final
 audit). Q4 has no live-provider path; live-model injection resistance
 remains Q6. Phase Q5 has not begun.
+
+The Q4 independent verification (2026-09-16,
+`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-INDEPENDENT-VERIFICATION.md`,
+audit commit `821d4f8…`) returned `VERIFIED WITH ONE HIGH FINDING` and
+permitted no formal closure: finding **H-1** proved that two overlapping
+open turns in ONE conversation could cross snapshots (the older turn's
+later model calls receiving the newer turn's snapshot, and the newer turn
+receiving zero injection while its durable record claimed `complete`).
+The owner decision made the rule binding — **Quellight permits exactly
+one active agent turn per conversation; a distinct request arriving while
+a reply remains active is rejected truthfully and creates no second turn;
+a retry of the same logical request preserves VICT's existing idempotent
+replay behavior** — and the H-1 remediation (2026-09-16,
+`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-H1-REMEDIATION.md`, remediation
+contract
+`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-H1-REMEDIATION-CONTRACT.md`)
+implemented both layers: a race-safe admission boundary at the real turns
+ingress (the admission decision and the durable turn start are atomic for
+the supported single-process deployment; a distinct overlapping request
+is refused with the stable, non-echoing code `QLT_TURN_ALREADY_OPEN` —
+"A reply is already in progress for this conversation." — quietly, with
+no modal, no tray opening, no focus change, and no queueing; same-key
+retries pass through to VICT's idempotent disposition unchanged), and a
+model-seam defensive backstop (`resolveForStream` attributes a snapshot
+only when EXACTLY ONE open turn exists for the conversation and actor;
+every ≥2-open-turn combination in any recorded/unrecorded/in-flight
+mixture fails closed with zero injection, no in-flight promise
+borrowing, and no new assembly — effective even when the admission
+invariant is bypassed). Different conversations still run concurrently.
+Q4 is recorded exactly as `Q4 H-1 REMEDIATED — AWAITING FRESH INDEPENDENT
+RE-VERIFICATION`: not Verified, not formally closed. The audit's L-1
+duplicated status line is corrected here and in the system reference;
+L-2's implementation-identity lag is reconciled additively (the Q4
+audited implementation tree is `c4896bef…`; executable content unchanged
+since `bf7fec3`; the audit-report commit is `821d4f8…`). L-3 (a
+pre-existing Q3 latent defect: confirming a correction-kind proposal
+through `confirmProposal` always rolls back `QLT_RECORD_EXISTS` because
+of a duplicate source-thread link, while the active production
+correction path remains `applyCorrection`) is recorded as a Q5/backlog
+obligation only and is NOT repaired by the remediation. The pending-
+correction fixture limitation and the Q3 correction-proposal deferral
+remain preserved; M-1 keeps its hard deadline (before the Phase Q6
+live-provider proof and the Stage 07C final audit). A FUTURE turn-
+steering direction (user steers an answer while it is generated, as an
+explicit operation targeting the exact active turn — never a second
+overlapping turn) is RECORDED in the decision register as a deferred
+design input requiring its own future contract; it is NOT implemented.
 0.2.0 boundary. Phases Q5–Q7 have not begun; VICT `0.1.0`/`0.1.1` remain
 published but
 are not adopted — any later change requires an explicit compatibility
