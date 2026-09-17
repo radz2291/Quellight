@@ -32,16 +32,16 @@ dispositions; executable remediation is NOT required.
 
 ## 1. Repository and audited identities
 
-| Item                                    | Value                                                                                                                                  |
-| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Quellight audited SHA (start = finish)  | `6fd1ba894e63fa66b36694d5a193be95fd6b47f6` (`HEAD == origin/main` after fresh fetch; fetch advanced nothing; tree byte-clean at every probe point) |
-| Original Q4 implementation tree         | `c4896befa64e7499b85cd751d2d4393482f2e7f0` (negative-control worktree; removed afterward)                                              |
-| Original Q4 audit-report commit         | `821d4f80ae160200f262dacb49560f71c528dca0` (proven the true remediation-start: resolves, is an ancestor, adds exactly the Q4 verification report) |
-| H-1 remediation contract commit         | `2b519d2c2734917ea065a0a0ba5e407502d5f49f` (alone; exactly one new file; direct child of `821d4f8…`)                                    |
-| H-1 executable implementation commit    | `e9ac36a5aded9ba9af4412062b4a4c5667048b14` (6 files: `turn-admission.ts` new, `composition.ts`, turns route, `context-assembler.ts`, `ConversationWorkspace.svelte`, disclosed `verify-q4.mjs` re-pin) |
-| H-1 permanent test commit               | `a49be653af9cdb89b03847a6449fee190b846af9` (exactly one new file, 852 lines)                                                            |
-| VICT read-only SHA                      | `6e3e10d8114216d19c1d338494a6cafeb67ae6f9` (`HEAD == origin/main`; `git diff` clean; only pre-existing untracked `.pi/` present, untouched) |
-| Conflicting closure / Q5+ work          | none on either remote (histories inspected after fresh fetch; nothing after `6fd1ba8…`; linear ancestry `821d4f8 → 2b519d2 → e9ac36a → a49be65 → … → 6fd1ba8` verified by `rev-parse` + parent chain) |
+| Item                                   | Value                                                                                                                                                                                                  |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Quellight audited SHA (start = finish) | `6fd1ba894e63fa66b36694d5a193be95fd6b47f6` (`HEAD == origin/main` after fresh fetch; fetch advanced nothing; tree byte-clean at every probe point)                                                     |
+| Original Q4 implementation tree        | `c4896befa64e7499b85cd751d2d4393482f2e7f0` (negative-control worktree; removed afterward)                                                                                                              |
+| Original Q4 audit-report commit        | `821d4f80ae160200f262dacb49560f71c528dca0` (proven the true remediation-start: resolves, is an ancestor, adds exactly the Q4 verification report)                                                      |
+| H-1 remediation contract commit        | `2b519d2c2734917ea065a0a0ba5e407502d5f49f` (alone; exactly one new file; direct child of `821d4f8…`)                                                                                                   |
+| H-1 executable implementation commit   | `e9ac36a5aded9ba9af4412062b4a4c5667048b14` (6 files: `turn-admission.ts` new, `composition.ts`, turns route, `context-assembler.ts`, `ConversationWorkspace.svelte`, disclosed `verify-q4.mjs` re-pin) |
+| H-1 permanent test commit              | `a49be653af9cdb89b03847a6449fee190b846af9` (exactly one new file, 852 lines)                                                                                                                           |
+| VICT read-only SHA                     | `6e3e10d8114216d19c1d338494a6cafeb67ae6f9` (`HEAD == origin/main`; `git diff` clean; only pre-existing untracked `.pi/` present, untouched)                                                            |
+| Conflicting closure / Q5+ work         | none on either remote (histories inspected after fresh fetch; nothing after `6fd1ba8…`; linear ancestry `821d4f8 → 2b519d2 → e9ac36a → a49be65 → … → 6fd1ba8` verified by `rev-parse` + parent chain)  |
 
 ## 2. Area 1 — history and evidence integrity
 
@@ -178,15 +178,15 @@ delayed offline model keeping the first turn genuinely open:
 **Verified.** The admission guard defers every same-key disposition to
 VICT exactly as the remediation contract requires:
 
-| Probe                                                                  | Result                                                                 |
-| ---------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| Same key + same payload WHILE active                                   | replays the ORIGINAL turn identity; never a second turn; still exactly one open turn |
-| Same key + same payload AFTER settlement                               | replays the original turn identity again                                |
-| Seeded PENDING receipt with a LIVE lease (crash-recovery shape)        | truthful `VICT_COMMAND_IDEMPOTENCY_IN_PROGRESS`; no turn created        |
-| Same key + DIFFERENT payload                                           | stable `VICT_COMMAND_IDEMPOTENCY_CONFLICT`; no turn; no model call      |
-| Key bound to conversation A reused against conversation B (B has no open turn) | guard passes through to VICT; digest conflict; B receives NO turn; B remains fully usable with a fresh key |
-| Seeded FAILED receipt (stale failure)                                  | deterministic failure replay; NO new overlapping turn                   |
-| Distinct keys                                                          | distinct logical requests; the second is refused while the first is active and admitted as a NEW turn after settlement |
+| Probe                                                                                    | Result                                                                                                                                                                                                                        |
+| ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Same key + same payload WHILE active                                                     | replays the ORIGINAL turn identity; never a second turn; still exactly one open turn                                                                                                                                          |
+| Same key + same payload AFTER settlement                                                 | replays the original turn identity again                                                                                                                                                                                      |
+| Seeded PENDING receipt with a LIVE lease (crash-recovery shape)                          | truthful `VICT_COMMAND_IDEMPOTENCY_IN_PROGRESS`; no turn created                                                                                                                                                              |
+| Same key + DIFFERENT payload                                                             | stable `VICT_COMMAND_IDEMPOTENCY_CONFLICT`; no turn; no model call                                                                                                                                                            |
+| Key bound to conversation A reused against conversation B (B has no open turn)           | guard passes through to VICT; digest conflict; B receives NO turn; B remains fully usable with a fresh key                                                                                                                    |
+| Seeded FAILED receipt (stale failure)                                                    | deterministic failure replay; NO new overlapping turn                                                                                                                                                                         |
+| Distinct keys                                                                            | distinct logical requests; the second is refused while the first is active and admitted as a NEW turn after settlement                                                                                                        |
 | Client-controlled authority (`threadId`/`mastraThreadId`/`turnId`/`actorId` in the body) | ignored server-side: the turn binds to the SERVER-resolved conversation, the assembly record binds to the real thread, conversation B receives no turn, and the injected snapshot is assembled from the server-resolved scope |
 
 The durable truthfulness of VICT's receipt lifecycle (claim / digest
@@ -200,19 +200,19 @@ stores with admission deliberately bypassed (real-shaped open-turn
 fixtures written directly through the turn store — the corrupted-state
 path the backstop must survive):
 
-| Open-turn state (one conversation)              | Required result                          | Probe result |
-| ----------------------------------------------- | ---------------------------------------- | ------------ |
-| zero open turns                                  | safe pass-through, zero injection, no record | PASS (`pass/ambiguous`; no record written) |
-| exactly one record-less turn                     | assemble ONLY that turn                   | PASS (correct frozen block; durable record for THAT turn; replay byte-identical) |
-| exactly one recorded turn                        | replay ONLY that turn                     | PASS (byte-identical replay; post-freeze memory never crosses in) |
-| two record-less turns                            | ambiguous, zero injection, no assembly    | PASS (no record for either) |
-| two recorded turns                               | ambiguous, zero injection, no replay      | PASS |
-| one recorded + one record-less                   | ambiguous, zero injection, no assembly    | PASS (B gets no record; A's record untouched) |
-| one in-flight promise + another open turn        | ambiguous; never borrow the promise       | PASS (A's gated in-flight assembly is NOT returned; ambiguity; after A settles the matrix behaves) |
-| three or more in any combination                 | ambiguous, zero injection                 | PASS |
-| no "pick newest": record-less turn OLDER than the recorded turn | still ambiguous             | PASS |
-| two scopes interleaved concurrently              | no cross-scope leakage                    | PASS (A injects A's own block; B passes; records bind to own threads) |
-| junk scope fields (`turnId`, `actorId`, `forceInject`) | ignored                              | PASS (client/model-supplied values change nothing; assembly binds to the durable turn) |
+| Open-turn state (one conversation)                              | Required result                              | Probe result                                                                                       |
+| --------------------------------------------------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| zero open turns                                                 | safe pass-through, zero injection, no record | PASS (`pass/ambiguous`; no record written)                                                         |
+| exactly one record-less turn                                    | assemble ONLY that turn                      | PASS (correct frozen block; durable record for THAT turn; replay byte-identical)                   |
+| exactly one recorded turn                                       | replay ONLY that turn                        | PASS (byte-identical replay; post-freeze memory never crosses in)                                  |
+| two record-less turns                                           | ambiguous, zero injection, no assembly       | PASS (no record for either)                                                                        |
+| two recorded turns                                              | ambiguous, zero injection, no replay         | PASS                                                                                               |
+| one recorded + one record-less                                  | ambiguous, zero injection, no assembly       | PASS (B gets no record; A's record untouched)                                                      |
+| one in-flight promise + another open turn                       | ambiguous; never borrow the promise          | PASS (A's gated in-flight assembly is NOT returned; ambiguity; after A settles the matrix behaves) |
+| three or more in any combination                                | ambiguous, zero injection                    | PASS                                                                                               |
+| no "pick newest": record-less turn OLDER than the recorded turn | still ambiguous                              | PASS                                                                                               |
+| two scopes interleaved concurrently                             | no cross-scope leakage                       | PASS (A injects A's own block; B passes; records bind to own threads)                              |
+| junk scope fields (`turnId`, `actorId`, `forceInject`)          | ignored                                      | PASS (client/model-supplied values change nothing; assembly binds to the durable turn)             |
 
 Additionally: no mutable global current-turn identity exists (attribution
 reads the DURABLE turn store per call; `AsyncLocalStorage` carries only
@@ -298,14 +298,14 @@ regression negative control, ceremony recovery) ran green unchanged.
 Executed ONCE, by the auditor, on the untouched remediated tree
 `6fd1ba8…` (HEAD == origin/main), before any probe:
 
-| Command                    | First-run result                                                                       |
-| -------------------------- | --------------------------------------------------------------------------------------- |
-| `git fetch` (both repos)   | advanced nothing; `HEAD == origin/main` both sides                                       |
-| `npm ci`                   | exit 0 (see the §2 disclosure: post-run the lockfile was restored byte-identically)      |
-| `npm run verify:consumer`  | exit 0 PASS — exact-pin 0.2.0 consumption; 13-member content identity re-derived `v1_7a5579…`; unreachable-registry negative control held |
+| Command                    | First-run result                                                                                                                                                                                                                                                                                         |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `git fetch` (both repos)   | advanced nothing; `HEAD == origin/main` both sides                                                                                                                                                                                                                                                       |
+| `npm ci`                   | exit 0 (see the §2 disclosure: post-run the lockfile was restored byte-identically)                                                                                                                                                                                                                      |
+| `npm run verify:consumer`  | exit 0 PASS — exact-pin 0.2.0 consumption; 13-member content identity re-derived `v1_7a5579…`; unreachable-registry negative control held                                                                                                                                                                |
 | `npm run verify:quellight` | exit 0 PASS — format; typecheck; governance; Q2; Q3; **Q4 (41 checks)**; node tests; UI tests; production build + closed-allowlist warning scan (1 warning); real-browser check; real-browser Stop regression; real-browser ceremony recovery; artifact scan (199 files); `git diff --check` — all green |
-| `npm audit --omit=dev`     | exit 0 — **0 vulnerabilities**                                                          |
-| `git diff --check`         | exit 0                                                                                   |
+| `npm audit --omit=dev`     | exit 0 — **0 vulnerabilities**                                                                                                                                                                                                                                                                           |
+| `git diff --check`         | exit 0                                                                                                                                                                                                                                                                                                   |
 
 No rerun, timeout increase, output suppression, or assertion weakening.
 The permanent H-1 suite runs inside `verify:quellight`'s node step; the
@@ -314,13 +314,13 @@ execution of the repository suite.
 
 ## 11. Independent probe summary (all authored outside both repositories; removed afterwards)
 
-| Probe suite                                      | Tree            | Result |
-| ------------------------------------------------ | --------------- | ------ |
-| H-1 negative control (NC1–NC4)                   | `c4896be…` worktree | **PASS — defect reproduced** (5.6 s) |
-| Same negative control as discriminator           | `6fd1ba8…`      | **FAIL as required** (`'pass'` where the old tree injected — the fix holds) |
-| Remediated node probes (seam matrix 11; admission 3; idempotency 8; restart/failure 2) | `6fd1ba8…` | **24/24 PASS** (recorded run) |
-| Admission critical-section lifecycle & retention | `6fd1ba8…`      | **3/3 PASS** (≈349 B/request transient; ≈102 B per conversation entry; failures flat) |
-| Quiet refusal UX (real island, happy-dom)        | `6fd1ba8…`      | **1/1 PASS** |
+| Probe suite                                                                            | Tree                | Result                                                                                |
+| -------------------------------------------------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------- |
+| H-1 negative control (NC1–NC4)                                                         | `c4896be…` worktree | **PASS — defect reproduced** (5.6 s)                                                  |
+| Same negative control as discriminator                                                 | `6fd1ba8…`          | **FAIL as required** (`'pass'` where the old tree injected — the fix holds)           |
+| Remediated node probes (seam matrix 11; admission 3; idempotency 8; restart/failure 2) | `6fd1ba8…`          | **24/24 PASS** (recorded run)                                                         |
+| Admission critical-section lifecycle & retention                                       | `6fd1ba8…`          | **3/3 PASS** (≈349 B/request transient; ≈102 B per conversation entry; failures flat) |
+| Quiet refusal UX (real island, happy-dom)                                              | `6fd1ba8…`          | **1/1 PASS**                                                                          |
 
 All TypeScript probe files type-clean under `tsc --noEmit` with strict
 settings. Probe development (harness sequencing fixes) preceded the
@@ -329,12 +329,12 @@ modified at any point.
 
 ## 12. Findings
 
-| ID    | Severity | Finding                                                                                                                                                                                        | Disposition                                                                                                                                                                                                                           |
-| ----- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| L-R1  | Low      | The admission guard's per-conversation critical-section map retains one settled promise per DISTINCT conversation id for the process lifetime (tail replaced per request; no per-request growth). Measured ≈102 B/entry; unbounded only in the lifetime conversation-count axis of one process. | Carried with explicit disposition: bounded in practice at product scale; no correctness impact; any future eviction policy belongs to a Q5+ change. NOT fixed during the audit.                                                                   |
-| L-R2  | Low      | The `resolveForStream` pass-reason union retains `'no-open-turn'`, now unreachable: the remediated exactly-one rule returns `'ambiguous'` for the zero-open-turn case too (behavior identical: safe pass-through, zero injection). | Cosmetic vocabulary retention. May be cleaned in a future docs/tests pass; no behavior change; carried.                                                                                                                               |
-| O-R1  | Observation | The executor's post-turn pipeline issues additional in-process model calls (memory settle) after a turn's own stream completes; audit harnesses must drain before gating. Server-side only; no transcript, authority, or evidence impact. | No action; recorded for future probe/verification authors.                                                                                                                                                                              |
-| O-R2  | Observation | The `verify:q4` inventory comparison re-pin (freeze→HEAD changed to freeze→Q4-audited-tree) was necessary because the audit-report commit itself legitimately adds files after the audited tree; the change strengthens nothing away, is disclosed in the remediation report §8, and the comparison is again exact (41 checks green in the ladder). | No action.                                                                                                                                                                                                                              |
+| ID   | Severity    | Finding                                                                                                                                                                                                                                                                                                                                             | Disposition                                                                                                                                                                     |
+| ---- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| L-R1 | Low         | The admission guard's per-conversation critical-section map retains one settled promise per DISTINCT conversation id for the process lifetime (tail replaced per request; no per-request growth). Measured ≈102 B/entry; unbounded only in the lifetime conversation-count axis of one process.                                                     | Carried with explicit disposition: bounded in practice at product scale; no correctness impact; any future eviction policy belongs to a Q5+ change. NOT fixed during the audit. |
+| L-R2 | Low         | The `resolveForStream` pass-reason union retains `'no-open-turn'`, now unreachable: the remediated exactly-one rule returns `'ambiguous'` for the zero-open-turn case too (behavior identical: safe pass-through, zero injection).                                                                                                                  | Cosmetic vocabulary retention. May be cleaned in a future docs/tests pass; no behavior change; carried.                                                                         |
+| O-R1 | Observation | The executor's post-turn pipeline issues additional in-process model calls (memory settle) after a turn's own stream completes; audit harnesses must drain before gating. Server-side only; no transcript, authority, or evidence impact.                                                                                                           | No action; recorded for future probe/verification authors.                                                                                                                      |
+| O-R2 | Observation | The `verify:q4` inventory comparison re-pin (freeze→HEAD changed to freeze→Q4-audited-tree) was necessary because the audit-report commit itself legitimately adds files after the audited tree; the change strengthens nothing away, is disclosed in the remediation report §8, and the comparison is again exact (41 checks green in the ladder). | No action.                                                                                                                                                                      |
 
 No Blocking or High finding exists; no Medium finding exists; idempotent
 retries are intact; H-1 is not reproducible; admission is race-safe in the
