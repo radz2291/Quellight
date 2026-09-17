@@ -14,9 +14,9 @@ Stage 07B: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
 Stage 07C Phase Q1: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
 Stage 07C Phase Q2: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (durable Shared World schema)
 Stage 07C Phase Q3: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (governed confirmation ceremony and quiet memory inbox)
-Stage 07C Phase Q4: VERIFIED WITH ONE HIGH FINDING — H-1 REMEDIATED — AWAITING FRESH INDEPENDENT RE-VERIFICATION (deterministic Shared World context assembly)
-Stage 07C Phases Q5–Q7: NOT BEGUN (full record-by-record context inspection remains Q5; Q5 implementation has not begun)
-Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 verified with one High finding, H-1 remediated, awaiting fresh independent re-verification; Q5–Q7, 07D, 07E remaining)
+Stage 07C Phase Q4: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (deterministic Shared World context assembly; H-1 remediated and independently re-verified closed)
+Stage 07C Phases Q5–Q7: NOT BEGUN (full record-by-record context inspection remains Q5; Q5 contract and implementation planning is permitted but has not begun)
+Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 closed; Q5–Q7, 07D, 07E remaining)
 ```
 
 Stage 07B is formally closed (2026-09-10) against the audited evidence
@@ -155,8 +155,23 @@ every ≥2-open-turn combination in any recorded/unrecorded/in-flight
 mixture fails closed with zero injection, no in-flight promise
 borrowing, and no new assembly — effective even when the admission
 invariant is bypassed). Different conversations still run concurrently.
-Q4 is recorded exactly as `Q4 H-1 REMEDIATED — AWAITING FRESH INDEPENDENT
-RE-VERIFICATION`: not Verified, not formally closed. The audit's L-1
+Q4 is now FORMALLY CLOSED (2026-09-17): the fresh independent
+re-verification (`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-H1-INDEPENDENT-RE-VERIFICATION.md`,
+audit commit `e0e0f19…` against the untouched tree `6fd1ba8…`)
+independently reproduced the original H-1 crossover on the audited
+tree `c4896bef…` and proved it dead on the remediated tree (the same
+staging fails closed), verified race-safe admission with deep zero
+effect for refused requests, exact VICT idempotency preservation, the
+complete seam-state matrix, restart fencing, failure truth, and the
+quiet refusal UX, and ran the authoritative ladder green first-run
+(0 vulnerabilities). Verdict: `VERIFIED WITH NON-BLOCKING ISSUES — Q4
+FORMAL CLOSURE PERMITTED` (0 Blocking · 0 High · 0 Medium · 2 Low ·
+2 Observations); carried: L-R1 (per-conversation critical-section
+settled-entry retention, ≈102 B/entry, conversation-count axis only)
+and L-R2 (unreachable `no-open-turn` pass-reason member), both with
+dispositions in the closure report. Formal closure:
+`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-FORMAL-CLOSURE.md`. The
+audit's L-1
 duplicated status line is corrected here and in the system reference;
 L-2's implementation-identity lag is reconciled additively (the Q4
 audited implementation tree is `c4896bef…`; executable content unchanged
@@ -173,6 +188,9 @@ steering direction (user steers an answer while it is generated, as an
 explicit operation targeting the exact active turn — never a second
 overlapping turn) is RECORDED in the decision register as a deferred
 design input requiring its own future contract; it is NOT implemented.
+Phase Q5 contract and implementation planning is permitted and has not
+begun; Phases Q6–Q7 have not begun. Q4 has no live-provider path;
+live-model injection resistance remains Q6. VICT remains pinned at the
 0.2.0 boundary. Phases Q5–Q7 have not begun; VICT `0.1.0`/`0.1.1` remain
 published but
 are not adopted — any later change requires an explicit compatibility

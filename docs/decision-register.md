@@ -447,3 +447,47 @@ state. Nothing is implemented: no steering, no queuing, no parallel
 replies, no cancellation redesign, and no provider behavior exist in
 this remediation. This entry is a future design input only; it invents
 no requirement claims beyond the direction recorded here.
+
+## D-Q4-CLOSE-1 — Phase Q4 formal closure (documentation-only; reconciles implementation, audit, owner decision, remediation, evidence erratum, and fresh re-verification)
+
+Phase Q4 is FORMALLY CLOSED (2026-09-17) as
+`QUELLIGHT STAGE 07C PHASE Q4 VERIFIED WITH NON-BLOCKING ISSUES —
+FORMALLY CLOSED`. The reconciled chain: the Q4 contract freeze `b4bf759…`
+(alone); the implementation through `bf7fec3…` (recorded `6a7f089…`,
+audited tree `c4896bef…`); the independent verification (audit commit
+`821d4f8…`, verdict `VERIFIED WITH ONE HIGH FINDING`, H-1 blocking);
+the owner decision D-Q4-H1-1; the H-1 remediation (contract `2b519d2…`
+committed alone, executable `e9ac36a…`, permanent tests `a49be65…`,
+recorded `163086c…` with the disclosed evidence erratum `6fd1ba8…`
+correcting the malformed start SHA to `821d4f8…` and the truthful
+205/14 node-test count); and the fresh independent re-verification
+(`e0e0f19…`, verdict `VERIFIED WITH NON-BLOCKING ISSUES — Q4 FORMAL
+CLOSURE PERMITTED`; 0 Blocking · 0 High · 0 Medium · 2 Low ·
+2 Observations): the original crossover independently reproduced on
+`c4896bef…` and proven dead on the remediated tree; race-safe admission
+with deep zero effect for refused requests over the REAL turns ingress;
+VICT idempotency preserved exactly; the complete seam-state matrix
+failing closed; restart fencing (`VICT_CONTROL_TURN_INVALID_TRANSITION`)
+and failure truth; the quiet truthful refusal UX. Carried through
+closure with dispositions: **L-R1** (per-conversation critical-section
+settled-entry retention — one settled promise per distinct conversation
+id, ≈102 B/entry, tail replaced per request, unbounded only in the
+lifetime conversation-count axis of one process; revisit trigger: any
+future multi-tenant or long-lived-server deployment shape) and **L-R2**
+(the now unreachable `no-open-turn` pass-reason union member; cosmetic).
+Still carried unchanged: **L-3** (correction-kind proposal confirmation
+rollback; Q5/backlog only), **M-1** (truthful VICT effect-class
+correction + Quellight repin; hard deadline before the Phase Q6
+live-provider proof and the Stage 07C final audit), the
+pending-correction fixture limitation, the Q3 correction-proposal
+deferral, and O-1/O-2/O-3. Future turn steering remains RECORDED —
+NOT IMPLEMENTED (D-FUTURE-STEERING-1). **Phase Q5 contract and
+implementation planning is PERMITTED — NOT BEGUN**; Stage 07 remains
+In Progress. Closure record:
+`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-FORMAL-CLOSURE.md`;
+re-verification record:
+`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-H1-INDEPENDENT-RE-VERIFICATION.md`.
+Documentation-only closure: no source, test, script, migration, frozen
+contract, implementation/remediation report, or independent audit
+report changed; VICT treated read-only (its System Reference
+registration is VICT's own documentation-only record).

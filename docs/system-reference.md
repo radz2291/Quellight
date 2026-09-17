@@ -1,15 +1,15 @@
 # Quellight system reference — Stage 07B/07C
 
-## Status (current, 2026-09-16 — Phase Q4 verified with one High finding; H-1 remediated; awaiting fresh independent re-verification)
+## Status (current, 2026-09-17 — Phase Q4 verified with non-blocking issues and FORMALLY CLOSED; H-1 remediation independently re-verified closed)
 
 ```text
 Stage 07B: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
 Stage 07C Phase Q1: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
 Stage 07C Phase Q2: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (durable Shared World schema)
 Stage 07C Phase Q3: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (governed confirmation ceremony and quiet memory inbox)
-Stage 07C Phase Q4: VERIFIED WITH ONE HIGH FINDING (H-1) — H-1 REMEDIATED — AWAITING FRESH INDEPENDENT RE-VERIFICATION (deterministic Shared World context assembly)
+Stage 07C Phase Q4: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (deterministic Shared World context assembly; H-1 remediated and independently re-verified closed)
 Stage 07C Phases Q5–Q7: NOT BEGUN (Q5 implementation has not begun)
-Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 verified with one High finding, H-1 remediated, awaiting fresh independent re-verification; Q5–Q7, 07D, 07E remaining)
+Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 closed; Q5–Q7, 07D, 07E remaining)
 ```
 
 - The retained dependency is now the immutable coordinated release set
@@ -189,6 +189,57 @@ NON-BLOCKING ISSUES — READY FOR FORMAL CLOSURE`, audit commit
   proof and the Stage 07C final audit). The agent envelope remains
   EXACTLY `qlt.proposal.draft@1`; no read/list/search capability exists.
   Live-model injection resistance remains Q6. Q5 has not begun.
+- **Phase Q4 H-1 remediation independently re-verified; Q4 FORMALLY
+  CLOSED (2026-09-17): Q4 VERIFIED WITH NON-BLOCKING ISSUES —
+  FORMALLY CLOSED.** The fresh independent re-verification
+  (`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-H1-INDEPENDENT-RE-VERIFICATION.md`,
+  audit commit `e0e0f19…` against the untouched remediated tree
+  `6fd1ba8…`) independently reproduced the original H-1 crossover on
+  the audited tree `c4896bef…` (in-flight promise borrowing, snapshot
+  substitution with a post-freeze canary, false durable `complete`
+  evidence, transparency corruption) and proved it DEAD on the
+  remediated tree — the same staging fails closed (`pass/ambiguous`
+  where the old seam injected). Independently verified: race-safe
+  admission over the REAL turns ingress (eight simultaneous distinct
+  keys → exactly one durable turn and seven `QLT_TURN_ALREADY_OPEN`
+  refusals with deep zero effect; check+start serialized per
+  conversation; different conversations concurrent; terminal-turn
+  recovery; dispatch-failure resilience; no queuing machinery);
+  VICT idempotency preserved exactly (same-key replay during and after
+  settlement; seeded pending-receipt live-lease answers the truthful
+  in-progress disposition; digest conflict; cross-conversation key
+  reuse refused; stale failed receipt replays deterministically; no
+  client-controlled field becomes turn-identity or memory authority);
+  the complete seam-state matrix (zero / exactly-one-record-less /
+  exactly-one-recorded / every ≥2 combination including in-flight and
+  three-plus / reversed ages → ambiguous, zero injection, no promise
+  borrowing, no new assembly; no cross-scope leakage; junk scope fields
+  ignored); restart reconciliation truthfully settling interrupted
+  turns with the durable fence rejecting stale settlements
+  (`VICT_CONTROL_TURN_INVALID_TRANSITION`) and the rule reapplied;
+  failure truth (a failing model settles `failed`, no fabricated
+  transcript, truthful assembly evidence); and the quiet refusal UX on
+  the real island (message withdrawn, draft restored, exact sentence,
+  no modal, no tray, no focus theft, one ingress request, clears on
+  transition). Verdict: `VERIFIED WITH NON-BLOCKING ISSUES — Q4 FORMAL
+CLOSURE PERMITTED` (0 Blocking · 0 High · 0 Medium · 2 Low ·
+  2 Observations); carried: L-R1 (per-conversation critical-section
+  settled-entry retention — one settled promise per distinct
+  conversation id, ≈102 B/entry, tail replaced per request, unbounded
+  only in the lifetime conversation-count axis; revisit trigger: any
+  future multi-tenant/long-lived-server shape) and L-R2 (the now
+  unreachable `no-open-turn` pass-reason member; cosmetic), both with
+  dispositions in the closure report. The authoritative ladder ran
+  green first-run on the untouched tree (`npm ci`; `verify:consumer`;
+  `verify:quellight` incl. the 41-check `verify:q4` and the H-1 suite;
+  `npm audit --omit=dev` 0 vulnerabilities; `git diff --check`).
+  Formal closure:
+  `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-FORMAL-CLOSURE.md`.
+  Disposition: `QUELLIGHT STAGE 07C PHASE Q4 VERIFIED WITH
+NON-BLOCKING ISSUES — FORMALLY CLOSED`; future turn steering remains
+  RECORDED — NOT IMPLEMENTED; Phase Q5 contract and implementation
+  planning is permitted — NOT BEGUN (inherits M-1's hard deadline and
+  the L-3 backlog item); Stage 07 remains In Progress.
 - **Phase Q4 H-1 remediation (2026-09-16): H-1 REMEDIATED — AWAITING
   FRESH INDEPENDENT RE-VERIFICATION (Q4 not Verified, not closed).** The
   independent verification (audit commit `821d4f8…`) found the High
