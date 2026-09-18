@@ -8,6 +8,9 @@
  *   2. typecheck               (npm run typecheck)
  *   3. node-side tests         (composition, sharedworld, ceremony authority,
  *                                 restart, reconnect)
+ *   (2f. development-start regression gate (D-11): the ordinary dev
+ *        path is started through the real repository vite.config.ts and
+ *        must serve the app and transform the released renderer)
  *   4. browser-side island tests (happy-dom)
  *   5. production build        (npm run build) with a BUILD-LOG scan:
  *      any warning that is not on the closed allowlist fails (N-17/N-18)
@@ -88,6 +91,15 @@ step('2e. Q4 deterministic context-assembly conformance gate (Phase Q4)');
 record(
   'verify:q4',
   spawnSync(process.execPath, ['--import', 'tsx', 'scripts/verify-q4.mjs'], {
+    encoding: 'utf8',
+    timeout: 300_000,
+    maxBuffer: 16 * 1024 * 1024,
+  }),
+);
+step('2f. development-start regression gate (D-11)');
+record(
+  'verify:dev-start',
+  spawnSync(process.execPath, ['scripts/verify-dev-start.mjs'], {
     encoding: 'utf8',
     timeout: 300_000,
     maxBuffer: 16 * 1024 * 1024,

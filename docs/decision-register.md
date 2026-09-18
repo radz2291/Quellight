@@ -491,3 +491,58 @@ Documentation-only closure: no source, test, script, migration, frozen
 contract, implementation/remediation report, or independent audit
 report changed; VICT treated read-only (its System Reference
 registration is VICT's own documentation-only record).
+
+## D-11 — Dev-only `optimizeDeps` exclusion for the released renderer (development-tooling compatibility note — technical decision, recorded, not a product semantic decision)
+
+- **Decision**: `vite.config.ts` now sets
+  `optimizeDeps: { exclude: ['@victframework/renderer-svelte'] }`.
+- **Why**: under the pinned `svelte@5.57.0`, `svelte.compileModule` cannot
+  parse TypeScript, and Vite's dev-only esbuild prebundler feeds the
+  released renderer's `mount.svelte.ts` to it raw — so `npm run dev`
+  crashed with "Unexpected token" the moment a browser opened the app.
+  Excluding the renderer routes it through the normal dev transform
+  pipeline (esbuild TS strip → svelte module compile). This is the exact
+  setting the Stage 07B browser-stop-check generated and real-browser
+  verified (REMEDIATION-01 incident #2; INDEPENDENT-REVERIFICATION
+  "Dev-config inspection"); this entry applies it durably to the
+  repository config, which Stage 07B deliberately left untouched.
+- **Provenance / clarification**: the "xport interface" in the crash log
+  is a rendering artifact (off-by-one in vite-plugin-svelte's
+  `lineFromFrame` esbuild-error frame extraction), NOT file corruption —
+  reproduced byte-identical on a pristine `npm ci` install whose
+  `mount.svelte.ts` matches the published `@victframework/renderer-svelte`
+  0.2.0 tarball. Production build (N-17 evidence path) is unaffected;
+  `optimizeDeps` is dev-only. D-3 immutable consumption unchanged.
+- **Consequences**: dev server starts cleanly; one cosmetic dev-only
+  sourcemap notice for `application/dist/renderer.js` appears in this
+  loading mode. The three pre-existing Svelte warnings in
+  `ConversationWorkspace.svelte` (two a11y, one `non_reactive_update`)
+  are separate, non-fatal, and remain open follow-up items.
+- **Environment restoration (2026-09-18)**: during this investigation
+  the repository's `node_modules/.bin` directory was found missing.
+  Its cause is UNKNOWN and is not attributed to any agent or process.
+  A clean `npm ci` restored the full dependency installation WITHOUT
+  changing `package-lock.json` (byte-identical before and after), and
+  the pristine install's renderer source was then verified to match
+  the published `@victframework/renderer-svelte@0.2.0` tarball (the
+  provenance evidence above).
+- **Deferred warnings (Q5 UI lane)**: the three pre-existing Svelte
+  warnings in `src/lib/islands/ConversationWorkspace.svelte` are
+  DEFERRED to the Phase Q5 UI lane (which already plans to touch the
+  memory-inspection UI) and are NOT repaired by this dev-only change:
+  (1) redundant `role="region"`; (2) keyboard listener on a
+  non-interactive `<section>`; (3) `chipButton` updated without
+  `$state`. They are non-fatal, do not reopen Q4, and the existing
+  real-browser proof shows focus return currently works.
+  `verify:dev-start` treats them as a closed allowlist with exact
+  expected counts, so any new or unknown warning still fails.
+- **Permanent regression gate**: `npm run verify:dev-start`
+  (`scripts/verify-dev-start.mjs`, wired into `verify:quellight` as
+  step 2f) starts the real dev server through the committed
+  `vite.config.ts` and requires HTTP 200 plus a clean transform of the
+  released renderer (`mount.svelte.ts`), failing on the recorded
+  optimizer signatures — so the ordinary `npm run dev` path cannot
+  silently regress again.
+- **Date**: 2026-09-18 (decision executed by co-founder agent; no owner
+  input required — no binding principle touched, trade-off already
+  charted and browser-verified by Stage 07B).

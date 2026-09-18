@@ -20,6 +20,7 @@
     "lint": "npm run format:check && npm run check",
     "typecheck": "npm run check",
     "verify:consumer": "node scripts/verify-consumer.mjs",
+    "verify:dev-start": "node scripts/verify-dev-start.mjs",
     "verify:quellight": "node scripts/verify-quellight.mjs",
     "verify:browser": "node scripts/browser-check.mjs",
     "verify:browser-ceremony": "node scripts/browser-ceremony-check.mjs",

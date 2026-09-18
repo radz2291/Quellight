@@ -42,4 +42,16 @@ function filteredLogger(): Logger {
 export default defineConfig({
   customLogger: filteredLogger(),
   plugins: [sveltekit()],
+  // D-11 (2026-09-18, technical decision — provenance: Stage 07B remediation
+  // report incident #2 and the independent re-verification, which real-browser
+  // verified exactly this setting): the pinned svelte@5.57.0
+  // `svelte.compileModule` cannot parse TypeScript, and Vite's dev-only esbuild
+  // prebundler feeds the released renderer's `mount.svelte.ts` to it raw, which
+  // crashed `npm run dev` with "Unexpected token" as soon as a browser opened
+  // the app (production build — the N-17 evidence path — was never affected).
+  // Excluding the renderer routes its modules through the normal dev transform
+  // pipeline (esbuild TS strip → svelte module compile) instead. Dev-only;
+  // consumption of the immutable `@victframework/*@0.2.0` set (D-3) is
+  // unchanged.
+  optimizeDeps: { exclude: ['@victframework/renderer-svelte'] },
 });
