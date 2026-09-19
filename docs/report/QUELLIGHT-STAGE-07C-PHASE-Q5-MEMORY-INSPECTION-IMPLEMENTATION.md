@@ -300,6 +300,27 @@ is unaffected.)
   disclosed seeding-fixture boundary for pending-correction proposals
   unchanged from Q4.
 
+## 6a. Disclosure: the real operator data directory received the additive migration-4 schema
+
+The `verify:dev-start` gate (in the ladder since D-11) requests `GET /`
+from the real dev server with the repository root as cwd; the page's
+server load (pre-existing 07B architecture) starts the composition, which
+opens the default operator data directory (`.quellight-data`). During the
+authoritative ladder this applied additive migration 4 to that store's
+schema. The migration is `CREATE TABLE`-only by frozen design — it cannot
+read, write, or delete any user row — and the lazy default-policy seed
+did not run (nothing read the policy on that path). Verified read-only
+after the ladder: both new tables are EMPTY (0 rows each) and every
+pre-existing user family is intact and untouched (4 threads, 1 proposal,
+2 claims, 1 correction, 6 source links, 10 context assemblies; the
+policy singleton was never seeded). No test, verifier, or browser script
+reads or writes the operator data directory (all use disposable
+temp directories); the operator's memory history was never loaded into
+any artifact. Any future migration carries the same property and the
+same disclosure duty; decoupling the dev-start gate from the operator
+data directory is recorded as follow-up hardening (07D retention work
+is a natural home).
+
 ## 7. Status
 
 Phase Q5 is recorded EXACTLY as `IMPLEMENTED — AWAITING INDEPENDENT
