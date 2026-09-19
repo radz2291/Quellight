@@ -184,9 +184,14 @@
     memoryError = '';
     editingId = undefined;
     correctingId = undefined;
+    exitingId = undefined;
+    exitReason = '';
+    exitingVerb = undefined;
+    memoryTab = 'pending';
     lastPendingAnnounced = -1;
     await refreshMemory();
     await refreshAssembly();
+    await refreshInspection();
     const composer = document.getElementById('qlt-composer');
     composer?.focus();
   }
@@ -521,10 +526,14 @@
     await refreshAssembly();
   }
 
-  // ---- Quiet memory inbox (Stage 07C Phase Q3; freeze §11) ----------------
-  // A small, non-blocking pending indicator plus a USER-OPENED review tray.
-  // It never opens or focuses itself, never blocks sending/streaming/
-  // stopping/reconnecting, and never requires a decision before continuing.
+  // ---- Quiet memory surface (Stage 07C Phases Q3–Q5; Q5 freeze §3/§4) -----
+  // A small, non-blocking pending indicator plus a USER-OPENED four-area
+  // Memory surface (Pending / Current / History / Used for reply) and the
+  // global Memory Mode control. It never opens or focuses itself, never
+  // blocks sending/streaming/stopping/reconnecting, and never requires a
+  // decision before continuing. All writes cross the governed /api/act
+  // boundary; all inspection reads cross the read-only act.queryInspection
+  // surface (RECORDED evidence only — never recomputed).
 
   interface MemoryRow {
     id: string;
@@ -543,6 +552,88 @@
     updatedAt: number;
   }
 
+  /** One bounded inspection row (record or proposal) from qlt.inspection. */
+  interface InspectionRow {
+    kind: string;
+    kindLabel: string;
+    proposalKind: string;
+    status: string;
+    statusLabel: string;
+    title: string;
+    text: string;
+    originThreadId: string | null;
+    turnRef: string;
+    actor: string;
+    decisionBy: string;
+    exitReason: string | null;
+    exitedAtMs: number | null;
+    version: number;
+    createdAtMs: number;
+    updatedAtMs: number;
+    createdRecordId: string | null;
+    details: { recordId: string; contentFingerprint: string; retentionState: string };
+  }
+
+  /** The unified view model for Current/History lifecycle rows. */
+  interface RecordRowView {
+    id: string;
+    /** The record family ('claim' | 'commitment' | 'open_loop'; History also carries 'proposal'). */
+    kind: string;
+    title: string;
+    text: string;
+    status: string;
+    statusLabel: string;
+    version: number;
+    origin: string;
+    createdAtMs: number;
+    updatedAtMs: number;
+    actor: string;
+    decisionBy: string;
+    exitReason: string | null;
+    contentFingerprint: string;
+    proposalKind: string;
+    createdRecordId: string | null;
+  }
+
+  interface TurnSummary {
+    turnId: string;
+    outcome: string;
+    usedCount: number;
+    memoryMode: string | undefined;
+    memoryModeLabel: string;
+    failureCode?: string;
+    createdAtMs: number;
+  }
+
+  interface TurnDetail {
+    usage: string;
+    usageLabel: string;
+    appliedPolicy: { policyId: string; mode: string; revision: number } | null;
+    usedCount: number;
+    selected: {
+      kindLabel: string;
+      origin: string;
+      selectedVersion: number;
+      currentVersion?: number;
+      supersededSince?: boolean;
+      title?: string;
+      content: string | null;
+      tombstone: string | null;
+      details: { recordId: string };
+    }[];
+    exclusions: {
+      kindLabel: string;
+      reason: string;
+      reasonLabel: string;
+      details: { recordId: string };
+    }[];
+    exclusionsAreBoundedSubset: boolean;
+    excludedBeyondCount: number | null;
+    details: Record<string, unknown>;
+  }
+
+  type MemoryTab = 'pending' | 'current' | 'history' | 'used';
+
   let memoryRows = $state<MemoryRow[]>([]);
   let memoryOpen = $state(false);
   let memoryBusy = $state(false);
@@ -557,7 +648,42 @@
   let saveKind = $state<'claim' | 'commitment' | 'open_loop'>('claim');
   let saveSubject = $state('');
   let saveText = $state('');
-  let chipButton: HTMLButtonElement | undefined = undefined;
+  let chipButton = $state<HTMLButtonElement | undefined>(undefined);
+
+  // Q5 four-area surface state.
+  let memoryTab = $state<MemoryTab>('pending');
+  let currentRows = $state<RecordRowView[]>([]);
+  let historyRows = $state<RecordRowView[]>([]);
+  let inspectionError = $state('');
+  let exitingId = $state<string | undefined>(undefined);
+  let exitReason = $state('');
+  let exitingVerb = $state<'abandon' | 'transform' | undefined>(undefined);
+  let detailsOpenId = $state<string | undefined>(undefined);
+  // Q5 Used-for-reply state (bounded chooser + recorded detail).
+  let turnRows = $state<TurnSummary[]>([]);
+  let selectedTurnId = $state<string | undefined>(undefined);
+  let turnDetail = $state<TurnDetail | undefined>(undefined);
+  let turnDetailError = $state('');
+  // Q5 Memory Mode control state (the durable global policy).
+  const MEMORY_MODE_CHOICES = [
+    {
+      value: 'across-conversations',
+      label: 'Across conversations (default)',
+      hint: 'Memory from this conversation, saved notes, and other conversations may be used.',
+    },
+    {
+      value: 'per-conversation',
+      label: 'Within each conversation only',
+      hint: 'Only memory created in this conversation is used.',
+    },
+    {
+      value: 'off',
+      label: 'Memory off',
+      hint: 'No memory is used in replies.',
+    },
+  ] as const;
+  let memoryModeChoice = $state<string>('across-conversations');
+  let memoryModeCurrent = $state<string | undefined>(undefined);
 
   // ---- Q4 quiet context-usage line (frozen contract §9; D-Q4-6) ----------
   // One quiet, non-interruptive line inside the USER-OPENED tray only,
@@ -567,6 +693,7 @@
   interface AssemblySummary {
     outcome: 'complete' | 'empty' | 'failed';
     usedCount: number;
+    memoryMode?: string;
   }
   let assemblySummary = $state<AssemblySummary | undefined>(undefined);
 
@@ -576,6 +703,11 @@
     }
     if (summary.outcome === 'failed') {
       return 'Memory unavailable for this turn';
+    }
+    if (summary.memoryMode === 'off') {
+      // Q5: an intentionally disabled mode is never misreported as "no
+      // memory existed" (Q5 freeze §3.5).
+      return 'Memory was off for your last reply here.';
     }
     if (summary.outcome === 'complete' && summary.usedCount > 0) {
       return summary.usedCount === 1
@@ -597,18 +729,23 @@
       );
       const result = body as {
         ok: boolean;
-        assembly?: { outcome?: unknown; usedCount?: unknown };
+        assembly?: { outcome?: unknown; usedCount?: unknown; memoryMode?: unknown };
       };
       if (result.ok && result.assembly !== undefined && result.assembly !== null) {
         const outcome = result.assembly.outcome;
         const usedCount = result.assembly.usedCount;
+        const memoryMode = result.assembly.memoryMode;
         if (
           (outcome === 'complete' || outcome === 'empty' || outcome === 'failed') &&
           typeof usedCount === 'number' &&
           Number.isSafeInteger(usedCount) &&
           usedCount >= 0
         ) {
-          assemblySummary = { outcome, usedCount };
+          assemblySummary = {
+            outcome,
+            usedCount,
+            ...(typeof memoryMode === 'string' ? { memoryMode } : {}),
+          };
         }
       } else if (result.ok) {
         assemblySummary = undefined;
@@ -619,19 +756,198 @@
     }
   }
 
-  const pendingProposals = $derived(
-    memoryRows.filter(
+  // ---- Q5 four-area surface reads (act.queryInspection; RECORDED evidence
+  // only — the Used-for-reply view never recomputes a historical turn) -----
+
+  async function inspectionQuery(
+    filters: Record<string, string>,
+  ): Promise<Record<string, unknown> | undefined> {
+    const { body } = await fetchJson('/api/act', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ actionId: 'act.queryInspection', input: { filters } }),
+    });
+    const result = body as { ok: boolean; row?: Record<string, unknown>; value?: unknown };
+    if (!result.ok) {
+      return undefined;
+    }
+    // The ingress query path returns the result object itself (rows/total
+    // or row) — unwrap either shape truthfully.
+    const value = (body as { value?: { row?: Record<string, unknown> } }).value;
+    return (result.row ?? value?.row ?? value ?? undefined) as
+      | Record<string, unknown>
+      | undefined;
+  }
+
+  function originLabelOf(row: {
+    originThreadId: string | null;
+    turnRef?: string;
+  }): string {
+    if (row.originThreadId === null || row.originThreadId === '') {
+      return 'saved without a conversation';
+    }
+    if (row.originThreadId === selectedThreadId) {
+      return 'this conversation';
+    }
+    return 'another conversation';
+  }
+
+  function recordViewOf(row: InspectionRow): RecordRowView {
+    return {
+      id: row.details.recordId,
+      kind: row.kind,
+      title: row.title,
+      text: row.text,
+      status: row.status,
+      statusLabel: row.statusLabel,
+      version: row.version,
+      origin: originLabelOf(row),
+      createdAtMs: row.createdAtMs,
+      updatedAtMs: row.updatedAtMs,
+      actor: row.actor,
+      decisionBy: row.decisionBy,
+      exitReason: row.exitReason,
+      contentFingerprint: row.details.contentFingerprint,
+      proposalKind: row.proposalKind,
+      createdRecordId: row.createdRecordId,
+    };
+  }
+
+  function timeLabel(ms: number): string {
+    try {
+      return new Date(ms).toLocaleString();
+    } catch {
+      return '';
+    }
+  }
+
+  async function refreshInspection(): Promise<void> {
+    if (selectedThreadId === undefined) {
+      currentRows = [];
+      historyRows = [];
+      turnRows = [];
+      turnDetail = undefined;
+      selectedTurnId = undefined;
+      memoryModeCurrent = undefined;
+      return;
+    }
+    try {
+      inspectionError = '';
+      const current = await inspectionQuery({ query: 'listRecords', bucket: 'current' });
+      const rows = (current?.['rows'] as InspectionRow[] | undefined) ?? [];
+      currentRows = rows.map(recordViewOf);
+      const history = await inspectionQuery({ query: 'listRecords', bucket: 'history' });
+      const historyList = (history?.['rows'] as InspectionRow[] | undefined) ?? [];
+      historyRows = historyList.map(recordViewOf);
+      const turns = await inspectionQuery({
+        query: 'listTurns',
+        threadId: selectedThreadId,
+        limit: '20',
+      });
+      const turnList = (turns?.['rows'] as TurnSummary[] | undefined) ?? [];
+      turnRows = turnList.slice(0, 20);
+      if (selectedTurnId !== undefined && !turnRows.some((turn) => turn.turnId === selectedTurnId)) {
+        selectedTurnId = undefined;
+        turnDetail = undefined;
+      }
+      const policy = await inspectionQuery({ query: 'getPolicy' });
+      const mode = policy?.['mode'];
+      memoryModeCurrent = typeof mode === 'string' ? mode : undefined;
+      if (memoryModeCurrent !== undefined) {
+        memoryModeChoice = memoryModeCurrent;
+      }
+    } catch {
+      inspectionError = 'QLT_INSPECTION_UNAVAILABLE';
+    }
+  }
+
+  async function openTurn(turnId: string): Promise<void> {
+    if (selectedThreadId === undefined) {
+      return;
+    }
+    selectedTurnId = turnId;
+    turnDetailError = '';
+    try {
+      const detail = await inspectionQuery({
+        query: 'getTurn',
+        threadId: selectedThreadId,
+        turnId,
+      });
+      if (detail === undefined) {
+        turnDetail = undefined;
+        turnDetailError = 'QLT_INSPECTION_TURN_MISSING';
+        return;
+      }
+      turnDetail = detail as unknown as TurnDetail;
+    } catch {
+      turnDetail = undefined;
+      turnDetailError = 'QLT_INSPECTION_TURN_MISSING';
+    }
+  }
+
+  function turnLabel(turn: TurnSummary): string {
+    const when = timeLabel(turn.createdAtMs);
+    if (turn.memoryMode === 'off') {
+      return `Reply · memory off${when !== '' ? ` · ${when}` : ''}`;
+    }
+    if (turn.outcome === 'failed') {
+      return `Reply · memory unavailable${when !== '' ? ` · ${when}` : ''}`;
+    }
+    if (turn.outcome === 'complete' && turn.usedCount > 0) {
+      return `Reply · used ${turn.usedCount} ${turn.usedCount === 1 ? 'memory' : 'memories'}${when !== '' ? ` · ${when}` : ''}`;
+    }
+    return `Reply · no memories used${when !== '' ? ` · ${when}` : ''}`;
+  }
+
+  async function saveMemoryMode(): Promise<void> {
+    memoryBusy = true;
+    memoryError = '';
+    try {
+      const { body } = await fetchJson('/api/act', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          actionId: 'act.setMemoryMode',
+          input: { mode: memoryModeChoice },
+          idempotencyKey: `memory-mode-${crypto.randomUUID()}`,
+        }),
+      });
+      const result = body as { ok: boolean; code?: string };
+      if (result.ok) {
+        memoryModeCurrent = memoryModeChoice;
+        announcement = `Memory mode saved: it applies to all conversations and takes effect on your next message.`;
+      } else {
+        memoryError = result.code ?? 'ACTION_FAILED';
+        announcement = `The memory mode was not changed (${memoryError}).`;
+      }
+    } catch {
+      memoryError = 'MEMORY_ACTION_UNDELIVERED';
+      announcement = 'The memory mode change could not be delivered; you can retry.';
+    } finally {
+      memoryBusy = false;
+    }
+  }
+
+  function pendingProposals(): MemoryRow[] {
+    return memoryRows.filter(
       (row) =>
         row.kind === 'proposal' &&
         (row.status === 'proposed' || row.status === 'awaiting_decision'),
-    ),
-  );
-  const decidedProposals = $derived(
-    memoryRows.filter(
-      (row) => row.kind === 'proposal' && !['proposed', 'awaiting_decision'].includes(row.status),
-    ),
-  );
-  const memoryRecords = $derived(memoryRows.filter((row) => row.kind !== 'proposal'));
+    );
+  }
+
+  function isLifecycleRow(row: RecordRowView | MemoryRow): boolean {
+    return (
+      row.status === 'active' ||
+      row.status === 'open' ||
+      row.status === 'superseded' ||
+      row.status === 'retired' ||
+      row.status === 'released' ||
+      row.status === 'resolved' ||
+      row.status === 'abandoned' ||
+      row.status === 'transformed'
+    );
+  }
 
   function contentPayload(row: MemoryRow, text: string): Record<string, string> {
     // For proposals the SPECIFIC drafted kind governs the content shape;
@@ -714,6 +1030,9 @@
       if (result.ok) {
         announcement = successMessage;
         await refreshMemory();
+        // Q5: lifecycle/correction effects move rows between areas — the
+        // inspection buckets refresh with the same quiet discipline.
+        await refreshInspection();
         return true;
       }
       memoryError = result.code ?? 'ACTION_FAILED';
@@ -830,14 +1149,14 @@
     }
   }
 
-  function startCorrect(row: MemoryRow): void {
+  function startCorrect(row: RecordRowView | MemoryRow): void {
     correctingId = row.id;
     correctingText = row.text;
     correctingReason = '';
     editingId = undefined;
   }
 
-  async function commitCorrect(row: MemoryRow): Promise<void> {
+  async function commitCorrect(row: RecordRowView | MemoryRow): Promise<void> {
     if (correctingText.trim().length === 0) {
       return;
     }
@@ -845,6 +1164,7 @@
       recordId: row.id,
       recordKind: row.kind,
       reason: correctingReason.trim(),
+      expectedVersion: row.version,
     };
     if (row.kind === 'open_loop') {
       payload['detail'] = correctingText.trim();
@@ -861,6 +1181,79 @@
     }
   }
 
+  /**
+   * Q5 lifecycle exits from the Current area (freeze §3.2): retire a
+   * claim, release a commitment, resolve/abandon/transform an open loop.
+   * All writes cross the governed /api/act boundary with the exact
+   * version check; reason-required exits use the inline reason input
+   * (no browser-native blocking dialogs).
+   */
+  function startExit(row: RecordRowView, verb: 'retire' | 'release' | 'resolve'): void {
+    exitingId = row.id;
+    exitReason = '';
+    const actionId =
+      verb === 'retire'
+        ? 'act.retireClaim'
+        : verb === 'release'
+          ? 'act.releaseCommitment'
+          : 'act.resolveLoop';
+    void commitExit(actionId, row);
+  }
+
+  function startReasonedExit(
+    row: RecordRowView,
+    verb: 'abandon' | 'transform',
+  ): void {
+    exitingId = row.id;
+    exitReason = '';
+    exitingVerb = verb;
+  }
+
+  function cancelExit(): void {
+    exitingId = undefined;
+    exitReason = '';
+    exitingVerb = undefined;
+  }
+
+  async function commitExit(
+    actionId: string,
+    row: RecordRowView,
+  ): Promise<void> {
+    const done = await memoryAction(
+      actionId,
+      {
+        recordId: row.id,
+        expectedVersion: row.version,
+        ...(exitReason.trim() !== '' ? { reason: exitReason.trim() } : {}),
+      },
+      'The lifecycle change was recorded with full attribution.',
+    );
+    if (done) {
+      exitingId = undefined;
+      exitReason = '';
+      exitingVerb = undefined;
+    }
+  }
+
+  async function commitReasonedExit(): Promise<void> {
+    if (exitingId === undefined || exitingVerb === undefined) {
+      return;
+    }
+    const row = currentRows.find((entry) => entry.id === exitingId);
+    if (row === undefined) {
+      cancelExit();
+      return;
+    }
+    const reason = exitReason.trim();
+    const actionId = exitingVerb === 'abandon' ? 'act.abandonLoop' : 'act.transformLoop';
+    if (reason.length === 0) {
+      memoryError = 'QLT_INPUT_REJECTED';
+      announcement = 'This exit requires a bounded reason; nothing was changed.';
+      return;
+    }
+    await commitExit(actionId, row);
+  }
+
   function closeMemory(): void {
     memoryOpen = false;
     chipButton?.focus();
@@ -872,9 +1265,59 @@
       return;
     }
     memoryOpen = true;
-    announcement = 'Memory review opened. Pending proposals are listed; deciding is optional.';
+    announcement =
+      'Memory review opened. Pending proposals are listed; deciding is optional.';
     void refreshMemory();
     void refreshAssembly();
+    void refreshInspection();
+  }
+
+  /** Q5: real Escape-to-close via the window-level keydown (M-2 law). */
+  function handleWindowKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape' && memoryOpen) {
+      event.preventDefault();
+      closeMemory();
+    }
+  }
+
+  function toggleDetails(id: string): void {
+    detailsOpenId = detailsOpenId === id ? undefined : id;
+  }
+
+  /** True when every area is empty (the truthful empty-state message). */
+  function memoryEmpty(): boolean {
+    return (
+      pendingProposals().length === 0 &&
+      currentRows.length === 0 &&
+      historyRows.length === 0 &&
+      turnRows.length === 0
+    );
+  }
+
+  /** The user-facing label of a stable Memory Mode identity. */
+  function memoryModeChoiceLabel(mode: string): string {
+    if (mode === 'across-conversations') return 'Across conversations';
+    if (mode === 'per-conversation') return 'Within each conversation only';
+    if (mode === 'off') return 'Memory off';
+    return mode;
+  }
+
+  /** The human kind label of a record family (Current/History). */
+  function recordKindLabel(kind: string): string {
+    if (kind === 'claim') return 'Claim';
+    if (kind === 'commitment') return 'Commitment';
+    if (kind === 'open_loop') return 'Open question';
+    return kind;
+  }
+
+  /** The human label of a terminal proposal in History. */
+  function proposalHistoryLabel(row: RecordRowView): string {
+    const kind = recordKindLabel(row.proposalKind === '' ? row.kind : row.proposalKind);
+    if (row.status === 'confirmed') return `Confirmed ${kind.toLowerCase()} proposal`;
+    if (row.status === 'rejected') return `Rejected ${kind.toLowerCase()} proposal`;
+    if (row.status === 'amended') return `Amended ${kind.toLowerCase()} proposal`;
+    if (row.status === 'withdrawn') return `Withdrawn ${kind.toLowerCase()} proposal`;
+    return `${kind} proposal`;
   }
 
   $effect(() => {
@@ -882,6 +1325,11 @@
     void refreshThreads();
   });
 </script>
+
+<!-- Q5 (freeze §13): real Escape-to-close via the window-level keydown —
+     this also removes the a11y warning of a key listener on a non-
+     interactive <section>. Focus returns to the memory chip on close. -->
+<svelte:window onkeydown={handleWindowKeydown} />
 
 <section class="qlt-workspace" aria-label="Quellight conversation workspace">
   <header class="qlt-topbar">
@@ -922,7 +1370,11 @@
       </ul>
     </nav>
 
-    <main class="qlt-conversation" aria-label="Conversation">
+    <main
+      class="qlt-conversation"
+      class:qlt-conversation--with-memory={memoryOpen}
+      aria-label="Conversation"
+    >
       {#if selectedThread === undefined}
         <div class="qlt-center" data-state="empty">
           <p class="qlt-empty">
@@ -948,20 +1400,20 @@
             <button type="button" class="qlt-btn" onclick={() => (renaming = false)}>Cancel</button>
           {:else}
             <h2 class="qlt-thread-heading">{selectedThread.title}</h2>
-    {#if pendingCount > 0 || memoryRows.length > 0}
-              <button
-                type="button"
-                class="qlt-memory-chip"
-                bind:this={chipButton}
-                aria-label={pendingCount > 0
-                  ? `Memory review, ${pendingCount} pending ${pendingCount === 1 ? 'proposal' : 'proposals'}`
-                  : 'Memory review'}
-                aria-expanded={memoryOpen}
-                onclick={toggleMemory}
-              >
-                {pendingCount > 0 ? `Memory · ${pendingCount} pending` : 'Memory'}
-              </button>
-            {/if}
+            <!-- Q5 (freeze §5): the Memory chip is ALWAYS present for an
+                 open thread; the pending count appears only when applicable. -->
+            <button
+              type="button"
+              class="qlt-memory-chip"
+              bind:this={chipButton}
+              aria-label={pendingCount > 0
+                ? `Memory review, ${pendingCount} pending ${pendingCount === 1 ? 'proposal' : 'proposals'}`
+                : 'Memory review'}
+              aria-expanded={memoryOpen}
+              onclick={toggleMemory}
+            >
+              {pendingCount > 0 ? `Memory · ${pendingCount} pending` : 'Memory'}
+            </button>
             <button type="button" class="qlt-btn" onclick={startRename} disabled={archived}>Rename</button>
             {#if archived}
               <button type="button" class="qlt-btn" onclick={() => void threadAction('act.reopenThread', {})}
@@ -1033,20 +1485,7 @@
         {/if}
 
         {#if memoryOpen}
-          <section
-            class="qlt-memory"
-            role="region"
-            aria-label="Memory review"
-            onkeydown={(event) => {
-              // M-2 (frozen Q4 contract §10): a real Escape keydown inside
-              // the tray closes it; focus returns to the memory chip; the
-              // composer is unaffected.
-              if (event.key === 'Escape') {
-                event.preventDefault();
-                closeMemory();
-              }
-            }}
-          >
+          <section class="qlt-memory" aria-label="Memory review">
             <div class="qlt-memory-head">
               <h3 class="qlt-memory-title">Memory review</h3>
               <button
@@ -1060,157 +1499,438 @@
             </div>
             <p class="qlt-memory-hint">
               Deciding is optional and nothing is confirmed by waiting. Pending proposals stay
-              pending until you decide.
+              pending until you decide. History and Used for reply show recorded evidence only.
             </p>
             <p class="qlt-memory-assembly" role="status" data-assembly={assemblySummary === undefined ? 'none' : assemblySummary.outcome}>
               {assemblyLine(assemblySummary)}
             </p>
             {#if memoryError !== ''}
               <p class="qlt-memory-error" role="status">The last memory action did not complete ({memoryError}). You can retry.</p>
+            {:else if inspectionError !== ''}
+              <p class="qlt-memory-error" role="status">The inspection surface did not answer ({inspectionError}). You can retry by reopening.</p>
             {/if}
 
-            {#if pendingProposals.length === 0 && decidedProposals.length === 0 && memoryRecords.length === 0}
-              <p class="qlt-memory-empty">No pending proposals or saved memory for this thread.</p>
-            {/if}
-
-            <ul class="qlt-memory-list">
-              {#each pendingProposals as row (row.id)}
-                <li class="qlt-memory-item" data-stale={row.stale}>
-                  <div class="qlt-memory-item-head">
-                    <span class="qlt-memory-kind">{kindLabel(row)}</span>
-                    <span class="qlt-memory-status" data-status={row.stale === 'true' ? 'stale' : 'pending'}>
-                      {statusLabel(row)}
-                    </span>
-                  </div>
-                  <p class="qlt-memory-title-text">{row.title}</p>
-                  {#if editingId === row.id}
-                    <label class="qlt-visually-hidden" for="qlt-edit-{row.id}">Amended proposal text</label>
-                    <textarea
-                      id="qlt-edit-{row.id}"
-                      class="qlt-input qlt-memory-input"
-                      rows="2"
-                      bind:value={editingText}
-                    ></textarea>
-                    <div class="qlt-memory-actions">
-                      <button
-                        type="button"
-                        class="qlt-btn"
-                        disabled={memoryBusy}
-                        onclick={() => void commitEdit(row)}
-                      >
-                        Save amendment
-                      </button>
-                      <button type="button" class="qlt-btn" onclick={() => (editingId = undefined)}>
-                        Cancel
-                      </button>
-                    </div>
-                  {:else}
-                    <p class="qlt-memory-text">{row.text}</p>
-                    <div class="qlt-memory-actions">
-                      <button
-                        type="button"
-                        class="qlt-btn"
-                        disabled={memoryBusy}
-                        onclick={() => void decide('act.confirmProposal', row, 'Confirmed. The proposal is now confirmed memory, attributed to you.')}
-                      >
-                        Confirm
-                      </button>
-                      <button type="button" class="qlt-btn" disabled={memoryBusy} onclick={() => startEdit(row)}>
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        class="qlt-btn"
-                        disabled={memoryBusy}
-                        onclick={() => void decide('act.rejectProposal', row, 'Rejected. Nothing was saved as memory.')}
-                      >
-                        Reject
-                      </button>
-                      <button
-                        type="button"
-                        class="qlt-btn"
-                        disabled={memoryBusy}
-                        onclick={() => void decide('act.withdrawProposal', row, 'Withdrawn. The proposal was permanently withdrawn by you.')}
-                      >
-                        Withdraw
-                      </button>
-                    </div>
-                  {/if}
-                  <p class="qlt-memory-provenance">
-                    Drafted by {row.actor === 'agent-quellight' ? 'the assistant' : row.actor} · in
-                    this thread{row.turnRef !== '' ? ' · from a conversation turn' : ''}
-                  </p>
-                </li>
-              {/each}
-
-              {#each decidedProposals as row (row.id)}
-                <li class="qlt-memory-item qlt-memory-item--decided" data-status={row.status}>
-                  <div class="qlt-memory-item-head">
-                    <span class="qlt-memory-kind">{kindLabel(row)}</span>
-                    <span class="qlt-memory-status" data-status={row.status}>{statusLabel(row)}</span>
-                  </div>
-                  <p class="qlt-memory-title-text">{row.title}</p>
-                  <p class="qlt-memory-text">{row.text}</p>
-                  <p class="qlt-memory-provenance">
-                    {row.status === 'withdrawn'
-                      ? 'Permanently withdrawn by you.'
-                      : row.status === 'amended'
-                        ? 'Amended by you; the amended version is a new pending proposal.'
-                        : row.status === 'rejected'
-                          ? 'Rejected by you. Nothing was saved as memory.'
-                          : `Decided by ${row.decisionBy === 'actor-quellight-local' ? 'you' : row.decisionBy}.`}
-                  </p>
-                </li>
-              {/each}
-
-              {#each memoryRecords as row (row.id)}
-                <li class="qlt-memory-item" data-kind={row.kind}>
-                  <div class="qlt-memory-item-head">
-                    <span class="qlt-memory-kind">{row.kind === 'claim' ? 'Claim' : row.kind === 'commitment' ? 'Commitment' : 'Open question'}</span>
-                    <span class="qlt-memory-status" data-status={row.status}>{statusLabel(row)}</span>
-                  </div>
-                  <p class="qlt-memory-title-text">{row.title}</p>
-                  {#if correctingId === row.id}
-                    <label class="qlt-visually-hidden" for="qlt-correct-{row.id}">Corrected text</label>
-                    <textarea
-                      id="qlt-correct-{row.id}"
-                      class="qlt-input qlt-memory-input"
-                      rows="2"
-                      bind:value={correctingText}
-                    ></textarea>
-                    <label class="qlt-visually-hidden" for="qlt-correct-reason-{row.id}">Reason for the correction</label>
+            <!-- Q5 Memory Mode control (Q5-OD-1; lives ONLY inside this
+                 surface; applies to ALL conversations; user-attributed,
+                 idempotent governed mutation) -->
+            <fieldset class="qlt-memory-mode">
+              <legend class="qlt-memory-mode-legend">Memory mode</legend>
+              <p class="qlt-memory-mode-scope">
+                This setting applies to all conversations. It takes effect on your next message;
+                replies already started keep the memory they had.
+              </p>
+              <div class="qlt-memory-mode-options">
+                {#each MEMORY_MODE_CHOICES as choice (choice.value)}
+                  <label class="qlt-memory-mode-option">
                     <input
-                      id="qlt-correct-reason-{row.id}"
-                      class="qlt-input qlt-memory-input"
-                      placeholder="Why is this being corrected?"
-                      bind:value={correctingReason}
+                      type="radio"
+                      name="qlt-memory-mode"
+                      value={choice.value}
+                      bind:group={memoryModeChoice}
                     />
-                    <div class="qlt-memory-actions">
-                      <button
-                        type="button"
-                        class="qlt-btn"
-                        disabled={memoryBusy}
-                        onclick={() => void commitCorrect(row)}
-                      >
-                        Save correction
-                      </button>
-                      <button type="button" class="qlt-btn" onclick={() => (correctingId = undefined)}>
-                        Cancel
-                      </button>
+                    <span>
+                      <span class="qlt-memory-mode-label">{choice.label}</span>
+                      <span class="qlt-memory-mode-hint">{choice.hint}</span>
+                    </span>
+                  </label>
+                {/each}
+              </div>
+              <button
+                type="button"
+                class="qlt-btn qlt-memory-mode-save"
+                disabled={memoryBusy || memoryModeChoice === memoryModeCurrent}
+                onclick={() => void saveMemoryMode()}
+              >
+                Save memory mode
+              </button>
+              {#if memoryModeCurrent !== undefined}
+                <span class="qlt-memory-mode-current" data-memory-mode={memoryModeCurrent}>
+                  Current: {memoryModeChoiceLabel(memoryModeCurrent)}
+                </span>
+              {/if}
+            </fieldset>
+
+            <!-- Q5 four areas -->
+            <div class="qlt-memory-tabs" role="group" aria-label="Memory areas">
+              <button
+                type="button"
+                class="qlt-memory-tab"
+                aria-pressed={memoryTab === 'pending'}
+                data-memory-tab="pending"
+                onclick={() => (memoryTab = 'pending')}
+              >
+                Pending{pendingProposals().length > 0 ? ` (${pendingProposals().length})` : ''}
+              </button>
+              <button
+                type="button"
+                class="qlt-memory-tab"
+                aria-pressed={memoryTab === 'current'}
+                data-memory-tab="current"
+                onclick={() => (memoryTab = 'current')}
+              >
+                Current
+              </button>
+              <button
+                type="button"
+                class="qlt-memory-tab"
+                aria-pressed={memoryTab === 'history'}
+                data-memory-tab="history"
+                onclick={() => (memoryTab = 'history')}
+              >
+                History
+              </button>
+              <button
+                type="button"
+                class="qlt-memory-tab"
+                aria-pressed={memoryTab === 'used'}
+                data-memory-tab="used"
+                onclick={() => (memoryTab = 'used')}
+              >
+                Used for reply
+              </button>
+            </div>
+
+            {#if memoryTab === 'pending'}
+              <div>
+              {#if pendingProposals().length === 0}
+                <p class="qlt-memory-empty">No pending proposals for this thread.</p>
+              {/if}
+              <ul class="qlt-memory-list">
+                {#each pendingProposals() as row (row.id)}
+                  <li class="qlt-memory-item" data-stale={row.stale}>
+                    <div class="qlt-memory-item-head">
+                      <span class="qlt-memory-kind">{kindLabel(row)}</span>
+                      <span class="qlt-memory-status" data-status={row.stale === 'true' ? 'stale' : 'pending'}>
+                        {statusLabel(row)}
+                      </span>
                     </div>
-                  {:else}
-                    <p class="qlt-memory-text">{row.text}</p>
-                    {#if row.status === 'active' || row.status === 'open'}
+                    <p class="qlt-memory-title-text">{row.title}</p>
+                    {#if editingId === row.id}
+                      <label class="qlt-visually-hidden" for="qlt-edit-{row.id}">Amended proposal text</label>
+                      <textarea
+                        id="qlt-edit-{row.id}"
+                        class="qlt-input qlt-memory-input"
+                        rows="2"
+                        bind:value={editingText}
+                      ></textarea>
+                      <div class="qlt-memory-actions">
+                        <button
+                          type="button"
+                          class="qlt-btn"
+                          disabled={memoryBusy}
+                          onclick={() => void commitEdit(row)}
+                        >
+                          Save amendment
+                        </button>
+                        <button type="button" class="qlt-btn" onclick={() => (editingId = undefined)}>
+                          Cancel
+                        </button>
+                      </div>
+                    {:else}
+                      <p class="qlt-memory-text">{row.text}</p>
+                      <div class="qlt-memory-actions">
+                        <button
+                          type="button"
+                          class="qlt-btn"
+                          disabled={memoryBusy}
+                          onclick={() => void decide('act.confirmProposal', row, 'Confirmed. The proposal is now confirmed memory, attributed to you.')}
+                        >
+                          Confirm
+                        </button>
+                        <button type="button" class="qlt-btn" disabled={memoryBusy} onclick={() => startEdit(row)}>
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          class="qlt-btn"
+                          disabled={memoryBusy}
+                          onclick={() => void decide('act.rejectProposal', row, 'Rejected. Nothing was saved as memory.')}
+                        >
+                          Reject
+                        </button>
+                        <button
+                          type="button"
+                          class="qlt-btn"
+                          disabled={memoryBusy}
+                          onclick={() => void decide('act.withdrawProposal', row, 'Withdrawn. The proposal was permanently withdrawn by you.')}
+                        >
+                          Withdraw
+                        </button>
+                      </div>
+                    {/if}
+                    <p class="qlt-memory-provenance">
+                      Drafted by {row.actor === 'agent-quellight' ? 'the assistant' : row.actor} · in
+                      this thread{row.turnRef !== '' ? ' · from a conversation turn' : ''}
+                    </p>
+                  </li>
+                {/each}
+              </ul>
+              </div>
+            {:else if memoryTab === 'current'}
+              <div>
+              <p class="qlt-memory-area-hint">
+                Current memory in force across your conversations. Lifecycle changes are attributed
+                to you and keep full lineage.
+              </p>
+              {#if currentRows.length === 0}
+                <p class="qlt-memory-empty">No current memory yet.</p>
+              {/if}
+              <ul class="qlt-memory-list">
+                {#each currentRows as row (row.id)}
+                  <li class="qlt-memory-item" data-kind={row.kind} data-origin={row.origin}>
+                    <div class="qlt-memory-item-head">
+                      <span class="qlt-memory-kind">{recordKindLabel(row.kind)}</span>
+                      <span class="qlt-memory-status" data-status={row.status}>{row.statusLabel}</span>
+                    </div>
+                    <p class="qlt-memory-title-text">{row.title}</p>
+                    {#if correctingId === row.id}
+                      <label class="qlt-visually-hidden" for="qlt-correct-{row.id}">Corrected text</label>
+                      <textarea
+                        id="qlt-correct-{row.id}"
+                        class="qlt-input qlt-memory-input"
+                        rows="2"
+                        bind:value={correctingText}
+                      ></textarea>
+                      <label class="qlt-visually-hidden" for="qlt-correct-reason-{row.id}">Reason for the correction</label>
+                      <input
+                        id="qlt-correct-reason-{row.id}"
+                        class="qlt-input qlt-memory-input"
+                        placeholder="Why is this being corrected?"
+                        bind:value={correctingReason}
+                      />
+                      <div class="qlt-memory-actions">
+                        <button
+                          type="button"
+                          class="qlt-btn"
+                          disabled={memoryBusy}
+                          onclick={() => void commitCorrect(row)}
+                        >
+                          Save correction
+                        </button>
+                        <button type="button" class="qlt-btn" onclick={() => (correctingId = undefined)}>
+                          Cancel
+                        </button>
+                      </div>
+                    {:else if exitingId === row.id && exitingVerb !== undefined}
+                      <label class="qlt-visually-hidden" for="qlt-exit-reason-{row.id}">
+                        Reason for this change
+                      </label>
+                      <input
+                        id="qlt-exit-reason-{row.id}"
+                        class="qlt-input qlt-memory-input"
+                        placeholder="Why is this being {exitingVerb === 'abandon' ? 'abandoned' : 'transformed'}? (required)"
+                        bind:value={exitReason}
+                      />
+                      <div class="qlt-memory-actions">
+                        <button
+                          type="button"
+                          class="qlt-btn"
+                          disabled={memoryBusy}
+                          onclick={() => void commitReasonedExit()}
+                        >
+                          Confirm {exitingVerb}
+                        </button>
+                        <button type="button" class="qlt-btn" onclick={cancelExit}>Cancel</button>
+                      </div>
+                    {:else}
+                      <p class="qlt-memory-text">{row.text}</p>
                       <div class="qlt-memory-actions">
                         <button type="button" class="qlt-btn" disabled={memoryBusy} onclick={() => startCorrect(row)}>
                           Correct
                         </button>
+                        {#if row.kind === 'claim'}
+                          <button type="button" class="qlt-btn" disabled={memoryBusy} onclick={() => startExit(row, 'retire')}>
+                            Retire claim
+                          </button>
+                        {:else if row.kind === 'commitment'}
+                          <button type="button" class="qlt-btn" disabled={memoryBusy} onclick={() => startExit(row, 'release')}>
+                            Release commitment
+                          </button>
+                        {:else}
+                          <button type="button" class="qlt-btn" disabled={memoryBusy} onclick={() => startExit(row, 'resolve')}>
+                            Resolve
+                          </button>
+                          <button type="button" class="qlt-btn" disabled={memoryBusy} onclick={() => startReasonedExit(row, 'abandon')}>
+                            Abandon
+                          </button>
+                          <button type="button" class="qlt-btn" disabled={memoryBusy} onclick={() => startReasonedExit(row, 'transform')}>
+                            Transform
+                          </button>
+                        {/if}
                       </div>
                     {/if}
+                    <p class="qlt-memory-provenance">
+                      Origin: {row.origin} · saved {timeLabel(row.createdAtMs)} · updated {timeLabel(row.updatedAtMs)}
+                    </p>
+                    <button
+                      type="button"
+                      class="qlt-btn qlt-memory-details-toggle"
+                      aria-expanded={detailsOpenId === row.id}
+                      onclick={() => toggleDetails(row.id)}
+                    >
+                      {detailsOpenId === row.id ? 'Hide details' : 'Details'}
+                    </button>
+                    {#if detailsOpenId === row.id}
+                      <p class="qlt-memory-details">
+                        record id: {row.id} · version {row.version} · fingerprint {row.contentFingerprint}
+                      </p>
+                    {/if}
+                  </li>
+                {/each}
+              </ul>
+              </div>
+            {:else if memoryTab === 'history'}
+              <div>
+              <p class="qlt-memory-area-hint">
+                History is inspect-only: ended proposals and closed or replaced records, with what
+                ended them. Nothing here can be restored or reactivated.
+              </p>
+              {#if historyRows.length === 0}
+                <p class="qlt-memory-empty">No history yet.</p>
+              {/if}
+              <ul class="qlt-memory-list">
+                {#each historyRows as row (row.id)}
+                  <li class="qlt-memory-item qlt-memory-item--decided" data-kind={row.kind} data-status={row.status}>
+                    <div class="qlt-memory-item-head">
+                      <span class="qlt-memory-kind">
+                        {row.kind === 'proposal' ? proposalHistoryLabel(row) : recordKindLabel(row.kind)}
+                      </span>
+                      <span class="qlt-memory-status" data-status={row.status}>{row.statusLabel}</span>
+                    </div>
+                    <p class="qlt-memory-title-text">{row.title}</p>
+                    <p class="qlt-memory-text">{row.text}</p>
+                    <p class="qlt-memory-provenance">
+                      Origin: {row.origin}
+                      {#if row.exitReason !== null && row.exitReason !== ''}
+                        · reason: {row.exitReason}
+                      {/if}
+                      {#if row.decisionBy !== ''}
+                        · by {row.decisionBy === 'actor-quellight-local' ? 'you' : row.decisionBy}
+                      {/if}
+                      · ended {timeLabel(row.updatedAtMs)}
+                      {#if row.kind === 'proposal' && row.status === 'confirmed'}
+                        · became a saved record
+                      {/if}
+                    </p>
+                    <button
+                      type="button"
+                      class="qlt-btn qlt-memory-details-toggle"
+                      aria-expanded={detailsOpenId === row.id}
+                      onclick={() => toggleDetails(row.id)}
+                    >
+                      {detailsOpenId === row.id ? 'Hide details' : 'Details'}
+                    </button>
+                    {#if detailsOpenId === row.id}
+                      <p class="qlt-memory-details">
+                        record id: {row.id} · version {row.version} · fingerprint {row.contentFingerprint}
+                      </p>
+                    {/if}
+                  </li>
+                {/each}
+              </ul>
+              </div>
+            {:else}
+              <div>
+              <p class="qlt-memory-area-hint">
+                What your replies here actually used — recorded evidence for each completed turn,
+                never recomputed.
+              </p>
+              {#if turnRows.length === 0}
+                <p class="qlt-memory-empty">No completed replies in this conversation yet.</p>
+              {/if}
+              {#if turnRows.length > 0}
+                <label class="qlt-visually-hidden" for="qlt-turn-chooser">Choose a completed reply</label>
+                <select
+                  id="qlt-turn-chooser"
+                  class="qlt-input qlt-memory-turn-chooser"
+                  onchange={(event) => {
+                    const value = (event.currentTarget as HTMLSelectElement).value;
+                    if (value !== '') {
+                      void openTurn(value);
+                    }
+                  }}
+                >
+                  <option value="">Choose a reply…</option>
+                  {#each turnRows as turn (turn.turnId)}
+                    <option value={turn.turnId} selected={turn.turnId === selectedTurnId}>
+                      {turnLabel(turn)}
+                    </option>
+                  {/each}
+                </select>
+              {/if}
+              {#if turnDetailError !== ''}
+                <p class="qlt-memory-error" role="status">
+                  No recorded memory evidence for this reply ({turnDetailError}).
+                </p>
+              {/if}
+              {#if turnDetail !== undefined}
+                <div class="qlt-memory-item" data-usage={turnDetail.usage}>
+                  <div class="qlt-memory-item-head">
+                    <span class="qlt-memory-kind">{turnDetail.usageLabel}</span>
+                    {#if turnDetail.appliedPolicy !== null}
+                      <span class="qlt-memory-status" data-memory-mode={turnDetail.appliedPolicy.mode}>
+                        Memory mode: {memoryModeChoiceLabel(turnDetail.appliedPolicy.mode)}
+                      </span>
+                    {:else}
+                      <span class="qlt-memory-status">Memory mode: not recorded</span>
+                    {/if}
+                  </div>
+                  {#if turnDetail.selected.length > 0}
+                    <ol class="qlt-memory-used-list">
+                      {#each turnDetail.selected as entry, index (index)}
+                        <li class="qlt-memory-used-item">
+                          <span class="qlt-memory-used-order">{index + 1}.</span>
+                          <span>
+                            <strong>{entry.kindLabel}</strong>
+                            {#if entry.title !== ''}· {entry.title}{/if}
+                            · origin: {entry.origin}
+                            · version {entry.selectedVersion}
+                            {#if entry.supersededSince === true}
+                              (superseded since this reply; the version used is shown)
+                            {/if}
+                            {#if entry.tombstone === 'removed'}
+                              · <em>removed from current relevance: content withheld</em>
+                            {:else if entry.tombstone === 'unavailable'}
+                              · <em>content unavailable</em>
+                            {:else if entry.content !== null}
+                              <span class="qlt-memory-text"> — {entry.content}</span>
+                            {/if}
+                          </span>
+                        </li>
+                      {/each}
+                    </ol>
                   {/if}
-                </li>
-              {/each}
-            </ul>
+                  {#if turnDetail.exclusions.length > 0}
+                    <p class="qlt-memory-provenance">Excluded from this reply:</p>
+                    <ul class="qlt-memory-excluded-list">
+                      {#each turnDetail.exclusions as entry, index (index)}
+                        <li>
+                          {entry.kindLabel}: {entry.reasonLabel}
+                        </li>
+                      {/each}
+                    </ul>
+                    {#if turnDetail.exclusionsAreBoundedSubset}
+                      <p class="qlt-memory-provenance">
+                        Recorded exclusions are a bounded subset; further records beyond the
+                        evidence bound are not individually listed.
+                      </p>
+                    {/if}
+                  {/if}
+                  <button
+                    type="button"
+                    class="qlt-btn qlt-memory-details-toggle"
+                    aria-expanded={detailsOpenId === 'turn-detail'}
+                    onclick={() => toggleDetails('turn-detail')}
+                  >
+                    {detailsOpenId === 'turn-detail' ? 'Hide details' : 'Details'}
+                  </button>
+                  {#if detailsOpenId === 'turn-detail'}
+                    <pre class="qlt-memory-details">{JSON.stringify(turnDetail.details, null, 2)}</pre>
+                  {/if}
+                </div>
+              {/if}
+              </div>
+            {/if}
 
             <form
               class="qlt-memory-save"
@@ -1371,6 +2091,134 @@
     flex-direction: column;
     gap: 0.75rem;
     min-height: 40vh;
+  }
+  /* Q5 (freeze §4): desktop SIDE TRAY — when the Memory surface is open
+     the conversation column becomes a two-column grid and the surface
+     occupies the right column (non-modal; the conversation stays fully
+     usable). Narrow screens keep the in-flow non-modal sheet. */
+  @media (min-width: 961px) {
+    .qlt-conversation--with-memory {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 22rem;
+      align-items: start;
+    }
+    .qlt-conversation--with-memory > .qlt-memory {
+      grid-column: 2;
+      grid-row: 1 / span 8;
+      position: sticky;
+      top: 0.75rem;
+      max-height: calc(100vh - 6rem);
+    }
+  }
+  @media (max-width: 960px) {
+    .qlt-conversation--with-memory > .qlt-memory {
+      /* responsive narrow-screen non-modal sheet: the tray flows in the
+         page between the transcript and the composer; nothing overlays */
+      max-height: 26rem;
+    }
+  }
+  .qlt-memory-mode {
+    border: 1px solid var(--vict-color-border, #ddd);
+    border-radius: 8px;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin: 0;
+  }
+  .qlt-memory-mode-legend {
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0 0.25rem;
+  }
+  .qlt-memory-mode-scope {
+    margin: 0;
+    font-size: 0.72rem;
+    color: var(--vict-color-muted, #575757);
+  }
+  .qlt-memory-mode-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .qlt-memory-mode-option {
+    display: flex;
+    gap: 0.4rem;
+    align-items: flex-start;
+    font-size: 0.8rem;
+  }
+  .qlt-memory-mode-option input {
+    margin-top: 0.2rem;
+  }
+  .qlt-memory-mode-option > span {
+    display: flex;
+    flex-direction: column;
+  }
+  .qlt-memory-mode-label {
+    font-weight: 600;
+  }
+  .qlt-memory-mode-hint {
+    font-size: 0.72rem;
+    color: var(--vict-color-muted, #575757);
+  }
+  .qlt-memory-mode-save {
+    align-self: flex-start;
+  }
+  .qlt-memory-mode-current {
+    font-size: 0.72rem;
+    color: var(--vict-color-muted, #575757);
+  }
+  .qlt-memory-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+  .qlt-memory-tab {
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    border: 1px solid var(--vict-color-border, #ccc);
+    background: transparent;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.78rem;
+  }
+  .qlt-memory-tab[aria-pressed='true'] {
+    background: var(--vict-color-accent-surface, #e8f0fe);
+    border-color: var(--vict-color-focus-ring, #1a73e8);
+  }
+  .qlt-memory-area-hint {
+    margin: 0;
+    font-size: 0.72rem;
+    color: var(--vict-color-muted, #575757);
+  }
+  .qlt-memory-used-list,
+  .qlt-memory-excluded-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: 0.8rem;
+  }
+  .qlt-memory-used-item {
+    display: flex;
+    gap: 0.3rem;
+  }
+  .qlt-memory-turn-chooser {
+    width: 100%;
+  }
+  .qlt-memory-details-toggle {
+    align-self: flex-start;
+    font-size: 0.72rem;
+    padding: 0.15rem 0.5rem;
+  }
+  .qlt-memory-details {
+    margin: 0;
+    font-size: 0.7rem;
+    color: var(--vict-color-muted, #575757);
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
   }
   .qlt-thread-header {
     display: flex;

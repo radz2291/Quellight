@@ -37,13 +37,12 @@
  *      HTTP 5xx, raw untransformed TypeScript leaking out of the
  *      renderer modules, an exit of the dev-server child, or any
  *      warning outside the closed known-warning allowlist below.
- *   5. Closed warning treatment — the three known deferred warnings in
- *      `ConversationWorkspace.svelte` (redundant `role="region"`;
- *      keyboard listener on a non-interactive `<section>`; `chipButton`
- *      updated without `$state`) are EXPECTED with exact counts and are
- *      printed in the output (visible, deferred to the Phase Q5 UI
- *      lane — never hidden or rewritten as success). Any additional or
- *      unknown warning fails the gate.
+ *   5. Zero-warning treatment — Q5 (freeze §13): the three formerly
+ *      deferred warnings in `ConversationWorkspace.svelte` are REPAIRED,
+ *      so the gate expects ZERO project Svelte warnings and fails on
+ *      EVERY warning (no allowlist for project warnings). The known
+ *      cosmetic dev-only sourcemap notice (D-11) remains a separately
+ *      recorded optional external-tool notice.
  *   6. Teardown — the exact spawned child is terminated (SIGTERM, with
  *      a Windows `taskkill /T /F` escalation against the captured PID)
  *      on success, failure, and timeout; the optimizer cache is
@@ -225,41 +224,25 @@ const FATAL_SIGNATURES = [
 ];
 let fatalSignatureHits = [];
 
-// Closed known-warning allowlist. Svelte emits each warning with a
-// stable id URL (https://svelte.dev/e/<id>) on the line following the
-// message; the gate classifies by that id, so the three deferred
-// ConversationWorkspace.svelte warnings are EXPECTED and VISIBLE while
-// any svelte warning with an id outside the closed list fails the gate.
-// Optimizer reloads may legitimately re-emit them (counts >= 1).
-const KNOWN_WARNING_IDS = [
-  'a11y_no_noninteractive_element_interactions',
-  'a11y_no_redundant_roles',
-  'non_reactive_update',
-];
+// ZERO-WARNING GATE (Q5, freeze §13): the three formerly deferred
+// ConversationWorkspace.svelte warnings are REPAIRED in Phase Q5, so the
+// gate now expects ZERO project Svelte warnings — ANY Svelte warning id
+// fails the gate. The known cosmetic dev-only sourcemap notice (D-11) is
+// kept as a separately recorded, optional external-tool notice; it is not
+// a Svelte warning and never hides project warnings.
 const SVELTE_WARN_URL = /https:\/\/svelte\.dev\/e\/([A-Za-z0-9_]+)/g;
 const SOURCMAP_NOTICE = /Sourcemap for .*points to missing source files/;
-let warningCounts = KNOWN_WARNING_IDS.map(() => 0);
+let warningCounts = [];
 let sourcemapNoticeSeen = false;
 function auditWarnings() {
-  const counts = Object.fromEntries(KNOWN_WARNING_IDS.map((id) => [id, 0]));
-  const unknownIds = new Set();
+  const seen = new Map();
   for (const match of devLog.matchAll(SVELTE_WARN_URL)) {
     const id = match[1];
-    if (id in counts) counts[id] += 1;
-    else unknownIds.add(id);
+    seen.set(id, (seen.get(id) ?? 0) + 1);
   }
-  warningCounts = KNOWN_WARNING_IDS.map((id) => counts[id]);
-  for (let i = 0; i < KNOWN_WARNING_IDS.length; i += 1) {
-    if (counts[KNOWN_WARNING_IDS[i]] < 1) {
-      fail(
-        `known deferred warning "${KNOWN_WARNING_IDS[i]}" did not appear (expected visible with the workspace compile).`,
-      );
-    }
-  }
-  if (unknownIds.size > 0) {
-    fail(
-      `unknown svelte warning(s) outside the closed D-11 allowlist: ${[...unknownIds].join(', ')}.`,
-    );
+  warningCounts = [...seen.entries()].map(([id, count]) => ({ id, count }));
+  for (const [id, count] of seen) {
+    fail(`svelte warning "${id}" emitted ${count} time(s); the zero-warning dev-start gate forbids every project warning.`);
   }
   sourcemapNoticeSeen = SOURCMAP_NOTICE.test(devLog);
   return sourcemapNoticeSeen;
@@ -403,7 +386,8 @@ try {
   await stopServer(null);
 }
 
-// 5. Report. Known deferred warnings are printed (visible, never hidden).
+// 5. Report. The zero-warning outcome is printed; the optional sourcemap
+// notice stays visible as a recorded external-tool notice (never hidden).
 if (failures.length === 0) {
   console.log('verify:dev-start: PASS');
   console.log(`  real repository vite.config.ts; http://127.0.0.1:${freePort}/ → 200`);
@@ -411,12 +395,11 @@ if (failures.length === 0) {
     '  renderer entry + mount.svelte.ts transformed through the dev pipeline (no js_parse_error, no optimize-svelte failure, no raw TypeScript).',
   );
   console.log(
-    '  visible known deferred warnings (D-11 — Phase Q5 UI lane, not fixed here; >=1 required, optimizer reloads may repeat them):',
+    '  ZERO project Svelte warnings (Q5 zero-warning gate; the three D-11 deferred warnings were repaired in Phase Q5).',
   );
-  KNOWN_WARNING_IDS.forEach((id, i) => console.log(`    - ${id} ×${warningCounts[i]}`));
   console.log(
     sourcemapNoticeSeen
-      ? '  known recorded cosmetic sourcemap notice present (D-11: dev-only, expected in this loading mode).'
+      ? '  known recorded cosmetic sourcemap notice present (D-11: dev-only external-tool notice, expected in this loading mode).'
       : '  (known cosmetic sourcemap notice not emitted this run — optional).',
   );
   process.exit(0);
