@@ -538,14 +538,15 @@ capability still rejects `proposalKind: 'correction'`), and the
 permanent zero-warning development-start gate (the three D-11 deferred
 Svelte warnings repaired; `verify:dev-start` fails on every project
 warning). The action inventory is 21 (19 frozen + `act.queryInspection`
-+ `act.setMemoryMode`). The agent envelope remains EXACTLY
-`qlt.proposal.draft@1`. The authoritative ladder ran green first-run on
-the untouched tree. Carried unchanged: M-1 (open; hard deadline before
-the Phase Q6 live-provider proof and the Stage 07C final audit), L-R1/
-L-R2, the pending-correction fixture limitation, the Q3 §12 deferral,
-and D-FUTURE-STEERING-1. Q5 is NOT Verified and NOT formally closed;
-Phases Q6–Q7 have not begun; Stage 07 remains In Progress. This entry is
-documentation-only.
+
+- `act.setMemoryMode`). The agent envelope remains EXACTLY
+  `qlt.proposal.draft@1`. The authoritative ladder ran green first-run on
+  the untouched tree. Carried unchanged: M-1 (open; hard deadline before
+  the Phase Q6 live-provider proof and the Stage 07C final audit), L-R1/
+  L-R2, the pending-correction fixture limitation, the Q3 §12 deferral,
+  and D-FUTURE-STEERING-1. Q5 is NOT Verified and NOT formally closed;
+  Phases Q6–Q7 have not begun; Stage 07 remains In Progress. This entry is
+  documentation-only.
 
 ## D-11 — Dev-only `optimizeDeps` exclusion for the released renderer (development-tooling compatibility note — technical decision, recorded, not a product semantic decision)
 
