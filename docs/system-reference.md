@@ -1,6 +1,6 @@
 # Quellight system reference — Stage 07B/07C
 
-## Status (current, 2026-09-17 — Phase Q4 verified with non-blocking issues and FORMALLY CLOSED; H-1 remediation independently re-verified closed)
+## Status (current, 2026-09-20 — Phase Q5 IMPLEMENTED, awaiting independent verification)
 
 ```text
 Stage 07B: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
@@ -8,10 +8,71 @@ Stage 07C Phase Q1: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
 Stage 07C Phase Q2: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (durable Shared World schema)
 Stage 07C Phase Q3: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (governed confirmation ceremony and quiet memory inbox)
 Stage 07C Phase Q4: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (deterministic Shared World context assembly; H-1 remediated and independently re-verified closed)
-Stage 07C Phases Q5–Q7: NOT BEGUN (Q5 implementation has not begun)
-Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 closed; Q5–Q7, 07D, 07E remaining)
+Stage 07C Phase Q5: IMPLEMENTED — AWAITING INDEPENDENT VERIFICATION (Shared World inspection, user memory control, one durable global Memory Mode; L-3 repaired; zero-warning dev-start gate)
+Stage 07C Phases Q6–Q7: NOT BEGUN
+Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 closed; Q5 implemented — awaiting independent verification; Q6–Q7, 07D, 07E remaining)
 ```
 
+- **Phase Q5 — Shared World inspection and user memory control
+  (2026-09-20): IMPLEMENTED — AWAITING INDEPENDENT VERIFICATION (not
+  verified, not closed).** Contract freeze `e2d8436…` (committed alone;
+  frozen declarative modules `src/lib/sharedworld/policy-contract.ts`
+  and `src/lib/sharedworld/inspection-contract.ts`; dated Q4-AMEND-1
+  committed inside the freeze per the owner's Q5 instruction:
+  `scope-excluded` added to the frozen exclusion vocabulary and the
+  assembler version advanced to `q5-1` — the Q4 fingerprint ALGORITHM
+  unchanged) and implementation report
+  `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q5-MEMORY-INSPECTION-IMPLEMENTATION.md`
+  (executable verification SHA `a2d1f27…`). Q5 delivers: additive
+  migration 4 (`qlt-memory-mode-policy`: the durable product-default
+  Memory Mode singleton + the immutable per-turn applied-policy evidence
+  family); owner decision Q5-OD-1 (D-Q5-1) — ONE durable global Memory
+  Mode with exactly `Across conversations` (default; Q4 behavior
+  byte-preserved) / `Within each conversation only` (global and
+  other-conversation records excluded with truthful bounded
+  `scope-excluded` evidence) / `Memory off` (zero injection, truthfully
+  evidenced) — changed ONLY inside the user-opened Memory surface via
+  the declared, user-attributed, idempotent `act.setMemoryMode`
+  (`QLT_MEMORY_MODE_INVALID` on invalid modes; same-key retries replay,
+  same-key different payloads conflict); the effective mode is resolved
+  INSIDE the per-conversation admission critical section, carried
+  immutably in the turn assembly scope, and recorded as immutable
+  per-turn evidence — a mode change never reinterprets an admitted turn,
+  and the current setting never reinterprets history (pre-policy turns
+  report `unrecorded`); the resolution is centralized behind ONE typed
+  policy resolver (the documented future project-scope extension seam —
+  prepared, NOT implemented; no projectId fields, project tables,
+  selectors, UI, or placeholders exist); the read-only
+  `qlt.inspection@1` surface (`act.queryInspection`: bucketed record
+  listing, record lineage, per-turn assembly listing and detail with the
+  applied mode, historical selected versions, truthful tombstones, and
+  bounded-exclusion disclosure) and the ONE-mutation
+  `qlt.memory-policy@1` surface, exposed ONLY through the released read/
+  mutation boundary (agent identities refused; no context envelope,
+  markers, prompts, capability schemas, provider data, or credentials in
+  any output; no durable effect from a read); the quiet four-area Memory
+  surface (Pending / Current / History / Used for reply) with the
+  lifecycle controls (Correct, Retire claim, Release commitment,
+  Resolve/Abandon/Transform — reason-required exits inline, never
+  browser-native dialogs), the always-present Memory chip, desktop side
+  tray / responsive non-modal sheet, real Escape-to-close with focus
+  return, and the quiet line's new frozen off state; the action
+  inventory 19 → 21 with `bindings.capabilities` still empty (the agent
+  envelope remains EXACTLY `qlt.proposal.draft@1` — no inspection,
+  listing, search, decision, or Memory Mode authority); the narrow L-3
+  repair (correction-kind confirmation no longer duplicates the
+  successor's source-thread link; exactly one successor and one
+  applicable link; replay converges; the capability still rejects
+  correction proposals); and the permanent zero-warning development-
+  start gate (`verify:dev-start` fails on every project Svelte warning;
+  the three D-11 deferred warnings repaired). Verification: the
+  authoritative ladder green first-run on the untouched tree (`npm ci`;
+  `verify:consumer`; `verify:quellight` incl. the 71-check `verify:q5`
+  and the EXTENDED real-browser ceremony session with all Q5 scenarios,
+  axe clean with the Memory surface open on both viewports;
+  `npm audit --omit=dev` 0 vulnerabilities; `git diff --check`).
+  Carried: M-1 unchanged with its hard deadline; L-R1/L-R2 unchanged;
+  the Q3 §12 correction-proposal deferral remains.
 - The retained dependency is now the immutable coordinated release set
   `@victframework/*@0.2.0` (`vict-release-set@1/0.2.0`, content ID
   `v1_7a557983114b0743334061bd1f02ccd14f22e29f3a86697a4fd09b1722a8f172`),

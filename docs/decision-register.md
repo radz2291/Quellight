@@ -492,6 +492,61 @@ contract, implementation/remediation report, or independent audit
 report changed; VICT treated read-only (its System Reference
 registration is VICT's own documentation-only record).
 
+## D-Q5-1 — Phase Q5 owner decision Q5-OD-1: one global, durable Memory Mode (ratified; implemented)
+
+The owner approved, and Phase Q5 implements, EXACTLY one global durable
+Memory Mode with three user-facing choices and stable identities:
+`Across conversations` (default; identity `across-conversations`; Q4
+behavior preserved byte-for-byte), `Within each conversation only`
+(identity `per-conversation`; only the current conversation's memory is
+used; global/threadless and other-conversation records are excluded with
+truthful bounded `scope-excluded` evidence), and `Memory off` (identity
+`off`; zero injection, truthfully evidenced — never misreportable as
+"no memory existed"). Binding control properties: the control lives only
+inside the user-opened Memory surface; clearly says it applies to all
+conversations; persists across restart; is changed through one declared,
+user-attributed, idempotent governed mutation (`act.setMemoryMode`);
+never appears as a per-message prompt; never opens automatically; affects
+the next not-yet-started turn; never changes a turn already admitted or
+an in-flight frozen snapshot; cannot be supplied or overridden by the
+browser's turn request, the model, or the agent. The approved binding
+design: the effective mode is resolved from the durable policy INSIDE
+the per-conversation admission critical section, carried immutably in
+the turn assembly scope, and durably recorded as immutable per-turn
+evidence (migration 4, `qlt_turn_memory_policy`) at first assembly — a
+historical Used-for-reply view reads the evidence, never the current
+setting. The frozen Q4 fingerprint algorithm is not modified to encode
+the mode; bounded immutable policy evidence is added through migration 4.
+Future project-scoped conversations are PREPARED, not implemented: the
+resolver is the single extension seam; no projectId fields, project
+tables, selectors, UI, fake records, precedence rules, client-supplied
+scope identities, or speculative policy platforms exist.
+
+## D-Q5-2 — Phase Q5 disposition: implemented, awaiting independent verification (documentation-only)
+
+Phase Q5 is IMPLEMENTED — AWAITING INDEPENDENT VERIFICATION (2026-09-20;
+implementation report
+`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q5-MEMORY-INSPECTION-IMPLEMENTATION.md`;
+freeze `e2d8436…`; executable verification SHA `a2d1f27…`). Delivered:
+the four-area quiet Memory surface (Pending / Current / History / Used
+for reply), read-only `qlt.inspection@1` inspection, the lifecycle
+controls in the UI (Correct, Retire claim, Release commitment,
+Resolve/Abandon/Transform), the durable global Memory Mode (D-Q5-1),
+additive migration 4, the narrow L-3 repair (correction-kind proposal
+confirmation rollback — repaired without authority expansion; the
+capability still rejects `proposalKind: 'correction'`), and the
+permanent zero-warning development-start gate (the three D-11 deferred
+Svelte warnings repaired; `verify:dev-start` fails on every project
+warning). The action inventory is 21 (19 frozen + `act.queryInspection`
++ `act.setMemoryMode`). The agent envelope remains EXACTLY
+`qlt.proposal.draft@1`. The authoritative ladder ran green first-run on
+the untouched tree. Carried unchanged: M-1 (open; hard deadline before
+the Phase Q6 live-provider proof and the Stage 07C final audit), L-R1/
+L-R2, the pending-correction fixture limitation, the Q3 §12 deferral,
+and D-FUTURE-STEERING-1. Q5 is NOT Verified and NOT formally closed;
+Phases Q6–Q7 have not begun; Stage 07 remains In Progress. This entry is
+documentation-only.
+
 ## D-11 — Dev-only `optimizeDeps` exclusion for the released renderer (development-tooling compatibility note — technical decision, recorded, not a product semantic decision)
 
 - **Decision**: `vite.config.ts` now sets

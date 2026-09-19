@@ -15,8 +15,9 @@ Stage 07C Phase Q1: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
 Stage 07C Phase Q2: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (durable Shared World schema)
 Stage 07C Phase Q3: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (governed confirmation ceremony and quiet memory inbox)
 Stage 07C Phase Q4: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (deterministic Shared World context assembly; H-1 remediated and independently re-verified closed)
-Stage 07C Phases Q5–Q7: NOT BEGUN (full record-by-record context inspection remains Q5; Q5 contract and implementation planning is permitted but has not begun)
-Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 closed; Q5–Q7, 07D, 07E remaining)
+Stage 07C Phase Q5: IMPLEMENTED — AWAITING INDEPENDENT VERIFICATION (Shared World inspection, user memory control, one durable global Memory Mode; not verified, not closed)
+Stage 07C Phases Q6–Q7: NOT BEGUN (live-provider injection-resistance proof is Q6)
+Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 closed; Q5 implemented — awaiting independent verification; Q6–Q7, 07D, 07E remaining)
 ```
 
 Stage 07B is formally closed (2026-09-10) against the audited evidence
@@ -188,13 +189,48 @@ steering direction (user steers an answer while it is generated, as an
 explicit operation targeting the exact active turn — never a second
 overlapping turn) is RECORDED in the decision register as a deferred
 design input requiring its own future contract; it is NOT implemented.
-Phase Q5 contract and implementation planning is permitted and has not
-begun; Phases Q6–Q7 have not begun. Q4 has no live-provider path;
-live-model injection resistance remains Q6. VICT remains pinned at the
-0.2.0 boundary. Phases Q5–Q7 have not begun; VICT `0.1.0`/`0.1.1` remain
-published but
+Phase Q5 is IMPLEMENTED — AWAITING INDEPENDENT VERIFICATION (not
+verified, not closed); Phases Q6–Q7 have not begun. Q4 has no
+live-provider path; live-model injection resistance remains Q6. VICT
+remains pinned at the 0.2.0 boundary. Phases Q6–Q7 have not begun;
+VICT `0.1.0`/`0.1.1` remain published but
 are not adopted — any later change requires an explicit compatibility
 decision and fresh verification.
+
+Phase Q5 (2026-09-20) makes the existing Shared World understandable and
+controllable by the user, and is recorded as `IMPLEMENTED — AWAITING
+INDEPENDENT VERIFICATION` — not verified, not closed; see
+`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q5-CONTRACT-FREEZE.md` (freeze
+SHA `e2d8436…`, no amendments) and
+`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q5-MEMORY-INSPECTION-IMPLEMENTATION.md`
+(executable verification SHA `a2d1f27…`). Owner decision Q5-OD-1
+(decision register D-Q5-1) approved ONE durable global Memory Mode with
+exactly three choices — `Across conversations` (default; Q4 behavior
+preserved byte-for-byte), `Within each conversation only` (global and
+other-conversation records excluded with truthful bounded
+`scope-excluded` evidence), and `Memory off` (zero injection, truthfully
+evidenced) — changed only inside the user-opened Memory surface through
+the declared, user-attributed, idempotent `act.setMemoryMode`, applied to
+the next not-yet-started turn, and never able to reinterpret a turn
+already admitted: the effective mode is resolved inside the per-
+conversation admission critical section, carried immutably in the turn
+assembly scope, and durably recorded as immutable per-turn evidence
+(additive migration 4, `qlt-memory-mode-policy`). The quiet four-area
+Memory surface (Pending / Current / History / Used for reply) provides
+read-only inspection through `qlt.inspection@1` (records, provenance,
+append-only correction lineage, per-turn assembly evidence with the
+applied mode and truthful truncation), the lifecycle controls (Correct,
+Retire claim, Release commitment, Resolve/Abandon/Transform), and the
+Memory Mode control; `Used for reply` shows recorded evidence only and
+never recomputes a past turn. The action inventory grew 19 → 21
+(`act.queryInspection`, `act.setMemoryMode`); the agent envelope remains
+EXACTLY `qlt.proposal.draft@1` with no read/list/search/decision power
+and no Memory Mode authority. The narrow L-3 defect (correction-kind
+proposal confirmation rollback) is repaired without authority expansion,
+and the three D-11 deferred Svelte warnings are repaired with a permanent
+zero-warning development-start gate (`verify:dev-start` fails on every
+project warning). M-1 remains open with its hard deadline (before the
+Phase Q6 live-provider proof and the Stage 07C final audit).
 
 Stage 07B/07C-Q1 deliver the **conversation foundation** on the governed
 mutation boundary: one pinned provider profile, real streaming
@@ -231,8 +267,8 @@ npm run verify:consumer        # registry-only dependency proof (N-1/N-2; 0.2.0 
 npm run verify:governance      # governed mutation boundary structural gate (Phase Q1)
 npm run verify:q2              # Q2 durable-schema conformance gate (schema/deterministic/repository/structural)
 npm run verify:q3              # Q3 governed-ceremony structural + deterministic gate
-npm run verify:browser-ceremony # TEST-1 real-browser ceremony recovery proof (Q3)
-npm run verify:quellight       # full deterministic offline gate (N-20, incl. Q1/Q2/Q3 gates + TEST-1)
+npm run verify:browser-ceremony # TEST-1 real-browser ceremony recovery proof (Q3, extended Q4 + Q5)
+npm run verify:quellight       # full deterministic offline gate (N-20, incl. Q1–Q5 gates + TEST-1)
 npm run verify:live-provider   # bounded live proof (requires explicit gate)
 ```
 
