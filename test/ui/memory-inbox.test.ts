@@ -103,11 +103,18 @@ function makeFetch(options: FetchOptions): ReturnType<typeof vi.fn> {
       if (bodyText.includes('act.queryThreads')) {
         payload = { ok: true, value: { rows: [THREAD_ROW], total: 1 } };
       } else if (bodyText.includes('act.queryMemory')) {
-        payload = (options.memoryRows ?? []).length > 0 || options.memoryFails === true
-          ? options.memoryFails === true
-            ? { ok: false, code: 'ACTION_FAILED' }
-            : { ok: true, value: { rows: options.memoryRows ?? [], total: (options.memoryRows ?? []).length } }
-          : { ok: true, value: { rows: [], total: 0 } };
+        payload =
+          (options.memoryRows ?? []).length > 0 || options.memoryFails === true
+            ? options.memoryFails === true
+              ? { ok: false, code: 'ACTION_FAILED' }
+              : {
+                  ok: true,
+                  value: {
+                    rows: options.memoryRows ?? [],
+                    total: (options.memoryRows ?? []).length,
+                  },
+                }
+            : { ok: true, value: { rows: [], total: 0 } };
       } else if (bodyText.includes('act.queryInspection')) {
         if (options.inspectionFails === true) {
           payload = { ok: false, code: 'QLT_INSPECTION_UNSUPPORTED_QUERY' };
@@ -189,7 +196,9 @@ async function openThreadAndTray(host: HTMLElement): Promise<void> {
 }
 
 async function selectTab(host: HTMLElement, tab: string): Promise<void> {
-  const tabButton = host.querySelector(`button[data-memory-tab="${tab}"]`) as HTMLButtonElement | null;
+  const tabButton = host.querySelector(
+    `button[data-memory-tab="${tab}"]`,
+  ) as HTMLButtonElement | null;
   expect(tabButton).not.toBeNull();
   tabButton!.click();
   await new Promise((resolvePromise) => setTimeout(resolvePromise, 60));
