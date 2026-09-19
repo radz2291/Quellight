@@ -154,6 +154,14 @@ const INGRESS_ACTIONS: Readonly<Record<string, IngressActionSpec>> = {
     required: ['recordId'],
     idempotencyRequired: true,
   },
+  // Q5 (freeze §9): the ONE Memory Mode mutation (closed single field;
+  // the closed vocabulary is re-validated by the surface as the second
+  // fence and by the durable CHECK as the third).
+  'act.setMemoryMode': {
+    fields: { mode: S(32) },
+    required: ['mode'],
+    idempotencyRequired: true,
+  },
 };
 
 /**
@@ -418,9 +426,10 @@ export function createAppServer(
       // reconcilable). For rename/archive/reopen the target id is
       // required.
       let targetId: string | undefined;
-      if (action.resourceId === 'qlt.memory') {
-        // Memory actions carry their target identity inside the declared
-        // typed fields (proposalId / recordId); no envelope target id.
+      if (action.resourceId !== 'qlt.threads') {
+        // Memory (Q3) and memory-policy (Q5) actions carry their target
+        // identity inside the declared typed fields (proposalId / recordId
+        // / the closed mode field); no envelope target id exists.
         targetId = undefined;
       } else if (action.op === 'create') {
         const supplied = bounded(requestInput['id'], 128);

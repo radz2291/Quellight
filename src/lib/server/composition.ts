@@ -67,6 +67,14 @@ import { createSharedWorldSqlite } from '../sharedworld/sqlite';
 import type { SharedWorldSqlite } from '../sharedworld/sqlite';
 import { createMemorySurface, type MemorySurfaceDeps } from '../sharedworld/ceremony-actions';
 import {
+  createInspectionSurface,
+  type InspectionSurfaceDeps,
+} from '../sharedworld/inspection-surface';
+import {
+  createMemoryPolicySurface,
+  type MemoryPolicySurfaceDeps,
+} from '../sharedworld/memory-policy-surface';
+import {
   createTurnContextService,
   type TurnContextServiceDeps,
 } from '../sharedworld/context-assembler';
@@ -86,7 +94,18 @@ import {
 } from '../sharedworld/ceremony-contract';
 import type { CapabilityDefinition } from '@victframework/sdk';
 import { getCompiledPlan, inputContractImplementations } from '$lib/application/definition';
-import { withTurnDeadline, withTurnContextAssembly, createLiveProviderModel } from './model-seam';
+import {
+  runWithTurnAssemblyScope,
+  withTurnDeadline,
+  withTurnContextAssembly,
+  createLiveProviderModel,
+} from './model-seam';
+import type { QltResolvedMemoryPolicy } from '../sharedworld/policy-contract';
+import { QLT_MEMORY_MODE_LABELS } from '../sharedworld/policy-contract';
+import {
+  QLT_INSPECTION_RESOURCE_ID,
+  QLT_INSPECTION_USAGE_LABELS,
+} from '../sharedworld/inspection-contract';
 
 /** The ONE pinned Stage 07B provider profile (closed value; §7). */
 export const PINNED_PROFILE = 'ollama-cloud/glm-5.3-flash' as const;
@@ -280,7 +299,7 @@ export interface QuellightComposition {
    * retries pass through to VICT's idempotent disposition unchanged.
    */
   admitTurn<T>(
-    input: { mastraThreadId: string; idempotencyKey: string },
+    input: { swThreadId: string; mastraThreadId: string; idempotencyKey: string },
     dispatch: () => Promise<T>,
   ): Promise<TurnAdmissionResult<T>>;
   flush(): Promise<void>;
@@ -650,6 +669,55 @@ export async function createQuellightComposition(
     userActorId: LOCAL_ACTOR_ID,
   } satisfies MemorySurfaceDeps);
 
+  // ---- Q5 inspection and Memory Mode surfaces (one bounded read surface;
+  // ONE user-attributed Memory Mode mutation; both routed by resourceId
+  // inside the ONE application-data port) ----------------------------
+  const inspectionSurface = createInspectionSurface({
+    listRecords: async (options) => {
+      const page = await sharedWorld.listInspectionRecords(options);
+      return {
+        rows: page.rows as unknown as readonly Record<string, unknown>[],
+        total: page.total,
+      };
+    },
+    getRecord: async (recordId, recordKind) => {
+      const detail = await sharedWorld.getInspectionRecord(recordId, recordKind);
+      return detail === undefined ? undefined : (detail as unknown as Record<string, unknown>);
+    },
+    getProposal: async (proposalId) => {
+      const detail = await sharedWorld.getInspectionProposal(proposalId);
+      return detail === undefined ? undefined : (detail as unknown as Record<string, unknown>);
+    },
+    listTurns: async (threadId, limit, offset) => {
+      const page = await sharedWorld.listInspectionTurns(threadId, limit, offset);
+      return {
+        rows: page.rows as unknown as readonly Record<string, unknown>[],
+        total: page.total,
+      };
+    },
+    getTurnData: (threadId, turnId) => sharedWorld.getInspectionTurnData(threadId, turnId),
+    getRecordsByIds: async (ids) =>
+      (await sharedWorld.getInspectionRecordsByIds(ids)) as unknown as readonly Record<
+        string,
+        unknown
+      >[],
+    getPolicy: () => {
+      const row = sharedWorld.memoryPolicy.getPolicyRow();
+      return {
+        policyId: row.policyId,
+        mode: row.mode,
+        label: QLT_MEMORY_MODE_LABELS[row.mode],
+        revision: row.revision,
+        updatedAtMs: row.updatedAtMs,
+      };
+    },
+    userActorId: LOCAL_ACTOR_ID,
+  } satisfies InspectionSurfaceDeps);
+  const memoryPolicySurface = createMemoryPolicySurface({
+    memoryPolicy: sharedWorld.memoryPolicy,
+    userActorId: LOCAL_ACTOR_ID,
+  } satisfies MemoryPolicySurfaceDeps);
+
   const plan = getCompiledPlan();
   const contractImplementations = new Map(
     inputContractImplementations.map((contract) => [contract.id, contract] as const),
@@ -685,7 +753,10 @@ export async function createQuellightComposition(
           ? (request['filters'] as Record<string, string>)
           : undefined;
       // Q3: the memory ceremony surface answers `qlt.memory` reads; the
-      // thread resource keeps its exact historical shape.
+      // thread resource keeps its exact historical shape. Q5: the
+      // inspection surface answers `qlt.inspection` reads (user-only,
+      // read-only); the server-derived actor id is forwarded for the
+      // surface's agent-refusal guard.
       if (request['resourceId'] === 'qlt.memory') {
         return memorySurface.query(
           {
@@ -698,6 +769,19 @@ export async function createQuellightComposition(
             ...(Array.isArray(request['projection']) ? { projection: request['projection'] } : {}),
           },
           { permissions: ['qlt.memory.read'], effect: 'read' },
+        );
+      }
+      if (request['resourceId'] === QLT_INSPECTION_RESOURCE_ID) {
+        return inspectionSurface.query(
+          {
+            op: 'list',
+            resourceId: QLT_INSPECTION_RESOURCE_ID,
+            ...(filters !== undefined ? { filters } : {}),
+            // The server-derived actor id (added by the released query
+            // boundary) forwarded for the surface's agent-refusal guard.
+            ...(typeof request['actorId'] === 'string' ? { actorId: request['actorId'] } : {}),
+          } as Parameters<typeof inspectionSurface.query>[0],
+          { permissions: ['qlt.inspection.read'], effect: 'read' },
         );
       }
       const result: ApplicationDataResult = await sharedWorld.adapter.query(
@@ -743,6 +827,20 @@ export async function createQuellightComposition(
             ...(idempotencyKey !== undefined ? { idempotencyKey } : {}),
           },
           { permissions: ['qlt.memory.read', 'qlt.memory.write'], effect: 'write' },
+        );
+      }
+      if (request['resourceId'] === 'qlt.memory-policy') {
+        // The Q5 Memory Mode write path: ONE declared user-attributed
+        // mutation through the same ONE governed boundary.
+        return memoryPolicySurface.mutate(
+          {
+            resourceId: 'qlt.memory-policy',
+            op,
+            input,
+            ...(id !== undefined ? { id } : {}),
+            ...(idempotencyKey !== undefined ? { idempotencyKey } : {}),
+          },
+          { permissions: ['qlt.memory-policy.write'], effect: 'write' },
         );
       }
       return sharedWorld.adapter.mutate(
@@ -877,7 +975,27 @@ export async function createQuellightComposition(
     async getThreadAssemblySummary(threadId: string) {
       return turnContext.summaryForThread(threadId);
     },
-    admitTurn: (input, dispatch) => turnAdmission.admitTurn(input, dispatch),
+    // H-1 remediation boundary + Q5 policy binding (freeze §7): the
+    // dispatch runs inside the per-conversation critical section; the
+    // effective Memory Mode is resolved INSIDE that section (from the
+    // durable product-default policy — never from the request, the model,
+    // or the agent) and installed in the Quellight-owned turn assembly
+    // scope together with the server-resolved thread ids. The resolved
+    // value is IMMUTABLE for the turn's duration: a mode change while a
+    // reply is active can never reinterpret that reply, and the immutable
+    // per-turn evidence row is written from this value at first assembly.
+    admitTurn: (input, dispatch) =>
+      turnAdmission.admitTurn(input, () => {
+        const memoryPolicy: QltResolvedMemoryPolicy = sharedWorld.memoryPolicy.resolveCurrent();
+        return runWithTurnAssemblyScope(
+          {
+            swThreadId: input.swThreadId,
+            mastraThreadId: input.mastraThreadId,
+            memoryPolicy,
+          },
+          dispatch,
+        );
+      }),
     async flush(): Promise<void> {
       await mastraComposition.productAgent.flush();
     },

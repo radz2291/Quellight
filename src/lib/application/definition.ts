@@ -11,6 +11,10 @@ import {
   memoryContracts,
   memoryResource,
 } from '$lib/sharedworld/ceremony-actions';
+import { inspectionResource } from '$lib/sharedworld/inspection-surface';
+import { memoryPolicyResource } from '$lib/sharedworld/memory-policy-surface';
+import { QLT_MEMORY_POLICY_SET_MODE_CONTRACT_ID } from '$lib/sharedworld/policy-contract';
+import { QLT_INSPECTION_RESOURCE_ID } from '$lib/sharedworld/inspection-contract';
 
 /**
  * QUELLIGHT APPLICATION DEFINITION — author-owned.
@@ -143,6 +147,18 @@ export const application = defineApplication({
         'updatedAt',
       ],
     },
+    {
+      viewId: 'v.inspection',
+      resourceId: QLT_INSPECTION_RESOURCE_ID,
+      resourceRevision: '1',
+      fields: ['query'],
+    },
+    {
+      viewId: 'v.memoryPolicy',
+      resourceId: 'qlt.memory-policy',
+      resourceRevision: '1',
+      fields: ['policyId', 'mode', 'revision', 'updatedAt'],
+    },
   ],
   actions: [
     {
@@ -225,10 +241,32 @@ export const application = defineApplication({
       inputContractId: contractId,
       inputContractRevision: '1',
     })),
+    // ---- Stage 07C Phase Q5: the user-facing inspection and Memory Mode
+    // surfaces (one read-only resource; ONE Memory Mode mutation; the
+    // agent envelope is UNCHANGED — freeze §6/§9) -------------------------
+    {
+      kind: 'query',
+      id: 'act.queryInspection',
+      revision: '1',
+      resourceId: 'qlt.inspection',
+      resourceRevision: '1',
+    },
+    {
+      kind: 'mutation',
+      id: 'act.setMemoryMode',
+      revision: '1',
+      resourceId: 'qlt.memory-policy',
+      resourceRevision: '1',
+      op: 'setMode',
+      inputContractId: QLT_MEMORY_POLICY_SET_MODE_CONTRACT_ID,
+      inputContractRevision: '1',
+    },
   ],
   resources: [
     { resourceId: 'qlt.threads', revision: '1' },
     { resourceId: 'qlt.memory', revision: '1' },
+    { resourceId: QLT_INSPECTION_RESOURCE_ID, revision: '1' },
+    { resourceId: 'qlt.memory-policy', revision: '1' },
   ],
   components: [{ componentId: 'qlt.conversation-workspace', revision: '1' }],
   compatibility: { applicationSchema: APPLICATION_DEFINITION_SCHEMA_V2 },
@@ -322,6 +360,9 @@ export const inputContractImplementations = [
   // The Q3 ceremony contracts (executable implementations live in the
   // memory surface module; the same frozen field specs).
   ...memoryContracts,
+  // The Q5 Memory Mode contract (closed single field; the surface
+  // re-validates the closed vocabulary as the second fence).
+  closedStringContract(QLT_MEMORY_POLICY_SET_MODE_CONTRACT_ID, { mode: 32 }, ['mode']),
 ] as const;
 
 /** Canonical contract REGISTRY entries for the compiled plan (data only). */
@@ -331,6 +372,7 @@ export const inputContracts = [
   { id: 'qlt.threads.archive.input', revision: '1' },
   { id: 'qlt.threads.reopen.input', revision: '1' },
   ...memoryContractRegistry,
+  { id: QLT_MEMORY_POLICY_SET_MODE_CONTRACT_ID, revision: '1' },
 ] as const;
 
 export const bindings = {
@@ -343,7 +385,7 @@ export const bindings = {
 export function compileAppPlan(): ApplicationPlan {
   const result = compileApplication({
     application,
-    resources: [threadResource, memoryResource],
+    resources: [threadResource, memoryResource, inspectionResource, memoryPolicyResource],
     contracts: bindings.contracts,
     capabilities: bindings.capabilities,
     components: bindings.components,

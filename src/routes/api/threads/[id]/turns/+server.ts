@@ -1,7 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getQuellightRuntime } from '$lib/server/runtime';
-import { runWithTurnAssemblyScope } from '$lib/server/model-seam';
 import { QLT_TURN_ALREADY_OPEN } from '$lib/server/turn-admission';
 import { VictControlError } from '@victframework/runtime';
 
@@ -15,12 +14,15 @@ import { VictControlError } from '@victframework/runtime';
  *   the caller's idempotency key per logical send (duplicate sends
  *   reconcile to exactly one turn);
  * - the model input is bounded (untrusted conversation data);
- * - Q4 (frozen contract §8): the dispatch runs inside the Quellight-owned
- *   assembly correlation scope carrying the SERVER-RESOLVED Shared World
- *   thread id and Mastra conversation id — the model seam resolves the
- *   in-flight turn identity from durable records only; the client and the
- *   model supply no actor, thread, or turn authority. The detached turn
- *   execution inherits this scope.
+ * - Q4 (frozen contract §8): the assembly correlation scope — carrying
+ *   the SERVER-RESOLVED Shared World thread id and Mastra conversation
+ *   id — is installed by the composition's admission wrapper; the model
+ *   seam resolves the in-flight turn identity from durable records only;
+ *   the client and the model supply no actor, thread, or turn authority.
+ * - Q5 (Q5 freeze §7): the effective Memory Mode is resolved from the
+ *   durable policy INSIDE the admission critical section by the same
+ *   wrapper and bound immutably into that scope; the browser's turn
+ *   request, the model, and the agent can never supply or override it.
  * - H-1 remediation: the dispatch crosses the race-safe admission
  *   boundary first — exactly ONE active agent turn per conversation; a
  *   distinct overlapping request is refused truthfully with the stable
@@ -91,29 +93,21 @@ export const POST: RequestHandler = async ({ request, params }) => {
     // single-process deployment; a distinct overlapping request is
     // refused truthfully (`QLT_TURN_ALREADY_OPEN`) with zero effect, and
     // a same-key retry passes through to VICT's idempotent disposition.
+    // Q4/Q5: the composition's admission wrapper installs the server-
+    // derived assembly correlation scope WITH the admission-bound Memory
+    // Mode policy around the dispatch (see the composition).
     const admission = await runtime.composition.admitTurn(
-      { mastraThreadId: conversation.mastraThreadId, idempotencyKey },
+      {
+        swThreadId: threadId,
+        mastraThreadId: conversation.mastraThreadId,
+        idempotencyKey,
+      },
       () =>
-        // Q4: the server-derived assembly correlation scope wraps the
-        // dispatch (the detached turn execution inherits it). Q5: the
-        // effective Memory Mode is resolved server-side from the durable
-        // policy and bound into the scope (Lane B moves the resolution
-        // inside the admission critical section — the binding semantics
-        // of freeze §7 are identical: the resolved value is immutable for
-        // the turn's duration).
-        runWithTurnAssemblyScope(
-          {
-            swThreadId: threadId,
-            mastraThreadId: conversation.mastraThreadId,
-            memoryPolicy: runtime.composition.sharedWorld.memoryPolicy.resolveCurrent(),
-          },
-          () =>
-            runtime.composition.commandService.dispatch(actor, {
-              command: 'agent.turn.start',
-              payload: { threadId: conversation.mastraThreadId, input },
-              idempotencyKey,
-            }),
-        ),
+        runtime.composition.commandService.dispatch(actor, {
+          command: 'agent.turn.start',
+          payload: { threadId: conversation.mastraThreadId, input },
+          idempotencyKey,
+        }),
     );
     if (admission.refused) {
       // Stable, non-echoing, quiet refusal (remediation contract §3):
