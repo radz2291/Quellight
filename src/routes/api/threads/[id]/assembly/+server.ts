@@ -33,6 +33,11 @@ export const GET: RequestHandler = async ({ params }) => {
         usedCount: summary.usedCount,
         assemblerVersion: summary.assemblerVersion,
         createdAtMs: summary.createdAtMs,
+        // Q5 (freeze §3.5): the applied Memory Mode from the immutable
+        // per-turn policy evidence (undefined for pre-policy turns) — the
+        // quiet line distinguishes an intentionally-off reply from
+        // "no memories used".
+        ...(summary.memoryMode !== undefined ? { memoryMode: summary.memoryMode } : {}),
       },
     });
   } catch {
