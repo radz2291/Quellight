@@ -54,6 +54,7 @@ import {
 } from './context-contract.js';
 import type { QltContextLayer } from './context-contract.js';
 import { canonicalJson } from './meaning-contract.js';
+import type { QltResolvedMemoryPolicy } from './policy-contract.js';
 
 // ---------------------------------------------------------------------------
 // Candidate rows (the bounded read shape served by `sqlite.ts`)
@@ -340,17 +341,28 @@ function layerOf(sourceThreadId: string | null, currentThreadId: string): QltCon
 }
 
 /**
- * The deterministic assembly evaluation (freeze §3/§4/§5). Never throws
- * for store-level failures — the CALLER wraps evaluation and records the
- * truthful `failed` outcome; per-row failures are excluded
- * `evaluation-failed` so one hostile row cannot veto the turn.
+ * The deterministic assembly evaluation (freeze §3/§4/§5; Q5 mode
+ * consumption). Never throws for store-level failures — the CALLER wraps
+ * evaluation and records the truthful `failed` outcome; per-row failures
+ * are excluded `evaluation-failed` so one hostile row cannot veto the
+ * turn.
+ *
+ * Q5 (freeze §2/§8): `mode` is the ADMISSION-BOUND effective Memory Mode
+ * (default 'across-conversations' preserves Q4 behavior byte-for-byte).
+ * Under 'per-conversation', structurally eligible records whose origin
+ * layer is NOT the current conversation are excluded with the stable
+ * `scope-excluded` reason and never enter the pool. The mode 'off' never
+ * reaches evaluation (the caller records the truthful empty outcome
+ * without scanning records).
  */
 export function evaluateContextCandidates(input: {
   readonly turnId: string;
   readonly threadId: string;
   readonly candidates: readonly ContextCandidateRow[];
+  readonly mode?: 'across-conversations' | 'per-conversation';
 }): AssemblyEvaluation {
   const { turnId, threadId, candidates } = input;
+  const mode = input.mode ?? 'across-conversations';
   const excluded: ContextExcludedEntry[] = [];
   const noteExcluded = (row: ContextCandidateRow, reason: ExclusionReason): void => {
     excluded.push({ id: row.id, kind: row.family, reason });
@@ -362,6 +374,13 @@ export function evaluateContextCandidates(input: {
     try {
       const verdict = evaluateRow(row, threadId);
       if (verdict.ok) {
+        // Q5 per-conversation scope filter: only the current-conversation
+        // layer is eligible; everything else is truthful scope-excluded
+        // evidence (stable reason; bounded like every other evidence).
+        if (mode === 'per-conversation' && verdict.layer !== 'current-thread') {
+          noteExcluded(row, 'scope-excluded');
+          continue;
+        }
         valid.push({ row, layer: verdict.layer });
       } else {
         noteExcluded(row, verdict.reason);
@@ -507,12 +526,29 @@ function assemblyId(now: number): string {
 // The per-turn context service (turn identity is SERVER-DERIVED only)
 // ---------------------------------------------------------------------------
 
-/** The async scope installed by the turns route (server-resolved ids). */
+/**
+ * The async scope installed by the turns route (server-resolved ids and
+ * the ADMISSION-BOUND Memory Mode policy).
+ *
+ * Q5 (freeze §7): the effective Memory Mode is resolved INSIDE the
+ * per-conversation admission critical section and carried IMMUTABLY in
+ * this scope. The browser's turn request, the model, and the agent can
+ * never supply or override it (the scope is Quellight-owned and the only
+ * constructor is the server-side admission path). A policy change while a
+ * reply is active can never reinterpret that reply: the scope value is
+ * fixed for the turn's duration and the durable per-turn evidence row is
+ * written once from it.
+ */
 export interface TurnAssemblyScope {
   /** The Shared World thread id (resolved server-side by the route). */
   readonly swThreadId: string;
   /** The Mastra conversation thread id of the same conversation. */
   readonly mastraThreadId: string;
+  /**
+   * Q5: the effective Memory Mode policy bound at turn admission
+   * (server-resolved from the durable default; never client-supplied).
+   */
+  readonly memoryPolicy: QltResolvedMemoryPolicy;
 }
 
 /** One open VICT turn record (the fields the service reads). */
@@ -537,6 +573,21 @@ export interface TurnContextServiceDeps {
   ) => Promise<QltContextAssemblyRecord | undefined>;
   /** Durable open turns (intent/running/awaiting-approval). */
   readonly listOpenTurns: () => Promise<readonly OpenTurnRecord[]>;
+  /**
+   * Q5: record the immutable per-turn applied-policy evidence
+   * (INSERT-or-converge; called at first assembly from the ADMISSION-BOUND
+   * scope policy — never from the mutable current setting).
+   */
+  readonly recordTurnPolicy: (turnId: string, policy: QltResolvedMemoryPolicy) => Promise<void>;
+  /** Q5: read the per-turn applied-policy evidence (undefined when absent). */
+  readonly getTurnPolicy: (turnId: string) => Promise<
+    | {
+        readonly policyId: string;
+        readonly mode: QltResolvedMemoryPolicy['mode'];
+        readonly policyRevision: number;
+      }
+    | undefined
+  >;
   /** The server-derived local actor (never client/model-supplied). */
   readonly localActorId: string;
   readonly clock?: () => number;
@@ -569,6 +620,8 @@ export function createTurnContextService(deps: TurnContextServiceDeps): {
         readonly usedCount: number;
         readonly assemblerVersion: string;
         readonly createdAtMs: number;
+        /** Q5: the applied Memory Mode from immutable per-turn evidence (undefined for pre-policy turns). */
+        readonly memoryMode?: QltResolvedMemoryPolicy['mode'];
       }
     | undefined
   >;
@@ -590,6 +643,48 @@ export function createTurnContextService(deps: TurnContextServiceDeps): {
     if (existing !== undefined) {
       return replayRecord(existing);
     }
+    // Q5 (freeze §7): the immutable per-turn applied-policy evidence is
+    // written FIRST, from the ADMISSION-BOUND scope policy (never the
+    // mutable current setting). INSERT-or-converge; never updated. If the
+    // evidence cannot be durably recorded, the turn must not inject
+    // memory whose policy evidence is missing: fail closed to a zero-
+    // injection pass (the truthful failed outcome is attempted below and
+    // the stream continues, Q4 freeze §6).
+    try {
+      await deps.recordTurnPolicy(turnId, scope.memoryPolicy);
+    } catch {
+      return { kind: 'pass', reason: 'failed-assembly' };
+    }
+    // Q5: 'off' performs ZERO memory injection. No candidate scan, no
+    // evaluation — but a truthful immutable assembly outcome and the
+    // policy evidence above are still recorded, so a historical
+    // Used-for-reply view reports "memory was intentionally off" and can
+    // never misreport "no memory existed" (freeze §2).
+    if (scope.memoryPolicy.mode === 'off') {
+      await deps.recordAssembly({
+        id: assemblyId(clock()),
+        turnId,
+        threadId: scope.swThreadId,
+        assemblerVersion: QLT_CONTEXT_ASSEMBLER_VERSION,
+        outcome: 'empty',
+        selectedIds: [],
+        excluded: [],
+        orderingIdentity: '[]',
+        maxRecords: QLT_CONTEXT_MAX_RECORDS,
+        maxBytes: QLT_CONTEXT_MAX_BYTES,
+        renderedBytes: 0,
+        fingerprint: fingerprintOf({
+          turnId,
+          threadId: scope.swThreadId,
+          outcome: 'empty',
+          selected: [],
+          excludedCount: 0,
+          orderingIdentity: '[]',
+        }),
+        createdAtMs: clock(),
+      });
+      return { kind: 'pass', reason: 'empty-assembly' };
+    }
     let evaluation: AssemblyEvaluation;
     try {
       const candidates = await deps.listCandidates();
@@ -597,6 +692,7 @@ export function createTurnContextService(deps: TurnContextServiceDeps): {
         turnId,
         threadId: scope.swThreadId,
         candidates,
+        mode: scope.memoryPolicy.mode,
       });
     } catch {
       // Assembly cannot be evaluated: truthful failed outcome, zero
@@ -736,11 +832,22 @@ export function createTurnContextService(deps: TurnContextServiceDeps): {
       if (record === undefined) {
         return undefined;
       }
+      // Q5 (freeze §7): the applied Memory Mode comes from the immutable
+      // per-turn policy evidence — NEVER from the current setting. A turn
+      // without evidence (pre-policy) reports undefined, truthfully.
+      let memoryMode: QltResolvedMemoryPolicy['mode'] | undefined;
+      try {
+        const policy = await deps.getTurnPolicy(record.turnId);
+        memoryMode = policy?.mode;
+      } catch {
+        memoryMode = undefined;
+      }
       return {
         outcome: record.outcome,
         usedCount: record.selectedIds.length,
         assemblerVersion: record.assemblerVersion,
         createdAtMs: record.createdAtMs,
+        memoryMode,
       };
     },
   };

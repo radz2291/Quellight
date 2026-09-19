@@ -962,7 +962,9 @@ describe('Q4 authority matrix: frozen contract data (C-28..C-32)', () => {
     expect(QLT_CONTEXT_TURN_RULES.oneAssemblyPerLogicalTurn).toBe(true);
     expect(QLT_CONTEXT_TURN_RULES.historicalTurnsNeverRecompute).toBe(true);
     expect(QLT_CONTEXT_AGENT_IDENTITY).toBe('agent-quellight');
-    expect(QLT_CONTEXT_ASSEMBLER_VERSION).toBe('q4-1');
+    // Q5 bounded re-pin (Q4-AMEND-1, freeze §10): the assembler version
+    // advanced to 'q5-1' with policy consumption; the algorithm is unchanged.
+    expect(QLT_CONTEXT_ASSEMBLER_VERSION).toBe('q5-1');
     expect(QLT_CONTEXT_MIGRATION).toEqual({ version: 3, name: 'qlt-context-assembly' });
     expect(QLT_CONTEXT_TRANSPARENCY_STATES.used(1)).toBe('Your last reply here used 1 memory.');
     expect(QLT_CONTEXT_TRANSPARENCY_STATES.used(3)).toBe('Your last reply here used 3 memories.');

@@ -270,7 +270,8 @@ describe('Q2 meaning foundation: migration and schema (A-01..A-05)', () => {
       // Q4 reconciliation (frozen Q4 contract §12): migration 3
       // (qlt-context-assembly) is applied on top of migrations 1–2; this
       // assertion is re-pinned to the amended frozen reality, never weakened.
-    ).toEqual([1, 2, QLT_SHARED_WORLD_SCHEMA_VERSION]);
+      // Q5 bounded re-pin: migration 4 (qlt-memory-mode-policy) exists.
+    ).toEqual([1, 2, 3, QLT_SHARED_WORLD_SCHEMA_VERSION]);
     assertTableMatchesInventory(rawAfter);
     rawAfter.close();
   });
@@ -290,7 +291,9 @@ describe('Q2 meaning foundation: migration and schema (A-01..A-05)', () => {
         version: number;
       }>
     ).map((row) => row.version);
-    expect(bookkeeping).toEqual([1, QLT_SHARED_WORLD_SCHEMA_VERSION]);
+    // Q5 bounded re-pin: the downgrade simulation now leaves [1, 3, 4]
+    // (migration 4 present; version 2 removed by the simulation).
+    expect(bookkeeping).toEqual([1, 3, QLT_SHARED_WORLD_SCHEMA_VERSION]);
     // Q4 reconciliation: `buildQ1EraStore` applies migrations 1–3 before the
     // simulated downgrade, so the pre-existing bookkeeping [1,3] must be
     // untouched by the FAILED migration-2 attempt (the rollback assertion
@@ -320,8 +323,9 @@ describe('Q2 meaning foundation: migration and schema (A-01..A-05)', () => {
         }>
       ).map((row) => row.version),
       // Q4 reconciliation (frozen Q4 contract §12): the clean migration
-      // path now applies migrations 1–3.
-    ).toEqual([1, 2, QLT_SHARED_WORLD_SCHEMA_VERSION]);
+      // path now applies migrations 1–3. Q5 bounded re-pin: migration 4
+      // exists.
+    ).toEqual([1, 2, 3, QLT_SHARED_WORLD_SCHEMA_VERSION]);
     assertTableMatchesInventory(raw);
     raw.close();
     store.close();

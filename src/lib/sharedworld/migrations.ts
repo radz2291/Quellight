@@ -257,11 +257,57 @@ const MIGRATION_0003_CONTEXT_ASSEMBLY: QuellightMigration = {
   },
 };
 
+/**
+ * Migration 4: the 07C Phase Q5 Memory Mode policy families (frozen
+ * contract:
+ * docs/report/QUELLIGHT-STAGE-07C-PHASE-Q5-CONTRACT-FREEZE.md §11;
+ * machine-readable inventory: `policy-contract.ts`). ADDITIVE
+ * `CREATE TABLE`/`CREATE INDEX` only — it neither reads nor writes
+ * pre-existing rows and is incapable of deleting or rewriting existing
+ * user data. Two families:
+ *   - `qlt_memory_policy`: the durable product-default Memory Mode
+ *     (singleton row; closed mode CHECK; monotonic revision; the schema
+ *     is created here while the DEFAULT ROW is lazily seeded by the
+ *     policy store inside one transaction on first resolution);
+ *   - `qlt_turn_memory_policy`: immutable per-turn applied-policy
+ *     evidence (turn_id PRIMARY KEY; INSERT-or-converge; NEVER updated).
+ * The frozen Q4 assembly family is not touched; the frozen Q4
+ * fingerprint algorithm is not modified to encode the mode (bounded
+ * immutable policy evidence is added HERE instead).
+ */
+const MIGRATION_0004_MEMORY_MODE_POLICY: QuellightMigration = {
+  version: 4,
+  name: 'qlt-memory-mode-policy',
+  up: (db) => {
+    db.exec(`
+      CREATE TABLE qlt_memory_policy (
+        id TEXT NOT NULL PRIMARY KEY CHECK (id = 'qlt-memory-policy-default'),
+        policy_id TEXT NOT NULL CHECK (policy_id = 'qlt.memory-mode@1'),
+        mode TEXT NOT NULL CHECK (mode IN ('across-conversations','per-conversation','off')),
+        revision INTEGER NOT NULL CHECK (revision >= 1),
+        updated_by TEXT NOT NULL CHECK (updated_by GLOB 'actor-*'),
+        created_at_ms INTEGER NOT NULL,
+        updated_at_ms INTEGER NOT NULL
+      );
+
+      CREATE TABLE qlt_turn_memory_policy (
+        turn_id TEXT NOT NULL PRIMARY KEY,
+        policy_id TEXT NOT NULL CHECK (policy_id = 'qlt.memory-mode@1'),
+        mode TEXT NOT NULL CHECK (mode IN ('across-conversations','per-conversation','off')),
+        policy_revision INTEGER NOT NULL CHECK (policy_revision >= 1),
+        recorded_at_ms INTEGER NOT NULL
+      );
+      CREATE UNIQUE INDEX uq_qlt_turn_memory_policy_turn ON qlt_turn_memory_policy (turn_id);
+    `);
+  },
+};
+
 /** The ordered, forward-only migration list. */
 export const QLT_SHARED_WORLD_MIGRATIONS: readonly QuellightMigration[] = [
   MIGRATION_0001_FOUNDATION,
   MIGRATION_0002_MEANING_FOUNDATION,
   MIGRATION_0003_CONTEXT_ASSEMBLY,
+  MIGRATION_0004_MEMORY_MODE_POLICY,
 ];
 
 /** The current schema version of this build. */

@@ -41,6 +41,7 @@ import { createSharedWorldMeaningStore } from './meaning-store.js';
 import { runSharedWorldMigrations } from './migrations.js';
 import type { ContextCandidateRow, QltContextAssemblyRecord } from './context-assembler.js';
 import { QLT_CONTEXT_MAX_RECORDS, QLT_CONTEXT_SCAN_LIMIT_PER_FAMILY } from './context-contract.js';
+import { createMemoryPolicyStore, type MemoryPolicyStore } from './memory-policy.js';
 
 const MAX_TITLE_LENGTH = 200;
 const MAX_ID_LENGTH = 128;
@@ -170,6 +171,12 @@ export interface SharedWorldSqliteOptions {
   readonly path: string;
   /** Deterministic clock (epoch ms). */
   readonly clock?: () => number;
+  /**
+   * The SERVER-DERIVED local user actor id (Q5: attributes the lazily
+   * seeded default Memory Mode policy row). Defaults to the single-actor
+   * envelope identity; the composition passes the authoritative value.
+   */
+  readonly localActorId?: string;
   /** Deterministic id factory (tests). */
   readonly ids?: {
     readonly threadId?: () => string;
@@ -209,6 +216,113 @@ export interface QltMemoryListOptions {
   readonly offset?: number;
 }
 
+// ---- Q5 inspection read shapes (bounded; SELECT only) ---------------------
+
+export type QltInspectionBucket = 'pending' | 'current' | 'history';
+
+export interface QltInspectionListOptions {
+  readonly bucket: QltInspectionBucket;
+  readonly threadId?: string;
+  readonly kind?: 'claim' | 'commitment' | 'open_loop' | 'proposal';
+  readonly limit: number;
+  readonly offset: number;
+}
+
+/** One bounded row of the family record tables (any status). */
+export interface QltInspectionFamilyRow {
+  readonly kind: 'claim' | 'commitment' | 'open_loop';
+  readonly id: string;
+  readonly status: string;
+  readonly title: string;
+  readonly text: string;
+  readonly contentFingerprint: string;
+  readonly originThreadId: string | null;
+  readonly turnRef: string;
+  readonly actor: string;
+  readonly decisionBy: string;
+  readonly exitReason: string | null;
+  readonly exitedAtMs: number | null;
+  readonly version: number;
+  readonly createdAtMs: number;
+  readonly updatedAtMs: number;
+  readonly retentionState: string;
+  readonly hasSuccessor: boolean;
+  readonly supersedesId: string | null;
+}
+
+/** One bounded row of the proposal table (any status). */
+export interface QltInspectionProposalRow {
+  readonly kind: 'proposal';
+  readonly id: string;
+  readonly proposalKind: string;
+  readonly status: string;
+  readonly title: string;
+  readonly text: string;
+  readonly contentFingerprint: string;
+  readonly originThreadId: string;
+  readonly turnRef: string;
+  readonly actor: string;
+  readonly decisionBy: string;
+  readonly decisionReason: string | null;
+  readonly decidedAtMs: number | null;
+  readonly targetRecordId: string | null;
+  readonly targetRecordFamily: string | null;
+  readonly targetRecordVersion: number | null;
+  readonly version: number;
+  readonly createdAtMs: number;
+  readonly updatedAtMs: number;
+  readonly retentionState: string;
+  /** The record this confirmed proposal created (proposed-from link), if any. */
+  readonly createdRecordId: string | null;
+}
+
+export type QltInspectionRecordRow = QltInspectionFamilyRow | QltInspectionProposalRow;
+
+/** Source-link evidence (bounded; ids/relations only — never content). */
+export interface QltInspectionLinkRow {
+  readonly id: string;
+  readonly fromRecordId: string;
+  readonly fromRecordFamily: string;
+  readonly toKind: string;
+  readonly toRef: string;
+  readonly relation: string;
+  readonly createdAtMs: number;
+}
+
+/** Correction-lineage evidence for one subject record. */
+export interface QltInspectionCorrectionRow {
+  readonly id: string;
+  readonly subjectRecordId: string;
+  readonly subjectRecordFamily: string;
+  readonly correctionKey: string;
+  readonly reason: string | null;
+  readonly correctedBy: string;
+  readonly createdAtMs: number;
+}
+
+export interface QltInspectionRecordDetail {
+  readonly record: QltInspectionFamilyRow;
+  readonly links: readonly QltInspectionLinkRow[];
+  readonly corrections: readonly QltInspectionCorrectionRow[];
+  readonly successorIds: readonly string[];
+}
+
+export interface QltInspectionProposalDetail {
+  readonly proposal: QltInspectionProposalRow;
+  readonly links: readonly QltInspectionLinkRow[];
+}
+
+export interface QltInspectionTurnSummary {
+  readonly turnId: string;
+  readonly outcome: 'complete' | 'empty' | 'failed';
+  readonly usedCount: number;
+  readonly memoryMode: string | undefined;
+  readonly assemblerVersion: string;
+  readonly renderedBytes: number;
+  readonly failureCode: string | undefined;
+  readonly createdAtMs: number;
+}
+
 /** The Quellight Shared World store: domain port + Application Layer adapter. */
 export interface SharedWorldSqlite extends SharedWorldPort {
   readonly id: string;
@@ -241,6 +355,68 @@ export interface SharedWorldSqlite extends SharedWorldPort {
    * correlation record. READ-ONLY; undefined when no link exists.
    */
   getThreadIdByConversation(mastraThreadId: string): Promise<string | undefined>;
+
+  /**
+   * Q5 (freeze §2/§11): the durable Memory Mode policy store and typed
+   * effective-policy resolver (the SINGLE resolution boundary; the
+   * assembler consumes the resolved policy from the admission-bound
+   * turn scope).
+   */
+  readonly memoryPolicy: MemoryPolicyStore;
+
+  // ---- Q5 bounded inspection READ accessors (freeze §6; SELECT only; no
+  // write/effect path; consumed ONLY by the declared qlt.inspection
+  // surface through the released read boundary) -------------------------
+
+  /**
+   * Deterministic bounded page of the inspection bucket listing
+   * (pending | current | history), optionally thread- and kind-scoped.
+   */
+  listInspectionRecords(options: QltInspectionListOptions): Promise<{
+    readonly rows: readonly QltInspectionRecordRow[];
+    readonly total: number;
+  }>;
+
+  /** One record (family row) with provenance links and correction lineage. */
+  getInspectionRecord(
+    recordId: string,
+    recordKind: 'claim' | 'commitment' | 'open_loop',
+  ): Promise<QltInspectionRecordDetail | undefined>;
+
+  /** One proposal row with its provenance links and created-record links. */
+  getInspectionProposal(proposalId: string): Promise<QltInspectionProposalDetail | undefined>;
+
+  /** Bounded completed-assembly listing for one conversation (newest first). */
+  listInspectionTurns(
+    threadId: string,
+    limit: number,
+    offset: number,
+  ): Promise<{
+    readonly rows: readonly QltInspectionTurnSummary[];
+    readonly total: number;
+  }>;
+
+  /** Immutable per-turn assembly detail + applied-policy evidence. */
+  getInspectionTurnData(
+    threadId: string,
+    turnId: string,
+  ): Promise<
+    | {
+        readonly assembly: QltContextAssemblyRecord;
+        readonly policy:
+          | {
+              readonly policyId: string;
+              readonly mode: string;
+              readonly policyRevision: number;
+              readonly recordedAtMs: number;
+            }
+          | undefined;
+      }
+    | undefined
+  >;
+
+  /** Re-read specific family rows for historical content resolution. */
+  getInspectionRecordsByIds(ids: readonly string[]): Promise<readonly QltInspectionFamilyRow[]>;
 
   // ---- Q4 per-turn context-assembly reads (all bounded; READ-ONLY over
   // record rows; the assembly family itself is the ONLY new write family
@@ -1307,6 +1483,434 @@ export function createSharedWorldSqlite(options: SharedWorldSqliteOptions): Shar
     return row === undefined ? undefined : assemblyRecordOf(row);
   }
 
+  // ---- Q5 Memory Mode policy store (the SINGLE resolution boundary) -------
+
+  const memoryPolicy = createMemoryPolicyStore({
+    db,
+    clock,
+    localActorId: options.localActorId ?? 'actor-quellight-local',
+  });
+
+  // ---- Q5 bounded inspection reads (freeze §6; SELECT only) ---------------
+
+  const INSPECTION_FAMILY_TABLES = CONTEXT_FAMILY_TABLES;
+
+  function familyRowOf(
+    family: keyof typeof INSPECTION_FAMILY_TABLES,
+    row: Record<string, unknown>,
+    hasSuccessor: boolean,
+  ): QltInspectionFamilyRow {
+    const parsedText = (() => {
+      try {
+        const parsed = JSON.parse(String(row['content'] ?? '{}')) as Record<string, unknown>;
+        const text = parsed['statement'] ?? parsed['detail'];
+        return typeof text === 'string' ? text : '';
+      } catch {
+        return '';
+      }
+    })();
+    return {
+      kind: family,
+      id: String(row['id'] ?? ''),
+      status: String(row['status'] ?? ''),
+      title:
+        family === 'commitment'
+          ? String(row['commitment_key'] ?? '')
+          : String(row['subject'] ?? ''),
+      text: parsedText,
+      contentFingerprint: String(row['content_fingerprint'] ?? ''),
+      originThreadId: (row['source_thread_id'] as string | null) ?? null,
+      turnRef: String(row['source_turn_ref'] ?? ''),
+      actor: String(row['created_by'] ?? ''),
+      decisionBy:
+        family === 'open_loop' ? String(row['exit_by'] ?? '') : String(row['decision_by'] ?? ''),
+      exitReason:
+        family === 'open_loop'
+          ? ((row['exit_reason'] as string | null) ?? null)
+          : ((row['decision_reason'] as string | null) ?? null),
+      exitedAtMs: family === 'open_loop' ? ((row['exited_at_ms'] as number | null) ?? null) : null,
+      version: Number(row['version'] ?? 1),
+      createdAtMs: Number(row['created_at_ms'] ?? 0),
+      updatedAtMs: Number(row['updated_at_ms'] ?? 0),
+      retentionState: String(row['retention_state'] ?? ''),
+      hasSuccessor,
+      supersedesId: (row['supersedes_id'] as string | null) ?? null,
+    };
+  }
+
+  function proposalRowOf(row: Record<string, unknown>): QltInspectionProposalRow {
+    const content = (() => {
+      try {
+        return JSON.parse(String(row['content'] ?? '{}')) as Record<string, unknown>;
+      } catch {
+        return {} as Record<string, unknown>;
+      }
+    })();
+    const title =
+      typeof content['subject'] === 'string'
+        ? content['subject']
+        : typeof content['commitmentKey'] === 'string'
+          ? content['commitmentKey']
+          : `${String(row['proposal_kind'] ?? 'proposal')} proposal`;
+    const text =
+      typeof content['statement'] === 'string'
+        ? content['statement']
+        : typeof content['detail'] === 'string'
+          ? content['detail']
+          : typeof content['reason'] === 'string'
+            ? content['reason']
+            : '';
+    const createdLink = db
+      .prepare(
+        `SELECT from_record_id FROM qlt_source_link
+         WHERE to_kind = 'proposal' AND to_ref = ? AND relation = 'proposed-from'
+         ORDER BY created_at_ms ASC, id ASC LIMIT 1;`,
+      )
+      .get(String(row['id'] ?? '')) as { from_record_id: string } | undefined;
+    return {
+      kind: 'proposal',
+      id: String(row['id'] ?? ''),
+      proposalKind: String(row['proposal_kind'] ?? ''),
+      status: String(row['status'] ?? ''),
+      title,
+      text,
+      contentFingerprint: String(row['content_fingerprint'] ?? ''),
+      originThreadId: String(row['source_thread_id'] ?? ''),
+      turnRef: String(row['source_turn_ref'] ?? ''),
+      actor: String(row['proposed_by'] ?? ''),
+      decisionBy: String(row['decision_by'] ?? ''),
+      decisionReason: (row['decision_reason'] as string | null) ?? null,
+      decidedAtMs: (row['decided_at_ms'] as number | null) ?? null,
+      targetRecordId: (row['target_record_id'] as string | null) ?? null,
+      targetRecordFamily: (row['target_record_family'] as string | null) ?? null,
+      targetRecordVersion: (row['target_record_version'] as number | null) ?? null,
+      version: Number(row['version'] ?? 1),
+      createdAtMs: Number(row['created_at_ms'] ?? 0),
+      updatedAtMs: Number(row['updated_at_ms'] ?? 0),
+      retentionState: String(row['retention_state'] ?? ''),
+      createdRecordId: createdLink?.from_record_id ?? null,
+    };
+  }
+
+  function linksForRecord(recordId: string): QltInspectionLinkRow[] {
+    if (!assertBoundedIdSilent(recordId)) {
+      return [];
+    }
+    const raw = db
+      .prepare(
+        `SELECT * FROM qlt_source_link WHERE from_record_id = ?
+         ORDER BY created_at_ms ASC, id ASC;`,
+      )
+      .all(recordId) as unknown as Array<Record<string, unknown>>;
+    return raw.map((row) => ({
+      id: String(row['id'] ?? ''),
+      fromRecordId: String(row['from_record_id'] ?? ''),
+      fromRecordFamily: String(row['from_record_family'] ?? ''),
+      toKind: String(row['to_kind'] ?? ''),
+      toRef: String(row['to_ref'] ?? ''),
+      relation: String(row['relation'] ?? ''),
+      createdAtMs: Number(row['created_at_ms'] ?? 0),
+    }));
+  }
+
+  function correctionsForSubject(subjectRecordId: string): QltInspectionCorrectionRow[] {
+    if (!assertBoundedIdSilent(subjectRecordId)) {
+      return [];
+    }
+    const raw = db
+      .prepare(
+        `SELECT * FROM qlt_correction WHERE subject_record_id = ?
+         ORDER BY created_at_ms ASC, id ASC;`,
+      )
+      .all(subjectRecordId) as unknown as Array<Record<string, unknown>>;
+    return raw.map((row) => ({
+      id: String(row['id'] ?? ''),
+      subjectRecordId: String(row['subject_record_id'] ?? ''),
+      subjectRecordFamily: String(row['subject_record_family'] ?? ''),
+      correctionKey: String(row['correction_key'] ?? ''),
+      reason: (row['reason'] as string | null) ?? null,
+      correctedBy: String(row['corrected_by'] ?? ''),
+      createdAtMs: Number(row['created_at_ms'] ?? 0),
+    }));
+  }
+
+  async function listInspectionRecords(options: QltInspectionListOptions): Promise<{
+    readonly rows: readonly QltInspectionRecordRow[];
+    readonly total: number;
+  }> {
+    const { bucket } = options;
+    const limit = options.limit;
+    const offset = options.offset;
+    if (
+      !Number.isSafeInteger(limit) ||
+      limit < 1 ||
+      limit > 100 ||
+      !Number.isSafeInteger(offset) ||
+      offset < 0
+    ) {
+      throw new QltSharedWorldError('QLT_THREAD_INVALID_STATE', 'Invalid inspection bounds.');
+    }
+    const threadFilter =
+      options.threadId !== undefined ? assertBoundedId(options.threadId) : undefined;
+    // Bounded per-source window: the global page is contained in the union
+    // of per-source top-(offset+limit) lists under the shared ordering.
+    const window = offset + limit;
+    const rows: QltInspectionRecordRow[] = [];
+    let total = 0;
+
+    const proposalStatusesForBucket =
+      bucket === 'pending'
+        ? ['proposed', 'awaiting_decision']
+        : ['confirmed', 'rejected', 'amended', 'withdrawn'];
+    const proposalKindFilter =
+      options.kind === undefined || options.kind === 'proposal' ? undefined : options.kind;
+    const proposalWhere = [
+      `status IN (${proposalStatusesForBucket.map(() => '?').join(',')})`,
+      ...(threadFilter !== undefined ? ['source_thread_id = ?'] : []),
+      ...(proposalKindFilter !== undefined ? ['proposal_kind = ?'] : []),
+    ].join(' AND ');
+    const proposalParams = [
+      ...proposalStatusesForBucket,
+      ...(threadFilter !== undefined ? [threadFilter] : []),
+      ...(proposalKindFilter !== undefined ? [proposalKindFilter] : []),
+    ];
+    const proposalCount = db
+      .prepare(`SELECT COUNT(*) AS total FROM qlt_proposal WHERE ${proposalWhere};`)
+      .get(...proposalParams) as { total: number };
+    total += proposalCount.total;
+    const proposalRows = db
+      .prepare(
+        `SELECT * FROM qlt_proposal WHERE ${proposalWhere}
+         ORDER BY updated_at_ms DESC, id ASC LIMIT ?;`,
+      )
+      .all(...proposalParams, window) as unknown as Array<Record<string, unknown>>;
+    for (const row of proposalRows) {
+      rows.push(proposalRowOf(row));
+    }
+
+    if (options.kind === undefined || options.kind !== 'proposal') {
+      const familyFilter = options.kind;
+      for (const family of Object.keys(INSPECTION_FAMILY_TABLES) as Array<
+        keyof typeof INSPECTION_FAMILY_TABLES
+      >) {
+        if (familyFilter !== undefined && family !== familyFilter) {
+          continue;
+        }
+        const table = INSPECTION_FAMILY_TABLES[family];
+        const eligibleStatus = { claim: 'active', commitment: 'active', open_loop: 'open' }[family];
+        const threadClause = threadFilter !== undefined ? ' AND t.source_thread_id = ?' : '';
+        const params: (string | number)[] = threadFilter !== undefined ? [threadFilter] : [];
+        const countRow = db
+          .prepare(
+            `SELECT COUNT(*) AS total FROM ${table} t WHERE${' '}
+            ${
+              bucket === 'current'
+                ? `t.status = '${eligibleStatus}' AND t.retention_state = 'currently-relevant'
+                 AND NOT EXISTS (SELECT 1 FROM ${table} s WHERE s.supersedes_id = t.id)`
+                : `NOT (t.status = '${eligibleStatus}' AND t.retention_state = 'currently-relevant'
+                 AND NOT EXISTS (SELECT 1 FROM ${table} s WHERE s.supersedes_id = t.id))`
+            }${threadClause};`,
+          )
+          .get(...params) as { total: number };
+        total += countRow.total;
+        const raw = db
+          .prepare(
+            `SELECT t.*, EXISTS(
+               SELECT 1 FROM ${table} s WHERE s.supersedes_id = t.id
+             ) AS has_successor
+             FROM ${table} t
+             WHERE ${
+               bucket === 'current'
+                 ? `t.status = '${eligibleStatus}' AND t.retention_state = 'currently-relevant'
+                    AND NOT EXISTS (SELECT 1 FROM ${table} s WHERE s.supersedes_id = t.id)`
+                 : `NOT (t.status = '${eligibleStatus}' AND t.retention_state = 'currently-relevant'
+                    AND NOT EXISTS (SELECT 1 FROM ${table} s WHERE s.supersedes_id = t.id))`
+             }${threadClause}
+             ORDER BY t.updated_at_ms DESC, t.id ASC LIMIT ?;`,
+          )
+          .all(...params, window) as unknown as Array<Record<string, unknown>>;
+        for (const row of raw) {
+          rows.push(familyRowOf(family, row, Number(row['has_successor'] ?? 0) === 1));
+        }
+      }
+    }
+
+    rows.sort((left, right) =>
+      left.updatedAtMs === right.updatedAtMs
+        ? left.id < right.id
+          ? -1
+          : left.id > right.id
+            ? 1
+            : 0
+        : right.updatedAtMs - left.updatedAtMs,
+    );
+    return { rows: rows.slice(offset, offset + limit), total };
+  }
+
+  async function getInspectionRecord(
+    recordId: string,
+    recordKind: 'claim' | 'commitment' | 'open_loop',
+  ): Promise<QltInspectionRecordDetail | undefined> {
+    const id = assertBoundedId(recordId);
+    if (!(recordKind in INSPECTION_FAMILY_TABLES)) {
+      throw new QltSharedWorldError('QLT_THREAD_INVALID_STATE', 'Unknown record family.');
+    }
+    const table = INSPECTION_FAMILY_TABLES[recordKind];
+    const row = db
+      .prepare(
+        `SELECT t.*, EXISTS(
+           SELECT 1 FROM ${table} s WHERE s.supersedes_id = t.id
+         ) AS has_successor
+         FROM ${table} t WHERE t.id = ?;`,
+      )
+      .get(id) as unknown as Record<string, unknown> | undefined;
+    if (row === undefined) {
+      return undefined;
+    }
+    const successorRows = db
+      .prepare(
+        `SELECT id FROM ${table} WHERE supersedes_id = ? ORDER BY created_at_ms ASC, id ASC;`,
+      )
+      .all(id) as unknown as Array<{ id: string }>;
+    return {
+      record: familyRowOf(recordKind, row, Number(row['has_successor'] ?? 0) === 1),
+      links: linksForRecord(id),
+      corrections: correctionsForSubject(id),
+      successorIds: successorRows.map((entry) => entry.id),
+    };
+  }
+
+  async function getInspectionProposal(
+    proposalId: string,
+  ): Promise<QltInspectionProposalDetail | undefined> {
+    const id = assertBoundedId(proposalId);
+    const row = db.prepare('SELECT * FROM qlt_proposal WHERE id = ?;').get(id) as unknown as
+      Record<string, unknown> | undefined;
+    if (row === undefined) {
+      return undefined;
+    }
+    return { proposal: proposalRowOf(row), links: linksForRecord(id) };
+  }
+
+  async function listInspectionTurns(
+    threadId: string,
+    limit: number,
+    offset: number,
+  ): Promise<{
+    readonly rows: readonly QltInspectionTurnSummary[];
+    readonly total: number;
+  }> {
+    const thread = assertBoundedId(threadId);
+    if (
+      !Number.isSafeInteger(limit) ||
+      limit < 1 ||
+      limit > 100 ||
+      !Number.isSafeInteger(offset) ||
+      offset < 0
+    ) {
+      throw new QltSharedWorldError('QLT_THREAD_INVALID_STATE', 'Invalid inspection bounds.');
+    }
+    const countRow = db
+      .prepare('SELECT COUNT(*) AS total FROM qlt_context_assembly WHERE thread_id = ?;')
+      .get(thread) as { total: number };
+    const raw = db
+      .prepare(
+        `SELECT * FROM qlt_context_assembly WHERE thread_id = ?
+         ORDER BY created_at_ms DESC, turn_id ASC LIMIT ? OFFSET ?;`,
+      )
+      .all(thread, limit, offset) as unknown as Array<Record<string, unknown>>;
+    const rows: QltInspectionTurnSummary[] = [];
+    for (const row of raw) {
+      const record = assemblyRecordOf(row);
+      const policy = memoryPolicy.getTurnPolicy(record.turnId);
+      rows.push({
+        turnId: record.turnId,
+        outcome: record.outcome,
+        usedCount: record.selectedIds.length,
+        memoryMode: policy?.mode,
+        assemblerVersion: record.assemblerVersion,
+        renderedBytes: record.renderedBytes,
+        failureCode: record.failureCode,
+        createdAtMs: record.createdAtMs,
+      });
+    }
+    return { rows, total: countRow.total };
+  }
+
+  async function getInspectionTurnData(
+    threadId: string,
+    turnId: string,
+  ): Promise<
+    | {
+        readonly assembly: QltContextAssemblyRecord;
+        readonly policy:
+          | {
+              readonly policyId: string;
+              readonly mode: string;
+              readonly policyRevision: number;
+              readonly recordedAtMs: number;
+            }
+          | undefined;
+      }
+    | undefined
+  > {
+    const thread = assertBoundedId(threadId);
+    if (typeof turnId !== 'string' || turnId.length === 0 || turnId.length > 128) {
+      return undefined;
+    }
+    const assembly = await getContextAssemblyByTurn(turnId);
+    // The turn must belong to the requested conversation (no cross-thread
+    // inspection; a mismatched pair is a missing turn, never a leak).
+    if (assembly === undefined || assembly.threadId !== thread) {
+      return undefined;
+    }
+    const policy = memoryPolicy.getTurnPolicy(turnId);
+    return {
+      assembly,
+      policy: policy
+        ? {
+            policyId: policy.policyId,
+            mode: policy.mode,
+            policyRevision: policy.policyRevision,
+            recordedAtMs: policy.recordedAtMs,
+          }
+        : undefined,
+    };
+  }
+
+  async function getInspectionRecordsByIds(
+    ids: readonly string[],
+  ): Promise<readonly QltInspectionFamilyRow[]> {
+    if (ids.length === 0 || ids.length > QLT_CONTEXT_MAX_RECORDS * 4) {
+      return [];
+    }
+    for (const id of ids) {
+      if (!assertBoundedIdSilent(id)) {
+        return [];
+      }
+    }
+    const rows: QltInspectionFamilyRow[] = [];
+    for (const family of Object.keys(INSPECTION_FAMILY_TABLES) as Array<
+      keyof typeof INSPECTION_FAMILY_TABLES
+    >) {
+      const table = INSPECTION_FAMILY_TABLES[family];
+      const placeholders = ids.map(() => '?').join(',');
+      const raw = db
+        .prepare(
+          `SELECT t.*, EXISTS(
+             SELECT 1 FROM ${table} s WHERE s.supersedes_id = t.id
+           ) AS has_successor
+           FROM ${table} t
+           WHERE t.id IN (${placeholders});`,
+        )
+        .all(...ids) as unknown as Array<Record<string, unknown>>;
+      for (const row of raw) {
+        rows.push(familyRowOf(family, row, Number(row['has_successor'] ?? 0) === 1));
+      }
+    }
+    return rows;
+  }
+
   return {
     ...port,
     id: adapter.id,
@@ -1315,6 +1919,7 @@ export function createSharedWorldSqlite(options: SharedWorldSqliteOptions): Shar
     resource: sharedWorldThreadResource,
     contracts: sharedWorldContracts,
     meaning,
+    memoryPolicy,
     listMemoryRows,
     getThreadIdByConversation,
     listContextCandidates,
@@ -1322,5 +1927,11 @@ export function createSharedWorldSqlite(options: SharedWorldSqliteOptions): Shar
     recordContextAssembly,
     getContextAssemblyByTurn,
     getLatestContextAssemblyForThread,
+    listInspectionRecords,
+    getInspectionRecord,
+    getInspectionProposal,
+    listInspectionTurns,
+    getInspectionTurnData,
+    getInspectionRecordsByIds,
   };
 }

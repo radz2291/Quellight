@@ -124,12 +124,18 @@ async function startTurn(
   idempotencyKey: string,
 ): Promise<string> {
   // Install the scope EXACTLY as the production turns route does.
-  const outcome = await runWithTurnAssemblyScope({ swThreadId, mastraThreadId }, () =>
-    composition.commandService.dispatch(actorOf(composition), {
-      command: 'agent.turn.start',
-      payload: { threadId: mastraThreadId, input },
-      idempotencyKey,
-    }),
+  const outcome = await runWithTurnAssemblyScope(
+    {
+      swThreadId,
+      mastraThreadId,
+      memoryPolicy: { policyId: 'qlt.memory-mode@1', mode: 'across-conversations', revision: 1 },
+    },
+    () =>
+      composition.commandService.dispatch(actorOf(composition), {
+        command: 'agent.turn.start',
+        payload: { threadId: mastraThreadId, input },
+        idempotencyKey,
+      }),
   );
   if (!outcome.ok) {
     throw new Error(`turn did not start: ${'code' in outcome ? outcome.code : 'unknown'}`);

@@ -85,7 +85,14 @@ describe('Quellight Shared World store (Quellight-owned; §6)', () => {
     // Q4 reconciliation (frozen Q4 contract §12): migration 3
     // (qlt-context-assembly) is applied on top of migrations 1–2; this
     // assertion is re-pinned to the amended frozen reality, never weakened.
-    expect(bookkeeping.map((row) => row.version)).toEqual([1, 2, QLT_SHARED_WORLD_SCHEMA_VERSION]);
+    // Q5 bounded re-pin (assertion-neutral): migration 4 exists on top of
+    // the frozen Q4 bookkeeping [1, 2, 3].
+    expect(bookkeeping.map((row) => row.version)).toEqual([
+      1,
+      2,
+      3,
+      QLT_SHARED_WORLD_SCHEMA_VERSION,
+    ]);
     store.close();
   });
 

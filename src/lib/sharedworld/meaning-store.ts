@@ -1334,6 +1334,14 @@ export function createSharedWorldMeaningStore(
         // transaction (version-eligibility, never elapsed time).
         assertProposalNotStale(proposal);
         const createdRecords: QltSubjectRecord[] = [];
+        // L-3 (Q5 narrow repair, freeze §12): the correction path
+        // (applyCorrectionInTransaction) already writes the successor's
+        // thread/turn source links. The confirmation loop below must NOT
+        // write them again — the duplicate write violated the source-link
+        // UNIQUE constraint and rolled the whole confirmation back
+        // (QLT_RECORD_EXISTS). The loop still writes the 'proposed-from'
+        // link, which the correction path never writes.
+        let correctionWroteThreadTurnLinks = false;
         let correction: QltCorrection | undefined;
         if (proposal.proposalKind === 'correction') {
           const applied = applyCorrectionInTransaction(
@@ -1358,6 +1366,7 @@ export function createSharedWorldMeaningStore(
           );
           correction = applied.correction;
           createdRecords.push(applied.successor);
+          correctionWroteThreadTurnLinks = true;
         } else if (proposal.proposalKind === 'claim') {
           createdRecords.push(insertClaimFromProposal(proposal, confirmedBy, nextRecordId(), now));
         } else if (proposal.proposalKind === 'commitment') {
@@ -1372,13 +1381,17 @@ export function createSharedWorldMeaningStore(
         for (const record of createdRecords) {
           const family =
             'commitmentKey' in record ? 'commitment' : 'loopKind' in record ? 'open_loop' : 'claim';
-          writeThreadTurnLinks({
-            recordId: record.id,
-            family,
-            sourceThreadId: record.sourceThreadId,
-            sourceTurnRef: record.sourceTurnRef,
-            now,
-          });
+          // L-3 (Q5): exactly one applicable source-thread link — skip the
+          // duplicate thread/turn link write for the correction successor.
+          if (!correctionWroteThreadTurnLinks) {
+            writeThreadTurnLinks({
+              recordId: record.id,
+              family,
+              sourceThreadId: record.sourceThreadId,
+              sourceTurnRef: record.sourceTurnRef,
+              now,
+            });
+          }
           insertSourceLink({
             fromRecordId: record.id,
             fromRecordFamily: family,

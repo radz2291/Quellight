@@ -259,6 +259,8 @@ export interface QuellightComposition {
   /**
    * Q4: the truthful transparency summary of the thread's LATEST durable
    * context assembly (undefined before any assembly exists). Read-only.
+   * Q5: carries the applied Memory Mode from the immutable per-turn
+   * policy evidence (`memoryMode`; undefined for pre-policy turns).
    */
   getThreadAssemblySummary(threadId: string): Promise<
     | {
@@ -266,6 +268,7 @@ export interface QuellightComposition {
         readonly usedCount: number;
         readonly assemblerVersion: string;
         readonly createdAtMs: number;
+        readonly memoryMode?: 'across-conversations' | 'per-conversation' | 'off';
       }
     | undefined
   >;
@@ -395,6 +398,7 @@ export async function createQuellightComposition(
   const sharedWorld = createSharedWorldSqlite({
     path: join(dataDir, 'shared-world.db'),
     clock,
+    localActorId: LOCAL_ACTOR_ID,
   });
 
   // ---- Q4 per-turn context service (server-derived turn correlation) -------
@@ -409,6 +413,12 @@ export async function createQuellightComposition(
     getLatestAssemblyForThread: (threadId) =>
       sharedWorld.getLatestContextAssemblyForThread(threadId),
     listOpenTurns: () => agentStores.turns.listOpenTurns(),
+    // Q5: the immutable per-turn applied-policy evidence (the frozen
+    // migration 4 family), recorded from the ADMISSION-BOUND scope policy.
+    recordTurnPolicy: async (turnId, policy) => {
+      sharedWorld.memoryPolicy.recordTurnPolicy({ turnId, policy });
+    },
+    getTurnPolicy: (turnId) => Promise.resolve(sharedWorld.memoryPolicy.getTurnPolicy(turnId)),
     localActorId: LOCAL_ACTOR_ID,
     clock,
   };

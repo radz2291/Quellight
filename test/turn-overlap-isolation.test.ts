@@ -20,6 +20,18 @@ import { POST as turnsPost } from '../src/routes/api/threads/[id]/turns/+server'
 import type { QuellightRuntime } from '../src/lib/server/runtime';
 
 /**
+ * Q5 mechanical re-pin (assertion-neutral): the turn assembly scope now
+ * carries the ADMISSION-BOUND Memory Mode policy. These Q4 suites run
+ * under the default 'across-conversations' mode, so every frozen Q4
+ * assertion is unchanged.
+ */
+const ADMISSION_BOUND_POLICY = {
+  policyId: 'qlt.memory-mode@1',
+  mode: 'across-conversations',
+  revision: 1,
+} as const;
+
+/**
  * H-1 remediation regression suite (remediation contract §2/§3).
  *
  * Locks the one-active-turn-per-conversation rule at BOTH layers:
@@ -243,6 +255,11 @@ function serviceOf(composition: QuellightComposition) {
     getLatestAssemblyForThread: (threadId) =>
       composition.sharedWorld.getLatestContextAssemblyForThread(threadId),
     listOpenTurns: () => composition.stores.turns.listOpenTurns(),
+    recordTurnPolicy: async (turnId, policy) => {
+      composition.sharedWorld.memoryPolicy.recordTurnPolicy({ turnId, policy });
+    },
+    getTurnPolicy: (turnId) =>
+      Promise.resolve(composition.sharedWorld.memoryPolicy.getTurnPolicy(turnId)),
     localActorId: LOCAL_ACTOR_ID,
   });
 }
@@ -349,7 +366,11 @@ describe('H-1 model-seam backstop (real stores; corrupted-state fixtures)', () =
     // Turn A: a REAL open turn whose assembly record exists (its first
     // model call resolved while the stream stays held open).
     const outcome = await runWithTurnAssemblyScope(
-      { swThreadId: thread.id, mastraThreadId: conversation.mastraThreadId },
+      {
+        swThreadId: thread.id,
+        mastraThreadId: conversation.mastraThreadId,
+        memoryPolicy: ADMISSION_BOUND_POLICY,
+      },
       () =>
         composition.commandService.dispatch(actorOf(composition), {
           command: 'agent.turn.start',
@@ -387,7 +408,11 @@ describe('H-1 model-seam backstop (real stores; corrupted-state fixtures)', () =
     await createOpenTurnFixture(composition, conversation.mastraThreadId, turnB);
 
     const service = serviceOf(composition);
-    const scope = { swThreadId: thread.id, mastraThreadId: conversation.mastraThreadId };
+    const scope = {
+      swThreadId: thread.id,
+      mastraThreadId: conversation.mastraThreadId,
+      memoryPolicy: ADMISSION_BOUND_POLICY,
+    };
     // Stream 1 (may be turn A's later model call) and stream 2 (may be
     // turn B's first call) must BOTH fail closed: zero injection, no
     // in-flight promise belonging to one turn returned for another, and
@@ -447,9 +472,18 @@ describe('H-1 model-seam backstop (real stores; corrupted-state fixtures)', () =
       getLatestAssemblyForThread: (threadId) =>
         composition.sharedWorld.getLatestContextAssemblyForThread(threadId),
       listOpenTurns: () => composition.stores.turns.listOpenTurns(),
+      recordTurnPolicy: async (turnId, policy) => {
+        composition.sharedWorld.memoryPolicy.recordTurnPolicy({ turnId, policy });
+      },
+      getTurnPolicy: (turnId) =>
+        Promise.resolve(composition.sharedWorld.memoryPolicy.getTurnPolicy(turnId)),
       localActorId: LOCAL_ACTOR_ID,
     });
-    const scope = { swThreadId: thread.id, mastraThreadId: conversation.mastraThreadId };
+    const scope = {
+      swThreadId: thread.id,
+      mastraThreadId: conversation.mastraThreadId,
+      memoryPolicy: ADMISSION_BOUND_POLICY,
+    };
     const pendingA = service.resolveForStream(scope);
     // While A's assembly is in flight, turn B opens (record-less).
     const turnB = 'turn-h1-inflight-b';
@@ -491,7 +525,11 @@ describe('H-1 model-seam backstop (real stores; corrupted-state fixtures)', () =
       sourceThreadId: thread.id,
     });
     const service = serviceOf(composition);
-    const scope = { swThreadId: thread.id, mastraThreadId: conversation.mastraThreadId };
+    const scope = {
+      swThreadId: thread.id,
+      mastraThreadId: conversation.mastraThreadId,
+      memoryPolicy: ADMISSION_BOUND_POLICY,
+    };
     // two record-less open turns (corrupted-state fixture)
     await createOpenTurnFixture(composition, conversation.mastraThreadId, 'turn-h1-rl-1');
     await createOpenTurnFixture(composition, conversation.mastraThreadId, 'turn-h1-rl-2');
@@ -523,7 +561,11 @@ describe('H-1 model-seam backstop (real stores; corrupted-state fixtures)', () =
       sourceThreadId: thread.id,
     });
     const service = serviceOf(composition);
-    const scope = { swThreadId: thread.id, mastraThreadId: conversation.mastraThreadId };
+    const scope = {
+      swThreadId: thread.id,
+      mastraThreadId: conversation.mastraThreadId,
+      memoryPolicy: ADMISSION_BOUND_POLICY,
+    };
     // exactly one record-less open turn assembles
     await createOpenTurnFixture(composition, conversation.mastraThreadId, 'turn-h1-single-1');
     const assembled = await service.resolveForStream(scope);

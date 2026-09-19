@@ -95,9 +95,18 @@ export const POST: RequestHandler = async ({ request, params }) => {
       { mastraThreadId: conversation.mastraThreadId, idempotencyKey },
       () =>
         // Q4: the server-derived assembly correlation scope wraps the
-        // dispatch (the detached turn execution inherits it).
+        // dispatch (the detached turn execution inherits it). Q5: the
+        // effective Memory Mode is resolved server-side from the durable
+        // policy and bound into the scope (Lane B moves the resolution
+        // inside the admission critical section — the binding semantics
+        // of freeze §7 are identical: the resolved value is immutable for
+        // the turn's duration).
         runWithTurnAssemblyScope(
-          { swThreadId: threadId, mastraThreadId: conversation.mastraThreadId },
+          {
+            swThreadId: threadId,
+            mastraThreadId: conversation.mastraThreadId,
+            memoryPolicy: runtime.composition.sharedWorld.memoryPolicy.resolveCurrent(),
+          },
           () =>
             runtime.composition.commandService.dispatch(actor, {
               command: 'agent.turn.start',

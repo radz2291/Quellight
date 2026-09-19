@@ -89,9 +89,14 @@ describe('Q4 migration 3: the immutable per-turn context-assembly family', () =>
     const store = createSharedWorldSqlite({ path: join(dir, 'shared-world.db') });
     const raw = new DatabaseSync(join(dir, 'shared-world.db'), { readOnly: true });
     const applied = appliedSharedWorldMigrations(raw as never);
-    expect(applied.map((migration) => migration.version)).toEqual([1, 2, 3]);
-    expect(QLT_SHARED_WORLD_SCHEMA_VERSION).toBe(QLT_CONTEXT_MIGRATION.version);
-    expect(applied.at(-1)?.name).toBe(QLT_CONTEXT_MIGRATION.name);
+    // Q5 bounded re-pin (assertion-neutral; freeze §14): migration 4
+    // (qlt-memory-mode-policy) is applied on top of the frozen Q4 schema.
+    expect(applied.map((migration) => migration.version)).toEqual([1, 2, 3, 4]);
+    // Q5 bounded re-pin: the schema version advanced to migration 4; the
+    // frozen Q4 migration identity is unchanged in the applied list.
+    expect(QLT_SHARED_WORLD_SCHEMA_VERSION).toBe(4);
+    expect(applied.map((migration) => migration.name)).toContain(QLT_CONTEXT_MIGRATION.name);
+    expect(applied.at(-1)?.name).toBe('qlt-memory-mode-policy');
     const table = raw
       .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?;")
       .get(QLT_CONTEXT_ASSEMBLY_TABLE) as { sql: string };
@@ -570,13 +575,23 @@ describe('Q4 per-turn service: one assembly, replay, failure, ambiguity', () => 
       getAssemblyByTurn: async (turnId) => assemblies.get(turnId),
       getLatestAssemblyForThread: async () => undefined,
       listOpenTurns: async () => overrides.openTurns ?? [],
+      recordTurnPolicy: async () => undefined,
+      getTurnPolicy: async () => undefined,
       localActorId: 'actor-quellight-local',
       clock: () => 42,
     });
     return { service, assemblies };
   }
 
-  const scope = { swThreadId: 'thread-a', mastraThreadId: 'vict-conv-1' };
+  const scope = {
+    swThreadId: 'thread-a',
+    mastraThreadId: 'vict-conv-1',
+    memoryPolicy: {
+      policyId: 'qlt.memory-mode@1',
+      mode: 'across-conversations',
+      revision: 1,
+    },
+  } as const;
 
   it('assembles exactly once per turn and replays the frozen record for later calls', async () => {
     const { service, assemblies } = makeService({
