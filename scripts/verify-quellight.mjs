@@ -8,7 +8,8 @@
  *   2. typecheck               (npm run typecheck)
  *   3. node-side tests         (composition, sharedworld, ceremony authority,
  *                                 restart, reconnect)
- *   (2f. development-start regression gate (D-11): the ordinary dev
+ *   (2f. development-start regression gate (D-11) with the Q5
+ *        zero-warning gate; 2g. Q5 memory inspection and policy gate
  *        path is started through the real repository vite.config.ts and
  *        must serve the app and transform the released renderer)
  *   4. browser-side island tests (happy-dom)
@@ -96,10 +97,19 @@ record(
     maxBuffer: 16 * 1024 * 1024,
   }),
 );
-step('2f. development-start regression gate (D-11)');
+step('2f. development-start regression gate (D-11 + Q5 zero-warning gate)');
 record(
   'verify:dev-start',
   spawnSync(process.execPath, ['scripts/verify-dev-start.mjs'], {
+    encoding: 'utf8',
+    timeout: 300_000,
+    maxBuffer: 16 * 1024 * 1024,
+  }),
+);
+step('2g. Q5 memory inspection and policy conformance gate (Phase Q5)');
+record(
+  'verify:q5',
+  spawnSync(process.execPath, ['--import', 'tsx', 'scripts/verify-q5.mjs'], {
     encoding: 'utf8',
     timeout: 300_000,
     maxBuffer: 16 * 1024 * 1024,

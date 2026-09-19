@@ -81,10 +81,22 @@ console.log('\n[1] PLAN — frozen Q3 inventory (19 actions; 13 memory mutations
 {
   const plan = getCompiledPlan();
   const actionIds = Object.keys(plan.actions).sort();
+  // Q5 reconciliation (Q5 freeze §14): the frozen 19-action Q3 inventory
+  // is unchanged and is EXTENDED by EXACTLY the two Q5 actions
+  // (act.queryInspection, act.setMemoryMode) — assertions strengthened,
+  // never weakened; the frozen Q3 contract data is not rewritten.
+  const Q5_ADDED_ACTIONS = ['act.queryInspection', 'act.setMemoryMode'];
   check(
-    'the compiled plan carries EXACTLY the frozen 19-action inventory',
+    'the compiled plan carries EXACTLY the frozen 19-action inventory PLUS exactly the two Q5 actions',
     'plan',
-    JSON.stringify(actionIds) === JSON.stringify([...QLT_PLAN_ACTION_INVENTORY].sort()),
+    JSON.stringify(actionIds) ===
+      JSON.stringify([...QLT_PLAN_ACTION_INVENTORY, ...Q5_ADDED_ACTIONS].sort()),
+  );
+  check(
+    'the Q5 actions are the only additions beyond the frozen Q3 inventory',
+    'plan',
+    actionIds.filter((id) => !QLT_PLAN_ACTION_INVENTORY.includes(id)).length === 2 &&
+      Q5_ADDED_ACTIONS.every((id) => actionIds.includes(id)),
   );
   const memoryActions = Object.values(plan.actions).filter(
     (action) => action.resourceId === 'qlt.memory',

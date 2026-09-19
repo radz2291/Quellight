@@ -30,7 +30,8 @@
     "verify:governance": "node --import tsx scripts/verify-governance.mjs",
     "verify:q2": "node --import tsx scripts/verify-q2.mjs",
     "verify:q3": "node --import tsx scripts/verify-q3.mjs",
-    "verify:q4": "node --import tsx scripts/verify-q4.mjs"
+    "verify:q4": "node --import tsx scripts/verify-q4.mjs",
+    "verify:q5": "node --import tsx scripts/verify-q5.mjs"
   },
   "dependencies": {
     "@victframework/application": "0.2.0",

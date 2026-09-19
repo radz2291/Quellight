@@ -150,7 +150,9 @@ console.log('\n[1] CONTRACT — frozen contract data (identity, bounds, vocabula
       JSON.stringify(['claim', 'commitment', 'open_loop']),
   );
   check(
-    'exclusion vocabulary is the complete closed frozen list',
+    // Q5 reconciliation (Q4-AMEND-1, Q5 freeze §10): the frozen vocabulary
+    // gains exactly 'scope-excluded'; the original eight codes unchanged.
+    'exclusion vocabulary is the complete closed frozen list (incl. the Q4-AMEND-1 scope-excluded code)',
     'contract',
     JSON.stringify([...QLT_CONTEXT_EXCLUSION_CODES]) ===
       JSON.stringify([
@@ -162,6 +164,7 @@ console.log('\n[1] CONTRACT — frozen contract data (identity, bounds, vocabula
         'conflict-ambiguous',
         'budget',
         'evaluation-failed',
+        'scope-excluded',
       ]),
   );
   check(
@@ -206,7 +209,9 @@ console.log('\n[1] CONTRACT — frozen contract data (identity, bounds, vocabula
       QLT_CONTEXT_TURN_RULES.oneAssemblyPerLogicalTurn === true &&
       QLT_CONTEXT_TURN_RULES.historicalTurnsNeverRecompute === true &&
       QLT_CONTEXT_AGENT_IDENTITY === 'agent-quellight' &&
-      QLT_CONTEXT_ASSEMBLER_VERSION === 'q4-1',
+      // Q5 reconciliation (Q4-AMEND-1): the assembler version advanced to
+      // 'q5-1' with policy consumption; the algorithm is unchanged.
+      QLT_CONTEXT_ASSEMBLER_VERSION === 'q5-1',
   );
   check(
     'transparency strings are exactly the frozen user-facing states',
@@ -237,11 +242,13 @@ console.log('\n[2] SCHEMA — live migration-3 introspection vs the frozen inven
       .all()
       .map((row) => row.version);
     check(
-      'migration bookkeeping is [1, 2, 3] (additive forward-only)',
+      // Q5 reconciliation (Q5 freeze §14): migration 4 exists on top of the
+      // frozen Q4 bookkeeping [1, 2, 3] (additive forward-only).
+      'migration bookkeeping is [1, 2, 3, 4] (additive forward-only)',
       'schema',
-      JSON.stringify(bookkeeping) === JSON.stringify([1, 2, 3]),
+      JSON.stringify(bookkeeping) === JSON.stringify([1, 2, 3, 4]),
     );
-    check('QLT_SHARED_WORLD_SCHEMA_VERSION === 3', 'schema', QLT_SHARED_WORLD_SCHEMA_VERSION === 3);
+    check('QLT_SHARED_WORLD_SCHEMA_VERSION === 4', 'schema', QLT_SHARED_WORLD_SCHEMA_VERSION === 4);
 
     const columns = raw.prepare(`PRAGMA table_info(${QLT_CONTEXT_ASSEMBLY_TABLE});`).all();
     const actualColumns = columns.map((column) => ({

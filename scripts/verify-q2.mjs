@@ -188,18 +188,20 @@ console.log('\n[1] SCHEMA — frozen inventory introspection, bookkeeping, resta
         .all()
         .map((row) => row.version);
       // Q4 reconciliation (frozen Q4 contract §12): migration 3
-      // (qlt-context-assembly) is applied on top of the frozen Q2 schema;
-      // the bookkeeping assertion is re-pinned to the full applied list.
-      // The frozen Q2 inventory checks above are unchanged.
+      // (qlt-context-assembly) is applied on top of the frozen Q2 schema.
+      // Q5 reconciliation (Q5 freeze §14): migration 4
+      // (qlt-memory-mode-policy) is applied on top of the frozen Q4
+      // schema; the bookkeeping assertion is re-pinned to the full applied
+      // list. The frozen Q2 inventory checks above are unchanged.
       check(
-        `migration bookkeeping is [1, 2, ${QLT_SHARED_WORLD_SCHEMA_VERSION}]`,
+        `migration bookkeeping is [1, 2, 3, ${QLT_SHARED_WORLD_SCHEMA_VERSION}]`,
         'schema',
-        JSON.stringify(bookkeeping) === JSON.stringify([1, 2, QLT_SHARED_WORLD_SCHEMA_VERSION]),
+        JSON.stringify(bookkeeping) === JSON.stringify([1, 2, 3, QLT_SHARED_WORLD_SCHEMA_VERSION]),
       );
       check(
-        `QLT_SHARED_WORLD_SCHEMA_VERSION === 3 (Q4 additive migration)`,
+        `QLT_SHARED_WORLD_SCHEMA_VERSION === 4 (Q5 additive migration)`,
         'schema',
-        QLT_SHARED_WORLD_SCHEMA_VERSION === 3,
+        QLT_SHARED_WORLD_SCHEMA_VERSION === 4,
       );
       check(
         'PRAGMA foreign_keys enforced on the connection',
@@ -558,16 +560,28 @@ await (async () => {
     JSON.stringify(threadActionIds) === JSON.stringify([...ceremony.QLT_THREAD_ACTION_IDS].sort()),
   );
   check(
-    'the compiled plan carries EXACTLY the frozen Q3 action inventory',
+    // Q5 reconciliation (Q5 freeze §14): the frozen Q3 action inventory is
+    // unchanged and EXTENDED by exactly the two Q5 actions; the frozen Q3
+    // contract data is not rewritten and no other assertion is weakened.
+    'the compiled plan carries EXACTLY the frozen Q3 action inventory PLUS exactly the two Q5 actions',
     'structural',
     JSON.stringify(actionIds) ===
-      JSON.stringify([...ceremony.QLT_THREAD_ACTION_IDS, ...ceremony.QLT_MEMORY_ACTION_IDS].sort()),
+      JSON.stringify(
+        [
+          ...ceremony.QLT_THREAD_ACTION_IDS,
+          ...ceremony.QLT_MEMORY_ACTION_IDS,
+          'act.queryInspection',
+          'act.setMemoryMode',
+        ].sort(),
+      ),
   );
   check(
-    'every plan action targets qlt.threads or the Q3 qlt.memory resource',
+    'every plan action targets qlt.threads, the Q3 qlt.memory resource, or the two Q5 resources',
     'structural',
     Object.values(plan.actions).every((action) =>
-      ['qlt.threads', 'qlt.memory'].includes(action.resourceId),
+      ['qlt.threads', 'qlt.memory', 'qlt.inspection', 'qlt.memory-policy'].includes(
+        action.resourceId,
+      ),
     ),
   );
   check(

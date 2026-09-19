@@ -199,10 +199,15 @@ describe('B-01/B-02/B-12: the single pinned capability drafts inert, correlated 
     expect((await composition.sharedWorld.meaning.listProposals({})).total).toBe(0);
   });
 
-  it('the compiled plan carries EXACTLY the frozen Q3 inventory (19 actions)', async () => {
+  it('the compiled plan carries EXACTLY the frozen Q3 inventory PLUS exactly the two Q5 actions', async () => {
+    // Q5 bounded re-pin (freeze §14): the frozen Q3 19-action inventory is
+    // unchanged; the plan adds EXACTLY act.queryInspection and
+    // act.setMemoryMode. The Q3 actions themselves are unchanged.
     const plan = getCompiledPlan();
-    expect(Object.keys(plan.actions).sort()).toEqual([...QLT_PLAN_ACTION_INVENTORY].sort());
-    expect(Object.keys(plan.actions)).toHaveLength(19);
+    expect(Object.keys(plan.actions).sort()).toEqual(
+      [...QLT_PLAN_ACTION_INVENTORY, 'act.queryInspection', 'act.setMemoryMode'].sort(),
+    );
+    expect(Object.keys(plan.actions)).toHaveLength(21);
   });
 });
 

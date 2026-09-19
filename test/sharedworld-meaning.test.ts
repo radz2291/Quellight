@@ -1652,10 +1652,18 @@ describe('A-29: no production path reaches the meaning repository outside the go
     const ceremony = await import('../src/lib/sharedworld/ceremony-contract');
     const plan = getCompiledPlan();
     const actionIds = Object.keys(plan.actions).sort();
+    // Q5 bounded re-pin (freeze §14): the frozen Q3 inventory is unchanged;
+    // the plan adds EXACTLY the two Q5 actions (qlt.inspection read,
+    // qlt.memory-policy setMode). The Q3 actions are unchanged.
     expect(actionIds).toEqual(
-      [...ceremony.QLT_THREAD_ACTION_IDS, ...ceremony.QLT_MEMORY_ACTION_IDS].sort(),
+      [
+        ...ceremony.QLT_THREAD_ACTION_IDS,
+        ...ceremony.QLT_MEMORY_ACTION_IDS,
+        'act.queryInspection',
+        'act.setMemoryMode',
+      ].sort(),
     );
-    expect(actionIds).toHaveLength(19);
+    expect(actionIds).toHaveLength(21);
     const threadActionIds = actionIds.filter(
       (id) => (plan.actions[id] as { resourceId?: string }).resourceId === 'qlt.threads',
     );
