@@ -34,8 +34,18 @@
 /** The frozen Q4 context-assembly schema identity. */
 export const QLT_CONTEXT_SCHEMA = 'qlt.context-assembly@1';
 
-/** The frozen assembler version recorded on every assembly row. */
-export const QLT_CONTEXT_ASSEMBLER_VERSION = 'q4-1';
+/**
+ * The frozen assembler version recorded on every assembly row.
+ *
+ * Q4-AMEND-1 (2026-09-20, Phase Q5 contract freeze §10): `q4-1` → `q5-1`.
+ * The executable assembler gains Memory Mode policy consumption in Q5;
+ * assembly evidence must truthfully identify the executing assembler. The
+ * fingerprint ALGORITHM is unchanged — the version is a frozen INPUT VALUE
+ * of that algorithm, and the Q4 amendment was committed in the Phase Q5
+ * contract-freeze commit before any assembler consumed it (never bundled
+ * with consuming implementation).
+ */
+export const QLT_CONTEXT_ASSEMBLER_VERSION = 'q5-1';
 
 /** The single product agent identity (unchanged from Q3; no new actor). */
 export const QLT_CONTEXT_AGENT_IDENTITY = 'agent-quellight';
@@ -134,6 +144,14 @@ export const QLT_CONTEXT_EXCLUSION_CODES: readonly string[] = [
   'conflict-ambiguous',
   'budget',
   'evaluation-failed',
+  // Q4-AMEND-1 (2026-09-20, Phase Q5 contract freeze §8/§10): the frozen
+  // vocabulary gains EXACTLY one code. Meaning: the record was structurally
+  // eligible and current-effective but originates outside the conversation
+  // scope permitted by the turn's applied Memory Mode
+  // ('per-conversation'). It is emitted ONLY under 'per-conversation' and
+  // can never appear under 'across-conversations'. Amendment committed in
+  // the Phase Q5 contract-freeze commit BEFORE any assembler consumed it.
+  'scope-excluded',
 ];
 
 // ---------------------------------------------------------------------------
