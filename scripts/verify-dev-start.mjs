@@ -242,7 +242,9 @@ function auditWarnings() {
   }
   warningCounts = [...seen.entries()].map(([id, count]) => ({ id, count }));
   for (const [id, count] of seen) {
-    fail(`svelte warning "${id}" emitted ${count} time(s); the zero-warning dev-start gate forbids every project warning.`);
+    fail(
+      `svelte warning "${id}" emitted ${count} time(s); the zero-warning dev-start gate forbids every project warning.`,
+    );
   }
   sourcemapNoticeSeen = SOURCMAP_NOTICE.test(devLog);
   return sourcemapNoticeSeen;
