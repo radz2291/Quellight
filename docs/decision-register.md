@@ -540,13 +540,45 @@ Svelte warnings repaired; `verify:dev-start` fails on every project
 warning). The action inventory is 21 (19 frozen + `act.queryInspection`
 
 - `act.setMemoryMode`). The agent envelope remains EXACTLY
-  `qlt.proposal.draft@1`. The authoritative ladder ran green first-run on
-  the untouched tree. Carried unchanged: M-1 (open; hard deadline before
+  `qlt.proposal.draft@1`. The authoritative ladder passed in full on the
+  untouched tree; one initial `npm ci` attempt was interrupted by an
+  environmental file lock and the subsequent complete frozen-tree
+  sequence passed (see D-Q5-3 and the isolation-remediation report).
+  Carried unchanged: M-1 (open; hard deadline before
   the Phase Q6 live-provider proof and the Stage 07C final audit), L-R1/
   L-R2, the pending-correction fixture limitation, the Q3 §12 deferral,
   and D-FUTURE-STEERING-1. Q5 is NOT Verified and NOT formally closed;
   Phases Q6–Q7 have not begun; Stage 07 remains In Progress. This entry is
   documentation-only.
+
+## D-Q5-3 — Phase Q5 remediation decision: verification gates must never touch operator data (technical decision, implemented)
+
+Post-Q5 remediation decision (2026-09-20; report
+`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q5-VERIFICATION-ISOLATION-REMEDIATION.md`):
+verification and test gates must never start the application against the
+default operator data location. The D-11 development-start gate had done
+so indirectly — its `GET /` composed the application through the default
+operator data directory, applying Q5's additive migration-4 schema to
+the real operator database during the Q5 ladder (both new tables empty;
+existing rows reported intact; no content damage indicated; the Q5
+implementation report's "no test/script read or write" wording was too
+broad and is corrected additively in the remediation report — the
+historical reports are preserved byte-for-byte). Implemented: the typed
+`QUELLIGHT_DATA_DIR_ABSOLUTE` seam in `resolveQuellightEnvironment`
+(fail-closed: absolute, never combined with the relative form, never at
+or inside the default operator data directory or the repository; ordinary
+startup unchanged) and a fully isolated `verify:dev-start` (task-owned
+`mkdtempSync` OS-temporary data directory; explicit child environment;
+fail-closed path assessment regression-checked in-process; post-teardown
+read-only store proof of migrations 1..4 in the task-owned directory; a
+permanent spawned guard control that must be refused; port-release
+re-proof; verified `finally` cleanup on success and failure). The ladder
+wording is also corrected: one `npm ci` attempt was interrupted by an
+environmental file lock and the subsequent complete frozen-tree sequence
+passed — no unqualified "first-run" claim is retained. Data safety: the
+real operator database was not accessed during the remediation. Q5
+status is unchanged: IMPLEMENTED — AWAITING INDEPENDENT VERIFICATION;
+Phases Q6–Q7 have not begun. This entry is documentation-only.
 
 ## D-11 — Dev-only `optimizeDeps` exclusion for the released renderer (development-tooling compatibility note — technical decision, recorded, not a product semantic decision)
 

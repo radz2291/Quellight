@@ -66,11 +66,24 @@ Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed;
   correction proposals); and the permanent zero-warning development-
   start gate (`verify:dev-start` fails on every project Svelte warning;
   the three D-11 deferred warnings repaired). Verification: the
-  authoritative ladder green first-run on the untouched tree (`npm ci`;
+  authoritative ladder passed in full on the untouched tree (`npm ci`;
   `verify:consumer`; `verify:quellight` incl. the 71-check `verify:q5`
   and the EXTENDED real-browser ceremony session with all Q5 scenarios,
   axe clean with the Memory surface open on both viewports;
-  `npm audit --omit=dev` 0 vulnerabilities; `git diff --check`).
+  `npm audit --omit=dev` 0 vulnerabilities; `git diff --check`) — one
+  initial `npm ci` attempt was interrupted by an environmental file lock
+  and the subsequent complete frozen-tree sequence passed (corrected
+  2026-09-20; see the verification-isolation remediation report).
+  Post-Q5 narrow remediation (2026-09-20): the D-11 development-start
+  gate had indirectly composed the application against the default
+  operator data directory (applying additive migration 4's CREATE-only
+  schema during the ladder; new tables empty, existing rows intact) —
+  remediated by the typed `QUELLIGHT_DATA_DIR_ABSOLUTE` seam and a fully
+  isolated `verify:dev-start` (task-owned OS-temporary data directory,
+  fail-closed guards, read-only store proof, permanent guard control,
+  verified cleanup on success and failure); the real operator database
+  was not accessed during the remediation. See
+  `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q5-VERIFICATION-ISOLATION-REMEDIATION.md`.
   Carried: M-1 unchanged with its hard deadline; L-R1/L-R2 unchanged;
   the Q3 §12 correction-proposal deferral remains.
 - The retained dependency is now the immutable coordinated release set

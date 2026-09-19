@@ -20,7 +20,7 @@
  * - the agent/model has NO Shared World write path in 07B (§6).
  */
 
-import { join, resolve as resolvePath } from 'node:path';
+import { isAbsolute, join, relative, resolve as resolvePath } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import {
@@ -208,7 +208,55 @@ export function resolveQuellightEnvironment(
   }
   const dataDirRelative =
     dataDirRaw === undefined || dataDirRaw.trim() === '' ? '.quellight-data' : dataDirRaw;
-  const dataDir = resolvePath(join(repoRoot, dataDirRelative));
+  // Verification-isolation seam (Q5 remediation): an ABSOLUTE data directory
+  // outside the repository. The relative form above always anchors inside the
+  // repository, so the verification gates cannot isolate their stores with
+  // it. The override exists solely for task-owned, disposable gate data
+  // directories and is fail-closed: it must be absolute, must not be combined
+  // with the relative form, and must resolve strictly OUTSIDE this repository
+  // (in particular never at or inside the default operator data directory).
+  // Ordinary `npm run dev` startup never sets it and keeps the default
+  // operator location unchanged.
+  const dataDirOverrideRaw = env.QUELLIGHT_DATA_DIR_ABSOLUTE;
+  let dataDir: string;
+  if (dataDirOverrideRaw !== undefined && dataDirOverrideRaw.trim() !== '') {
+    if (dataDirRaw !== undefined && dataDirRaw.trim() !== '') {
+      throw new QuellightCompositionError(
+        'VICT_OPERATOR_CONFIG_INVALID',
+        'QUELLIGHT_DATA_DIR_ABSOLUTE must not be combined with QUELLIGHT_DATA_DIR.',
+      );
+    }
+    if (!isAbsolute(dataDirOverrideRaw)) {
+      throw new QuellightCompositionError(
+        'VICT_OPERATOR_CONFIG_INVALID',
+        'QUELLIGHT_DATA_DIR_ABSOLUTE must be an absolute path.',
+      );
+    }
+    const overridden = resolvePath(dataDirOverrideRaw);
+    const repo = resolvePath(repoRoot);
+    const defaultOperatorDir = resolvePath(join(repo, '.quellight-data'));
+    const inside = (base: string, candidate: string): boolean => {
+      // path.relative is case-insensitive on win32 and case-sensitive on
+      // posix — exactly the platform-correct containment comparison.
+      const rel = relative(base, candidate);
+      return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel));
+    };
+    if (inside(defaultOperatorDir, overridden)) {
+      throw new QuellightCompositionError(
+        'VICT_OPERATOR_CONFIG_INVALID',
+        'QUELLIGHT_DATA_DIR_ABSOLUTE must not resolve to or inside the default operator data directory.',
+      );
+    }
+    if (inside(repo, overridden)) {
+      throw new QuellightCompositionError(
+        'VICT_OPERATOR_CONFIG_INVALID',
+        'QUELLIGHT_DATA_DIR_ABSOLUTE must resolve outside the repository.',
+      );
+    }
+    dataDir = overridden;
+  } else {
+    dataDir = resolvePath(join(repoRoot, dataDirRelative));
+  }
   const turnDeadlineMs = requirePositiveInt(
     env.QUELLIGHT_TURN_DEADLINE_MS,
     'QUELLIGHT_TURN_DEADLINE_MS',
