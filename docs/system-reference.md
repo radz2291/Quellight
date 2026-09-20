@@ -1,8 +1,9 @@
 # Quellight system reference — Stage 07B/07C
 
-## Status (current, 2026-09-20 — Phase Q5 independently re-verified and FORMALLY CLOSED)
+## Status (current, 2026-09-21 — VICT-M-1 REMEDIATED — AWAITING INDEPENDENT VERIFICATION; adopted candidate `@victframework/*@0.3.0-rc.1`)
 
 ```text
+VICT-M-1: REMEDIATED — AWAITING INDEPENDENT VERIFICATION (qlt.proposal.draft@2/write; exact host quiet-write policy; adopted verification candidate @victframework/*@0.3.0-rc.1 = vict-release-set@1/0.3.0-rc.1; latest remains 0.2.0; stable 0.3.0 not yet published)
 Stage 07B: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
 Stage 07C Phase Q1: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
 Stage 07C Phase Q2: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (durable Shared World schema)
@@ -10,8 +11,31 @@ Stage 07C Phase Q3: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (gover
 Stage 07C Phase Q4: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (deterministic Shared World context assembly; H-1 remediated and independently re-verified closed)
 Stage 07C Phase Q5: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (Shared World inspection, user memory control, one durable global Memory Mode; independent audit NOT VERIFIED — B-1/H-1; Q5-B-1/Q5-H-1/Q5-M-1 remediated per the frozen remediation contract and independently re-verified closed; L-3 repaired; zero-warning dev-start gate)
 Stage 07C Phases Q6–Q7: NOT BEGUN (live-provider injection-resistance proof is Q6; contract and implementation planning is permitted — not begun)
-Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 closed; Q5 closed; Q6–Q7, 07D, 07E remaining)
+Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 closed; Q5 closed; M-1 remediated; Q6–Q7, 07D, 07E remaining)
 ```
+
+- **VICT-M-1 remediation (2026-09-21): REMEDIATED — AWAITING
+  INDEPENDENT VERIFICATION.** The pinned capability advanced to
+  `qlt.proposal.draft@2` with the truthful effect class `write` (the
+  durable, epistemically inert proposal-row creation); the composition
+  supplies the EXACT host-owned quiet-write approval policy
+  (`qlt.host-policy.quiet-write@1`, one exact entry) through the trusted
+  bridge-dependency channel only; the agent profile advanced to revision
+  4; every invocation durably records effect truth, the approval
+  decision, and the closed-code disposition under
+  `vict-effect-policy@1`; a quiet proposal write creates zero approval
+  rows, zero approver identities, and zero awaiting-approval events;
+  the ceremony, memory modes, inspection, context assembly, and agent
+  isolation are unchanged. Adopted set:
+  `vict-release-set@1/0.3.0-rc.1` (candidate tag `vict-0.3.0-rc`;
+  `latest` remains `0.2.0`; stable `0.3.0` not yet published). The
+  authoritative ladder (`npm ci`; `verify:consumer`; `verify:quellight`
+  incl. the real offline conversation/ceremony browser path;
+  `npm audit --omit=dev`; `git diff --check`) ran exactly once,
+  first-run green at `0fb4050…`. Record:
+  `docs/report/QUELLIGHT-STAGE-07C-M-1-REMEDIATION.md`; decision
+  register D-Q-M1-1. M-1 is NOT independently verified and NOT closed;
+  Phase Q6 has not begun.
 
 - **Phase Q5 — Shared World inspection and user memory control
   (2026-09-20): VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED

@@ -16,9 +16,29 @@ Stage 07C Phase Q2: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (durab
 Stage 07C Phase Q3: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (governed confirmation ceremony and quiet memory inbox)
 Stage 07C Phase Q4: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (deterministic Shared World context assembly; H-1 remediated and independently re-verified closed)
 Stage 07C Phase Q5: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (Shared World inspection, user memory control, one durable global Memory Mode; B-1/H-1 remediated and independently re-verified closed)
+VICT-M-1: REMEDIATED — AWAITING INDEPENDENT VERIFICATION (truthful write-effect capability; adopted verification candidate `@victframework/*@0.3.0-rc.1`; `latest` remains 0.2.0; stable 0.3.0 not yet published)
 Stage 07C Phases Q6–Q7: NOT BEGUN (live-provider injection-resistance proof is Q6; contract and implementation planning is permitted — not begun)
-Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 closed; Q5 closed; Q6–Q7, 07D, 07E remaining)
+Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 closed; Q5 closed; M-1 remediated; Q6–Q7, 07D, 07E remaining)
 ```
+
+**VICT-M-1 remediation (2026-09-21, current):** Quellight adopted the
+coordinated verification candidate `@victframework/*@0.3.0-rc.1`
+(`vict-release-set@1/0.3.0-rc.1`, published through the trusted-OIDC
+workflow under the candidate tag `vict-0.3.0-rc`; `latest` remains
+`0.2.0`; stable `0.3.0` is NOT yet published) and advanced the pinned
+capability to `qlt.proposal.draft@2` with the TRUTHFUL effect class
+`write` — a durable, epistemically inert proposal-row creation. Quiet
+in-turn completion is preserved by the exact host-owned quiet-write
+approval policy supplied through the composition only; every invocation
+durably records the truthful effect, the approval decision, and its
+closed-code basis; zero approval rows, zero approver identities, and
+zero awaiting-approval events exist for a quiet proposal write; the
+ceremony, memory modes, inspection, and agent isolation are unchanged.
+The authoritative ladder (`npm ci`; `verify:consumer`; `verify:quellight`;
+`npm audit --omit=dev`; `git diff --check`) ran exactly once, first-run
+green. Record: `docs/report/QUELLIGHT-STAGE-07C-M-1-REMEDIATION.md`;
+decision register D-Q-M1-1. M-1 is REMEDIATED — AWAITING INDEPENDENT
+VERIFICATION; Phase Q6 has not begun.
 
 Stage 07B is formally closed (2026-09-10) against the audited evidence
 SHA `1e0c0f53d62cde6d5031f865fe871ac1d41c9a9b`; see
@@ -109,7 +129,7 @@ retries converge), and delivers the snapshot at the Quellight-owned model
 seam as ONE user-role message (one text part) inserted immediately before
 the trailing user message — bounded data, never authority; the durable
 transcript is never touched; the agent envelope remains EXACTLY
-`qlt.proposal.draft@1` with no read/list/search power. The serializer is
+`qlt.proposal.draft` (now `@2/write` under the M-1 remediation; see the status section) with no read/list/search power. The serializer is
 deterministic and delimiter-safe (no `<`, `>`, `&`, or unescaped `/` byte
 inside record content, so markers cannot be forged); conflicts supported
 by structured identity are excluded as a group (`conflict-ambiguous`);
@@ -232,7 +252,7 @@ Retire claim, Release commitment, Resolve/Abandon/Transform), and the
 Memory Mode control; `Used for reply` shows recorded evidence only and
 never recomputes a past turn. The action inventory grew 19 → 21
 (`act.queryInspection`, `act.setMemoryMode`); the agent envelope remains
-EXACTLY `qlt.proposal.draft@1` with no read/list/search/decision power
+EXACTLY `qlt.proposal.draft@2/write` (M-1 remediation) with no read/list/search/decision power
 and no Memory Mode authority. The narrow L-3 defect (correction-kind
 proposal confirmation rollback) is repaired without authority expansion,
 and the three D-11 deferred Svelte warnings are repaired with a permanent

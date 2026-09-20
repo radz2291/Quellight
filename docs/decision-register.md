@@ -654,6 +654,45 @@ contract and implementation planning is PERMITTED — NOT BEGUN (VICT-M-1
 must be resolved before the Q6 live-provider proof). Phases Q7, 07D,
 and 07E have not begun. This entry is documentation-only.
 
+## D-Q-M1-1 — VICT-M-1 remediation implemented on the adopted verification candidate (binding integration decision; AWAITING INDEPENDENT VERIFICATION)
+
+- **Decision**: Quellight adopts `@victframework/*@0.3.0-rc.1`
+  (`vict-release-set@1/0.3.0-rc.1`, content ID
+  `v1_9117e0cbd3f3fe520238442e237889bf3b9a50916327051487b8a497551500a4`,
+  published through the trusted-OIDC release workflow under the candidate
+  tag `vict-0.3.0-rc`; `latest` remains `0.2.0`) and advances the pinned
+  capability to `qlt.proposal.draft@2` with the TRUTHFUL effect class
+  `write` (the durable, epistemically inert proposal-row creation).
+  Quiet in-turn completion is preserved through the EXACT host-owned
+  quiet-write approval policy (one entry, exact id+revision, policy
+  identity `qlt.host-policy.quiet-write@1`) supplied only through the
+  trusted composition-dependency channel — never through capability
+  metadata, which cannot exempt itself; `irreversible` targets can never
+  be exempted; defaults are byte-equivalent when the policy is absent.
+- **Why**: resolves carried finding M-1 (the untruthful `read` class on
+  an effect-ful capability, disclosed in the Q3 freeze) exactly along
+  the framework path that freeze anticipated: effect truth and approval
+  policy become independently represented, and every invocation durably
+  records the truthful effect, the resolved approval decision, and the
+  closed-code policy basis (`vict-effect-policy@1`).
+- **Consequences**: the agent profile advances to revision 4; the
+  model-visible tool description now truthfully says `write`; the durable
+  invocation evidence gains `approvalRequired=false` +
+  `approvalDisposition='host-policy-write-without-separate-approval'` on
+  quiet proposal writes with zero approval rows, zero approver
+  identities, and zero awaiting-approval events; the ceremony, memory
+  modes, inspection, context assembly, and agent isolation are unchanged;
+  no live-provider or Q6 behavior exists. Stable `0.3.0` and the Quellight
+  stable repin remain post-verification decisions.
+- **Verification status**: implemented and integrated at Quellight
+  `0fb4050…`; the authoritative ladder (`npm ci`; `verify:consumer`;
+  `verify:quellight`; `npm audit --omit=dev`; `git diff --check`) ran
+  EXACTLY ONCE, first-run green. **M-1 is REMEDIATED — AWAITING
+  INDEPENDENT VERIFICATION** (not verified, not closed). Q5 remains
+  formally closed. Record:
+  `docs/report/QUELLIGHT-STAGE-07C-M-1-REMEDIATION.md`.
+- **Date**: 2026-09-21.
+
 ## D-11 — Dev-only `optimizeDeps` exclusion for the released renderer (development-tooling compatibility note — technical decision, recorded, not a product semantic decision)
 
 - **Decision**: `vite.config.ts` now sets
