@@ -12,6 +12,53 @@
 > unchanged, with its hard deadline before the Phase Q6 live-provider
 > proof; it was NOT repaired or altered by this remediation.
 
+## 0. Post-remediation evidence correction (documentation-only)
+
+Added after the remediation completion, before fresh independent
+re-verification, by the documentation-only evidence-normalization
+commits (`fabaf2c…` — mechanical formatter normalization of the audit
+report — and the evidence-reconciliation commit carrying this section).
+No executable code, test, script, contract, schema, dependency, or
+product behavior changed. The historical command results recorded in
+the sections below are preserved exactly as they occurred; the four
+corrections here reconcile evidence claims, not results:
+
+1. **Git-derived file inventory** (supersedes the completion response's
+   ten-file summary): the complete span
+   `e80fe08c409020e5261ca9faa31400da3e028b04..aef57676d0667e76d59f78416dde572dd7e93e39`
+   — four commits (`c873692…` contract, `53831fd…` implementation,
+   `e56952d…` tests, `aef5767…` documentation) — contains EXACTLY
+   **14 files, +1606, −155** by `git diff --numstat`: 1
+   remediation-contract file, 4 production files, 5 test/verifier
+   files, and 4 documentation/status files including this report. The
+   exact per-file inventory is recorded in §9.
+2. **Browser-ceremony wording**: the four disclosed runs stand, with
+   truthful uncertainty — the first two runs crashed at different,
+   unchanged flow points; the exact cause was not conclusively
+   established; neither crash demonstrated failure of the new H-1
+   assertion; the two subsequent consecutive runs passed, including the
+   new assertion. The fresh independent re-verification must judge its
+   own first authoritative ceremony result without relying on those
+   reruns. §6 corrected accordingly.
+3. **Operator-data wording precision**: the remediation compared
+   `.quellight-data` filesystem metadata before and after the runs, so
+   the accurate statement is: the operator database content was never
+   opened, queried, copied, migrated, altered, or deleted; filesystem
+   metadata was observed only to confirm that the path remained
+   unchanged. §§7–8 corrected accordingly, and the decision register
+   corrected additively.
+4. **Formatting result reconciliation**: the `format:check` FAILURE
+   recorded in §6 remains the historical fact of the remediation
+   session. The dedicated documentation-only commit `fabaf2c…`
+   (`style(audit): normalize Q5 verification report`) later mechanically
+   normalized the audit report with the repository formatter —
+   formatting only; every finding, severity, number, SHA, command
+   result, conclusion, and status preserved (proof: whitespace- and
+   table-padding-collapsed token streams of the original and formatted
+   report are byte-equal; the original remains in Git at `e80fe08…`) —
+   restoring repository-wide `format:check` compliance before
+   re-verification.
+
 ## 1. Chain of custody and exact SHAs
 
 | Item                                                          | Value                                                                                                                               |
@@ -185,17 +232,17 @@ not merely API-absence errors.
 
 ## 6. Targeted verification (focused; full ladder deliberately NOT run)
 
-| Check                                                               | Result                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run format:check`                                              | **FAILED — pre-existing, disclosed**: prettier flags ONLY `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q5-INDEPENDENT-VERIFICATION.md` (its chain-of-custody table alignment). Proven pre-existing at the starting SHA (fails with the remediation files stashed). The audit report is preserved byte-for-byte per the mandate; fixing it is forbidden. All files touched by this remediation are prettier-clean (verified per-file).                                                                                                                                                                                                   |
-| `npm run typecheck`                                                 | PASS (`svelte-kit sync && tsc --noEmit`, exit 0)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `npm run verify:q5`                                                 | PASS — 86 checks green (was 43 sections-passing at the audited tree; the +43 include the Q5-B-1/Q5-H-1 controls)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `npm run test:node` (full)                                          | PASS — 17 files / 242 tests green                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| focused: `test:node` Q5 suites                                      | PASS — memory-policy 16, memory-authority 15                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `npm run test:ui -- memory-inbox`                                   | PASS — 14 tests                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| `npm run build`                                                     | PASS (exit 0)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `git diff --check`                                                  | PASS (exit 0)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `npm run verify:browser-ceremony` (script changed → rerun required) | Run 1 (fixed tree): **FAILED** — crash at Scenario B `waitForFunction` timeout, AFTER the Q5-H-1 assertion passed. Run 2 (fixed tree): **FAILED** — crash at `openTray 'current'` (element detached repeatedly), BEFORE the Q5-H-1 block runs. Both crashes are at DIFFERENT points and are diagnosed as environment flakiness under session load (neither involves the changed assertions). Run on the audited tree (original script, original code): PASS green. Runs 3 and 4 (fixed tree): **PASS green, including the new Q5-H-1 assertion.** No assertion was weakened; no rerun hid a failure; every run is disclosed here. |
+| Check                                                               | Result                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run format:check`                                              | **FAILED — pre-existing, disclosed**: prettier flags ONLY `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q5-INDEPENDENT-VERIFICATION.md` (its chain-of-custody table alignment). Proven pre-existing at the starting SHA (fails with the remediation files stashed). The audit report is preserved byte-for-byte per the mandate; fixing it is forbidden. All files touched by this remediation are prettier-clean (verified per-file). Subsequent normalization: the dedicated documentation-only commit `fabaf2c…` (`style(audit): normalize Q5 verification report`) later mechanically normalized the audit report with the repository formatter — formatting only; every finding, severity, number, SHA, command result, conclusion, and status preserved (whitespace- and table-padding-collapsed token streams byte-equal) — restoring repository-wide `format:check` compliance before re-verification. The FAILED result in this row remains the historical record of the remediation session. |
+| `npm run typecheck`                                                 | PASS (`svelte-kit sync && tsc --noEmit`, exit 0)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `npm run verify:q5`                                                 | PASS — 86 checks green (was 43 sections-passing at the audited tree; the +43 include the Q5-B-1/Q5-H-1 controls)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `npm run test:node` (full)                                          | PASS — 17 files / 242 tests green                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| focused: `test:node` Q5 suites                                      | PASS — memory-policy 16, memory-authority 15                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `npm run test:ui -- memory-inbox`                                   | PASS — 14 tests                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `npm run build`                                                     | PASS (exit 0)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `git diff --check`                                                  | PASS (exit 0)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `npm run verify:browser-ceremony` (script changed → rerun required) | Run 1 (fixed tree): **FAILED** — crash at Scenario B `waitForFunction` timeout, AFTER the Q5-H-1 assertion passed. Run 2 (fixed tree): **FAILED** — crash at `openTray 'current'` (element detached repeatedly), BEFORE the Q5-H-1 block runs. The two runs crashed at different, unchanged flow points; the exact cause was not conclusively established; neither crash demonstrated failure of the new H-1 assertion. Run on the audited tree (original script, original code): PASS green. Runs 3 and 4 (fixed tree): **PASS green consecutively, including the new Q5-H-1 assertion.** No assertion was weakened; no rerun hid a failure; every run is disclosed here. The fresh independent re-verification must judge its own first authoritative ceremony result without relying on these reruns.                                                                                                                                                                                        |
 
 The complete Q2–Q5 aggregate ladder was NOT run (per the remediation
 mandate); the fresh independent re-verification will run the
@@ -206,8 +253,9 @@ authoritative full sequence once on the remediated tree.
 - The three Memory Modes, global mode semantics, per-turn binding,
   migration 4 schema, policy revision rules, context assembly/injection,
   Q4-AMEND-1, the future project-scope seam, lifecycle behavior, the L-3
-  repair: UNTOUCHED (`git diff e80fe08..HEAD` touches exactly the ten
-  files listed in §9; none of the frozen contract modules changed).
+  repair: UNTOUCHED (`git diff e80fe08..HEAD` touches exactly the
+  fourteen files listed in §9, Git-derived; see §0; none of the frozen
+  contract modules changed).
 - Agent envelope unchanged: `verify:q5` section 4 (29 inventory checks)
   proves exactly 21 actions, empty capability bindings, no inspection/
   mode capability — the envelope remains EXACTLY `qlt.proposal.draft@1`.
@@ -216,40 +264,62 @@ authoritative full sequence once on the remediated tree.
   byte-for-byte preserved.
 - Real user data: the real `.quellight-data` directory metadata
   (existence, sizes, mtimes of every contained file) captured BEFORE any
-  probe/test run and compared after ALL runs — byte-identical. It was
-  never opened, queried, or migrated; every probe, test, ceremony, and
+  probe/test run and compared after ALL runs — byte-identical. Precise
+  statement (§0 normalization): the operator database content was never
+  opened, queried, copied, migrated, altered, or deleted; filesystem
+  metadata was observed only to confirm that the path remained
+  unchanged. Every probe, test, ceremony, and
   composition run used explicit disposable task-owned OS-temp stores
   (verified: full composition boots write only `<tempdir>/data/*`).
 
 ## 8. Negative controls (all external, disposable, removed)
 
-| Control                                                                            | Result                                                                                                                             |
-| ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Q5-B-1 reproduction at audited SHA `d61532d…` (disposable worktree; real boundary) | **REPRODUCED** — policy rows 0 → 1 after one `getPolicy`; probe failed on `expected 1 to be +0`                                    |
-| Q5-H-1 reproduction at audited SHA (exact UI query, decided proposal present)      | **REPRODUCED** — Current contained `proposal:confirmed`, total 5 vs canonical 4                                                    |
-| Same probes on the fixed tree                                                      | PASS — B-1 not reproduced (0 rows after reads, `persisted:false`); H-1 not reproduced (Current = 4 canonical rows, zero proposals) |
-| New permanent tests against the audited SHA                                        | **FAIL (discriminating)** — 12 of 31 fail, including genuine behavioral assertion failures of the old buckets/shape                |
-| Real `.quellight-data` never accessed                                              | PROVEN — file metadata identical before/after every run                                                                            |
+| Control                                                                            | Result                                                                                                                                                                                                                        |
+| ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Q5-B-1 reproduction at audited SHA `d61532d…` (disposable worktree; real boundary) | **REPRODUCED** — policy rows 0 → 1 after one `getPolicy`; probe failed on `expected 1 to be +0`                                                                                                                               |
+| Q5-H-1 reproduction at audited SHA (exact UI query, decided proposal present)      | **REPRODUCED** — Current contained `proposal:confirmed`, total 5 vs canonical 4                                                                                                                                               |
+| Same probes on the fixed tree                                                      | PASS — B-1 not reproduced (0 rows after reads, `persisted:false`); H-1 not reproduced (Current = 4 canonical rows, zero proposals)                                                                                            |
+| New permanent tests against the audited SHA                                        | **FAIL (discriminating)** — 12 of 31 fail, including genuine behavioral assertion failures of the old buckets/shape                                                                                                           |
+| Real `.quellight-data` untouched (precise statement; §0)                           | PROVEN — the operator database content was never opened, queried, copied, migrated, altered, or deleted; filesystem metadata was observed only to confirm that the path remained unchanged (identical before/after every run) |
 
-## 9. Files changed (exact inventory)
+## 9. Files changed (Git-derived inventory; corrected by §0)
 
-Implementation commit `53831fd…` (Lanes A/B — production only):
+The authoritative record is the exact
+`git diff --numstat e80fe08c409020e5261ca9faa31400da3e028b04..aef57676d0667e76d59f78416dde572dd7e93e39`
+over the four commits `c873692…` (contract), `53831fd…`
+(implementation), `e56952d…` (tests), `aef5767…` (documentation) —
+**14 files, +1606, −155** (supersedes the earlier ten-file summary;
+§0 correction 1):
 
-- `src/lib/sharedworld/memory-policy.ts` (+68/−: pure peek methods; write-path ensure; read-sounding writers removed)
-- `src/lib/server/composition.ts` (getPolicy dep peeks with truthful implicit representation; admission uses ensureCurrent)
-- `src/lib/sharedworld/sqlite.ts` (explicit bucket branching, no fallback)
-- `src/lib/sharedworld/inspection-surface.ts` (truthful getPolicy response: nullable updatedAtMs + persisted)
+| Class                                  | File                                                                     | Added    | Deleted |
+| -------------------------------------- | ------------------------------------------------------------------------ | -------- | ------- |
+| Remediation contract (committed ALONE) | `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q5-B1-H1-REMEDIATION-CONTRACT.md` | 186      | 0       |
+| Production (Lanes A/B)                 | `src/lib/sharedworld/memory-policy.ts`                                   | 55       | 13      |
+| Production (Lanes A/B)                 | `src/lib/server/composition.ts`                                          | 29       | 3       |
+| Production (Lanes A/B)                 | `src/lib/sharedworld/sqlite.ts`                                          | 83       | 70      |
+| Production (Lanes A/B)                 | `src/lib/sharedworld/inspection-surface.ts`                              | 11       | 2       |
+| Test/verifier (Lane D)                 | `test/memory-authority.test.ts`                                          | 389      | 23      |
+| Test/verifier (Lane D)                 | `test/memory-policy.test.ts`                                             | 119      | 22      |
+| Test/verifier (Lane D)                 | `scripts/verify-q5.mjs`                                                  | 364      | 17      |
+| Test/verifier (Lane D)                 | `scripts/browser-ceremony-check.mjs`                                     | 14       | 0       |
+| Test/verifier (Lane D)                 | `test/ui/memory-inbox.test.ts`                                           | 3        | 0       |
+| Documentation/status                   | `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q5-B1-H1-REMEDIATION.md`          | 292      | 0       |
+| Documentation/status                   | `docs/decision-register.md`                                              | 36       | 0       |
+| Documentation/status                   | `docs/system-reference.md`                                               | 23       | 3       |
+| Documentation/status                   | `README.md`                                                              | 2        | 2       |
+| **Total**                              | **14 files**                                                             | **1606** | **155** |
 
-Test commit `e56952d…` (Lane D — tests/verifier only; no production file):
-
-- `test/memory-policy.test.ts` (read-purity + truthful seeding controls)
-- `test/memory-authority.test.ts` (real-boundary read-purity and bucket-composition controls; C-01/C-19 rewritten non-vacuous)
-- `scripts/verify-q5.mjs` (Q5-B-1/Q5-H-1 verifier controls; 86 checks)
-- `scripts/browser-ceremony-check.mjs` (after-confirm Current-truthfulness assertions)
-- `test/ui/memory-inbox.test.ts` (getPolicy stub gains `persisted: true` — shape faithfulness only)
-
-Documentation commit (this commit): this report + current status lines in
-`README.md`, `docs/system-reference.md`, `docs/decision-register.md`.
+Per-commit narrative: the implementation commit `53831fd…` carried ONLY
+the four production files (pure peek methods; write-path ensure; the
+`getPolicy` dep peeking with the truthful implicit representation;
+explicit bucket branching, no fallback); the test commit `e56952d…`
+carried ONLY the five test/verifier files (real-boundary read-purity
+and bucket-composition controls with C-01/C-19 rewritten non-vacuous,
+the Q5-B-1/Q5-H-1 verifier controls at 86 checks, the after-confirm
+Current-truthfulness ceremony assertions, and the `persisted: true`
+getPolicy-stub shape fix); the documentation commit `aef5767…` carried
+this report and the current status lines in `README.md`,
+`docs/system-reference.md`, and `docs/decision-register.md`.
 
 ## 10. FastGate feedback
 

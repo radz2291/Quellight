@@ -614,7 +614,12 @@ carried VICT **M-1** effect-class finding, which remains OPEN and
 unchanged with its hard deadline before the Phase Q6 live-provider
 proof. Q5 remains NOT Verified and NOT formally closed — it is exactly
 IMPLEMENTED — AWAITING REMEDIATION / RE-VERIFICATION. Phases Q6–Q7 have
-not begun. This entry is documentation-only.
+not begun. Wording precision (post-remediation evidence normalization,
+documentation-only): in this entry, the statement that the real
+operator data was never accessed means precisely — the operator
+database content was never opened, queried, copied, migrated, altered,
+or deleted; filesystem metadata was observed only to confirm that the
+path remained unchanged. This entry is documentation-only.
 
 ## D-11 — Dev-only `optimizeDeps` exclusion for the released renderer (development-tooling compatibility note — technical decision, recorded, not a product semantic decision)
 
