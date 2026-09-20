@@ -580,6 +580,42 @@ real operator database was not accessed during the remediation. Q5
 status is unchanged: IMPLEMENTED — AWAITING INDEPENDENT VERIFICATION;
 Phases Q6–Q7 have not begun. This entry is documentation-only.
 
+## D-Q5-4 — Phase Q5 disposition after the independent audit: B-1/H-1 remediated, awaiting fresh independent re-verification (documentation-only)
+
+The Phase Q5 independent audit (2026-09-20,
+`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q5-INDEPENDENT-VERIFICATION.md`)
+returned NOT VERIFIED with Blocking B-1 (inspection `getPolicy` durably
+seeded the default policy row on a freshly migrated store — a read with
+a durable effect), High H-1 (terminal proposals rendered in the Current
+bucket, inflating its total), and Medium Q5-M-1 (the read-purity and
+bucket-composition coverage was vacuous). Executable remediation was
+performed exactly per the frozen remediation contract
+`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q5-B1-H1-REMEDIATION-CONTRACT.md`
+(contract committed ALONE as `c873692…`; implementation `53831fd…`;
+tests `e56952d…`; record
+`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q5-B1-H1-REMEDIATION.md`):
+read-side policy resolution is durable-effect-free (pure
+`peekCurrent`/`peekPolicyRow` peeks; write-path-only `ensureCurrent`;
+the read-sounding writers removed), the implicit default is represented
+truthfully (nullable `updatedAtMs`, explicit `persisted` signal), the
+inspection buckets branch explicitly with no fallback (Pending = only
+pending proposals; Current = only canonical current-effective records,
+never any proposal status; History = terminal proposals plus
+non-current records), and the vacuous controls were replaced by
+permanent non-vacuous coverage (real-boundary read-purity and
+bucket-composition suites, `verify:q5` at 86 checks, and the extended
+browser ceremony after-confirm assertion). Both defects were reproduced
+at the audited SHA `d61532d…` in disposable worktrees with disposable
+OS-temp stores and shown absent on the remediated tree; the new
+permanent tests fail against the audited SHA (12 discriminating
+failures); the real operator data was never accessed. Distinction: this
+Q5-M-1 is a Q5 verification-coverage finding and is DISTINCT from the
+carried VICT **M-1** effect-class finding, which remains OPEN and
+unchanged with its hard deadline before the Phase Q6 live-provider
+proof. Q5 remains NOT Verified and NOT formally closed — it is exactly
+IMPLEMENTED — AWAITING REMEDIATION / RE-VERIFICATION. Phases Q6–Q7 have
+not begun. This entry is documentation-only.
+
 ## D-11 — Dev-only `optimizeDeps` exclusion for the released renderer (development-tooling compatibility note — technical decision, recorded, not a product semantic decision)
 
 - **Decision**: `vite.config.ts` now sets

@@ -1,6 +1,6 @@
 # Quellight system reference — Stage 07B/07C
 
-## Status (current, 2026-09-20 — Phase Q5 IMPLEMENTED, awaiting independent verification)
+## Status (current, 2026-09-20 — Phase Q5 B-1/H-1 remediated, awaiting fresh independent re-verification)
 
 ```text
 Stage 07B: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
@@ -8,9 +8,9 @@ Stage 07C Phase Q1: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
 Stage 07C Phase Q2: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (durable Shared World schema)
 Stage 07C Phase Q3: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (governed confirmation ceremony and quiet memory inbox)
 Stage 07C Phase Q4: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (deterministic Shared World context assembly; H-1 remediated and independently re-verified closed)
-Stage 07C Phase Q5: IMPLEMENTED — AWAITING INDEPENDENT VERIFICATION (Shared World inspection, user memory control, one durable global Memory Mode; L-3 repaired; zero-warning dev-start gate)
+Stage 07C Phase Q5: IMPLEMENTED — AWAITING REMEDIATION / RE-VERIFICATION (Shared World inspection, user memory control, one durable global Memory Mode; independent audit NOT VERIFIED — B-1/H-1; Q5-B-1/Q5-H-1/Q5-M-1 remediated per the frozen remediation contract; L-3 repaired; zero-warning dev-start gate)
 Stage 07C Phases Q6–Q7: NOT BEGUN
-Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 closed; Q5 implemented — awaiting independent verification; Q6–Q7, 07D, 07E remaining)
+Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 closed; Q5 implemented — B-1/H-1 remediated, awaiting fresh independent re-verification; Q6–Q7, 07D, 07E remaining)
 ```
 
 - **Phase Q5 — Shared World inspection and user memory control
@@ -84,6 +84,26 @@ Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed;
   verified cleanup on success and failure); the real operator database
   was not accessed during the remediation. See
   `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q5-VERIFICATION-ISOLATION-REMEDIATION.md`.
+  Post-Q5 audit remediation (2026-09-20): the Phase Q5 independent audit
+  returned NOT VERIFIED (B-1: inspection `getPolicy` durably seeded the
+  default row on a fresh store — a read with a durable effect; H-1:
+  terminal proposals rendered in the Current bucket; M-1: the read-purity
+  and bucket coverage was vacuous). Remediated exactly per the frozen
+  remediation contract
+  `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q5-B1-H1-REMEDIATION-CONTRACT.md`
+  (contract commit `c873692…`): read-side policy resolution is now
+  durable-effect-free (`peekCurrent`/`peekPolicyRow` pure peeks resolve
+  the implicit default in memory; `ensureCurrent` is the only write-path
+  establishment; the read-sounding writers were removed); the `getPolicy`
+  response is truthful for the implicit default (nullable `updatedAtMs`,
+  `persisted: false`); the inspection buckets branch explicitly with no
+  fallback (Pending holds only pending proposals; Current holds only
+  canonical current-effective records and never any proposal status;
+  History holds terminal proposals plus non-current records); and the
+  vacuous controls were replaced by permanent non-vacuous read-purity
+  and bucket-composition coverage in the Q5 suites, `verify:q5` (86
+  checks), and the extended browser ceremony. See
+  `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q5-B1-H1-REMEDIATION.md`.
   Carried: M-1 unchanged with its hard deadline; L-R1/L-R2 unchanged;
   the Q3 §12 correction-proposal deferral remains.
 - The retained dependency is now the immutable coordinated release set

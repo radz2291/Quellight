@@ -15,9 +15,9 @@ Stage 07C Phase Q1: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
 Stage 07C Phase Q2: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (durable Shared World schema)
 Stage 07C Phase Q3: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (governed confirmation ceremony and quiet memory inbox)
 Stage 07C Phase Q4: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (deterministic Shared World context assembly; H-1 remediated and independently re-verified closed)
-Stage 07C Phase Q5: IMPLEMENTED — AWAITING INDEPENDENT VERIFICATION (Shared World inspection, user memory control, one durable global Memory Mode; not verified, not closed)
+Stage 07C Phase Q5: IMPLEMENTED — AWAITING REMEDIATION / RE-VERIFICATION (Shared World inspection, user memory control, one durable global Memory Mode; independent audit NOT VERIFIED; Q5-B-1/Q5-H-1/Q5-M-1 remediated; not verified, not closed)
 Stage 07C Phases Q6–Q7: NOT BEGUN (live-provider injection-resistance proof is Q6)
-Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 closed; Q5 implemented — awaiting independent verification; Q6–Q7, 07D, 07E remaining)
+Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 closed; Q5 implemented — B-1/H-1 remediated, awaiting fresh independent re-verification; Q6–Q7, 07D, 07E remaining)
 ```
 
 Stage 07B is formally closed (2026-09-10) against the audited evidence
