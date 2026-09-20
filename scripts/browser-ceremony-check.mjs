@@ -350,6 +350,20 @@ try {
       '6 + 7: hard reload converged on the truthful confirmed state; exactly one claim record exists',
     );
   }
+  // Q5-H-1 remediation (non-vacuous after-confirm control): the CURRENT
+  // area must hold ONLY the canonical current-effective record — ZERO
+  // proposal items of any status and EXACTLY ONE item in total, so a
+  // decided proposal can never appear in Current or as a duplicate-looking
+  // memory item alongside the record it created.
+  const currentProposalItems = await tray.locator('.qlt-memory-item[data-kind="proposal"]').count();
+  const currentAllItems = await tray.locator('.qlt-memory-item').count();
+  if (currentProposalItems !== 0 || currentAllItems !== 1) {
+    fail(
+      `the CURRENT area is not truthful after the confirm: proposal items=${currentProposalItems}, total items=${currentAllItems} (expected 0 and 1)`,
+    );
+  } else {
+    note('Q5-H-1: Current holds ONLY the canonical record — zero proposals, no duplicate item');
+  }
   await openTray(page, 'history');
   await tray
     .locator('.qlt-memory-status[data-status="confirmed"]')

@@ -148,6 +148,9 @@ function makeFetch(options: FetchOptions): ReturnType<typeof vi.fn> {
                 modeLabel: 'Across conversations',
                 revision: 1,
                 updatedAtMs: 1,
+                // Q5-B-1 truthfulness signal: the durable row exists in
+                // this stub's scenario, so the default is persisted.
+                persisted: true,
               },
             },
           };

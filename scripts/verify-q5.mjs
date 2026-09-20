@@ -28,20 +28,35 @@
  *                     mode-change capability anywhere in the agent
  *                     surface).
  *   5. POLICY       — deterministic policy mechanics on a live store:
- *                     lazy default seed, value-idempotent setMode with
+ *                     Q5-B-1 read purity on a freshly migrated store
+ *                     (complete durable row-state dumps around pure
+ *                     reads: implicit default in memory, ZERO effect,
+ *                     repeated deterministic identity, write-path
+ *                     ensureCurrent creates exactly one row, later reads
+ *                     stay pure), value-idempotent setMode with
  *                     monotonic revision, invalid modes fail closed
  *                     (non-echoing), agent refusal, per-turn evidence
  *                     INSERT-or-converge immutability, assembler mode
  *                     semantics (across parity / scope-excluded / off),
- *                     admission binding through the composition's
- *                     admitTurn wrapper (a mode change mid-turn cannot
- *                     rebind the in-flight scope), restart persistence.
+ *                     restart persistence.
  *   6. INSPECTION   — bucket determinism (pending/current/history),
  *                     agent refusal, bounded pagination, no durable
  *                     effect from reads, historical Used-for-reply truth
  *                     (selected versions; superseded-since; tombstones),
  *                     never-contains (no context envelope, no markers,
- *                     no provider data in inspection output).
+ *                     no provider data in inspection output), plus the
+ *                     Q5-H-1 NON-VACUOUS bucket-composition control (a
+ *                     fixture with all six proposal statuses, canonical
+ *                     current records, and closed/superseded records;
+ *                     the exact UI query shape proves Pending holds only
+ *                     pending proposals, Current holds zero proposals and
+ *                     only canonical current records, History holds all
+ *                     terminal proposals plus non-current records,
+ *                     pagination is deterministic and duplicate-free,
+ *                     and kind/thread filters never reintroduce
+ *                     proposals). Basis: the frozen remediation contract
+ *                     QUELLIGHT-STAGE-07C-PHASE-Q5-B1-H1-REMEDIATION-
+ *                     CONTRACT.md §4 (controls 1 and 2; Q5-M-1).
  *   7. L-3          — correction-kind proposal confirmation through the
  *                     real store: exactly one successor and exactly one
  *                     applicable source link; replay converges; the
@@ -109,6 +124,51 @@ function tempStore() {
   const dir = mkdtempSync(join(tmpdir(), 'qlt-q5-verify-'));
   tempDirs.push(dir);
   return createSharedWorldSqlite({ path: join(dir, 'shared-world.db') });
+}
+function tempStoreWithDb() {
+  const dir = mkdtempSync(join(tmpdir(), 'qlt-q5-verify-'));
+  tempDirs.push(dir);
+  const dbPath = join(dir, 'shared-world.db');
+  return { store: createSharedWorldSqlite({ path: dbPath }), dbPath };
+}
+/**
+ * Q5-B-1/Q5-M-1: complete durable row-state snapshot — every user table
+ * of the shared-world db, fully ordered, via a READ-ONLY raw connection.
+ * This inspects the durable rows themselves (not any store or inspection
+ * projection), so a read that silently persisted anything would show.
+ */
+function durableDump(dbPath) {
+  const raw = new DatabaseSync(dbPath, { readOnly: true });
+  try {
+    const tables = raw
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name;",
+      )
+      .all()
+      .map((row) => row.name);
+    const parts = [];
+    for (const table of tables) {
+      const columns = raw
+        .prepare(`PRAGMA table_info(${table});`)
+        .all()
+        .map((column) => column.name);
+      const order = columns.map((column) => `"${column}"`).join(', ');
+      const rows = raw.prepare(`SELECT * FROM ${table} ORDER BY ${order};`).all();
+      parts.push(`${table}: ${JSON.stringify(rows)}`);
+    }
+    return parts.join('\n');
+  } finally {
+    raw.close();
+  }
+}
+/** The fully ordered durable rows of ONE table (read-only connection). */
+function tableRows(dbPath, table) {
+  const raw = new DatabaseSync(dbPath, { readOnly: true });
+  try {
+    return raw.prepare(`SELECT * FROM ${table} ORDER BY id;`).all();
+  } finally {
+    raw.close();
+  }
 }
 function cleanup() {
   for (const dir of tempDirs.splice(0)) {
@@ -237,7 +297,7 @@ console.log('\n[3] SCHEMA — migration 4 introspection vs the frozen inventory'
   tempDirs.push(dir);
   const dbPath = join(dir, 'shared-world.db');
   const store = createSharedWorldSqlite({ path: dbPath });
-  store.memoryPolicy.resolveCurrent();
+  store.memoryPolicy.ensureCurrent();
   store.memoryPolicy.recordTurnPolicy({
     turnId: 'turn-schema-probe',
     policy: { policyId: QLT_MEMORY_MODE_POLICY_ID, mode: 'across-conversations', revision: 1 },
@@ -374,23 +434,79 @@ console.log('\n[4] INVENTORY — 19 frozen + exactly the two Q5 actions; envelop
 // ---------------------------------------------------------------------------
 console.log('\n[5] POLICY — resolver, setMode semantics, evidence immutability, modes, restart');
 {
-  // default seed + value-idempotent revision monotonicity
+  // Q5-B-1/Q5-M-1 READ PURITY on a freshly migrated store (empty policy
+  // table): complete durable row-state snapshots around PURE reads; then
+  // the legitimate write path establishes exactly one row. Remediation
+  // contract §4 control 1 (store-level mirror of the real-boundary test
+  // in test/memory-authority.test.ts).
+  {
+    const { store, dbPath } = tempStoreWithDb();
+    const before = durableDump(dbPath);
+    const implicit = store.memoryPolicy.peekCurrent();
+    check(
+      'Q5-B-1: a fresh store resolves the IMPLICIT default in memory (across-conversations, revision 1)',
+      'policy',
+      implicit.mode === 'across-conversations' &&
+        implicit.revision === 1 &&
+        implicit.policyId === QLT_MEMORY_MODE_POLICY_ID,
+    );
+    check(
+      'Q5-B-1: the implicit default is truthful — no durable row exists yet (no fabricated timestamp, no persisted-row claim)',
+      'policy',
+      store.memoryPolicy.peekPolicyRow() === undefined,
+    );
+    check(
+      'Q5-B-1: the read created ZERO durable effect (complete durable row-state dump identical)',
+      'policy',
+      durableDump(dbPath) === before,
+    );
+    const repeat = store.memoryPolicy.peekCurrent();
+    check(
+      'Q5-B-1: repeated reads are deterministically identical and still zero-effect',
+      'policy',
+      JSON.stringify(repeat) === JSON.stringify(implicit) && durableDump(dbPath) === before,
+    );
+    const ensured = store.memoryPolicy.ensureCurrent();
+    const policyRows = tableRows(dbPath, QLT_MEMORY_POLICY_TABLE);
+    check(
+      'Q5-B-1: write-path resolution (ensureCurrent) establishes EXACTLY ONE durable default row',
+      'policy',
+      ensured.mode === 'across-conversations' &&
+        ensured.revision === 1 &&
+        policyRows.length === 1 &&
+        policyRows[0].policy_id === QLT_MEMORY_MODE_POLICY_ID &&
+        policyRows[0].mode === 'across-conversations' &&
+        policyRows[0].revision === 1 &&
+        policyRows[0].updated_by === 'actor-quellight-local',
+    );
+    const afterEnsure = durableDump(dbPath);
+    check(
+      'Q5-B-1: after establishment, reads remain pure and resolve from the durable row',
+      'policy',
+      store.memoryPolicy.peekCurrent().mode === 'across-conversations' &&
+        store.memoryPolicy.peekPolicyRow() !== undefined &&
+        durableDump(dbPath) === afterEnsure,
+    );
+    store.close();
+  }
+  // Q5-B-1: legitimate write-path seeding semantics on an ABSENT row.
   {
     const store = tempStore();
-    const first = store.memoryPolicy.resolveCurrent();
+    const sameMode = store.memoryPolicy.setMode({
+      mode: 'across-conversations',
+      updatedBy: 'actor-quellight-local',
+    });
     check(
-      'a fresh store resolves the durable default (across-conversations, revision 1)',
+      'Q5-B-1: same-value setMode on an ABSENT row creates the one default row at revision 1 (no false bump)',
       'policy',
-      first.mode === 'across-conversations' &&
-        first.revision === 1 &&
-        first.policyId === QLT_MEMORY_MODE_POLICY_ID,
+      sameMode.mode === 'across-conversations' && sameMode.revision === 1,
     );
     const changed = store.memoryPolicy.setMode({
       mode: 'per-conversation',
       updatedBy: 'actor-quellight-local',
     });
     check(
-      'an effective change bumps the revision monotonically',
+      'an effective change bumps the revision monotonically (first change from the default: revision 2)',
       'policy',
       changed.mode === 'per-conversation' && changed.revision === 2,
     );
@@ -402,6 +518,12 @@ console.log('\n[5] POLICY — resolver, setMode semantics, evidence immutability
       'a same-value set converges without a revision bump (value-idempotent)',
       'policy',
       again.revision === 2,
+    );
+    check(
+      'the resolved mode is read back truthfully from the durable row (peekCurrent)',
+      'policy',
+      store.memoryPolicy.peekCurrent().mode === 'per-conversation' &&
+        store.memoryPolicy.peekCurrent().revision === 2,
     );
     store.close();
   }
@@ -441,10 +563,9 @@ console.log('\n[5] POLICY — resolver, setMode semantics, evidence immutability
       agentCode = cause.code;
     }
     check(
-      'an agent identity can never change the mode (zero effect)',
+      'an agent identity can never change the mode (zero effect; the default stays truthful)',
       'policy',
-      agentCode !== undefined &&
-        store.memoryPolicy.resolveCurrent().mode === 'across-conversations',
+      agentCode !== undefined && store.memoryPolicy.peekCurrent().mode === 'across-conversations',
     );
     store.close();
   }
@@ -575,7 +696,7 @@ console.log('\n[5] POLICY — resolver, setMode semantics, evidence immutability
     check(
       'restart preserves the current default policy',
       'policy',
-      second.memoryPolicy.resolveCurrent().mode === 'off',
+      second.memoryPolicy.peekCurrent().mode === 'off',
     );
     check(
       'restart preserves the immutable per-turn applied-policy evidence',
@@ -696,6 +817,232 @@ console.log('\n[6] INSPECTION — buckets, authority, bounds, historical truth')
     wrongThread === undefined,
   );
   store.close();
+  // --- Q5-H-1/Q5-M-1: bucket composition on a NON-VACUOUS fixture ---
+  // Decided proposals exist, records are open AND closed, and every query
+  // below uses the EXACT UI query shape (bucket only — no threadId, no
+  // kind filter) unless a filter is itself the thing under test.
+  {
+    const { store } = tempStoreWithDb();
+    const actor = 'actor-quellight-local';
+    const threadA = await store.createThread({ id: 'bucket-thread-a', title: 'Buckets A' });
+    const threadB = await store.createThread({ id: 'bucket-thread-b', title: 'Buckets B' });
+    // Canonical current records (thread A).
+    await store.meaning.createClaim({
+      subject: 'Bucket current claim',
+      epistemicType: 'E2',
+      honestyState: 'known',
+      confidence: 'stated',
+      statement: 'The canonical current claim of the bucket fixture.',
+      createdBy: actor,
+      sourceThreadId: threadA.id,
+    });
+    await store.meaning.createCommitment({
+      commitmentKey: 'bucket-commitment-current',
+      statement: 'The canonical current commitment of the bucket fixture.',
+      createdBy: actor,
+      sourceThreadId: threadA.id,
+    });
+    await store.meaning.createOpenLoop({
+      subject: 'Bucket current loop',
+      loopKind: 'undecided_question',
+      detail: 'The canonical current open loop of the bucket fixture.',
+      createdBy: actor,
+      sourceThreadId: threadA.id,
+    });
+    // Second thread: proves thread filtering (its claim is current).
+    await store.meaning.createClaim({
+      subject: 'Bucket other-thread claim',
+      epistemicType: 'E2',
+      honestyState: 'known',
+      confidence: 'stated',
+      statement: 'The other-thread claim of the bucket fixture.',
+      createdBy: actor,
+      sourceThreadId: threadB.id,
+    });
+    // Non-vacuous proposal fixture: every proposal status exists.
+    const claimProposal = (statement, subject) =>
+      store.meaning.createProposal({
+        proposalKind: 'claim',
+        content: {
+          subject,
+          epistemicType: 'E2',
+          honestyState: 'known',
+          confidence: 'stated',
+          statement,
+        },
+        proposedBy: actor,
+        sourceThreadId: threadA.id,
+      });
+    await claimProposal('The still-proposed statement.', 'Bucket proposed');
+    const awaiting = await claimProposal('The awaiting-decision statement.', 'Bucket awaiting');
+    await store.meaning.markProposalAwaitingDecision(awaiting.id, { key: 'bucket-await-1' });
+    const toConfirm = await claimProposal('The to-be-confirmed statement.', 'Bucket confirmed');
+    await store.meaning.markProposalAwaitingDecision(toConfirm.id, { key: 'bucket-await-2' });
+    await store.meaning.confirmProposal({
+      proposalId: toConfirm.id,
+      confirmedBy: actor,
+      key: 'bucket-confirm-1',
+    });
+    const toReject = await claimProposal('The rejected statement.', 'Bucket rejected');
+    await store.meaning.markProposalAwaitingDecision(toReject.id, { key: 'bucket-await-3' });
+    await store.meaning.rejectProposal({
+      proposalId: toReject.id,
+      decidedBy: actor,
+      reason: 'bucket fixture rejection',
+    });
+    const toAmend = await claimProposal('The original amended statement.', 'Bucket amended');
+    await store.meaning.markProposalAwaitingDecision(toAmend.id, { key: 'bucket-await-4' });
+    await store.meaning.amendProposal({
+      proposalId: toAmend.id,
+      amendedBy: actor,
+      content: {
+        subject: 'Bucket amended',
+        epistemicType: 'E2',
+        honestyState: 'known',
+        confidence: 'stated',
+        statement: 'The amended replacement statement.',
+      },
+      reason: 'bucket fixture amendment',
+    });
+    // Amending also creates a NEW proposed amendment: pending grows to 3.
+    const toWithdraw = await claimProposal('The withdrawn statement.', 'Bucket withdrawn');
+    await store.meaning.markProposalAwaitingDecision(toWithdraw.id, { key: 'bucket-await-5' });
+    await store.meaning.withdrawProposal({
+      proposalId: toWithdraw.id,
+      withdrawnBy: actor,
+      reason: 'bucket fixture withdrawal',
+    });
+    // Closed/superseded records.
+    const superseded = await store.meaning.createClaim({
+      subject: 'Bucket superseded claim',
+      epistemicType: 'E2',
+      honestyState: 'known',
+      confidence: 'stated',
+      statement: 'The soon-superseded statement of the bucket fixture.',
+      createdBy: actor,
+      sourceThreadId: threadA.id,
+    });
+    await store.meaning.applyCorrection({
+      subjectRecordId: superseded.id,
+      subjectFamily: 'claim',
+      correctionKey: 'bucket-correction-1',
+      content: { statement: 'The successor statement of the bucket fixture.' },
+      correctedBy: actor,
+      sourceThreadId: threadA.id,
+    });
+    const released = await store.meaning.createCommitment({
+      commitmentKey: 'bucket-commitment-released',
+      statement: 'The soon-released commitment of the bucket fixture.',
+      createdBy: actor,
+      sourceThreadId: threadA.id,
+    });
+    await store.meaning.releaseCommitment({
+      recordId: released.id,
+      exitedBy: actor,
+      reason: 'bucket fixture release',
+    });
+    const abandoned = await store.meaning.createOpenLoop({
+      subject: 'Bucket abandoned loop',
+      loopKind: 'undecided_question',
+      detail: 'The soon-abandoned loop of the bucket fixture.',
+      createdBy: actor,
+      sourceThreadId: threadA.id,
+    });
+    await store.meaning.abandonLoop({
+      loopId: abandoned.id,
+      exitedBy: actor,
+      reason: 'bucket fixture abandonment',
+    });
+    // Expected composition (no filters):
+    //   pending = proposed + awaiting + the amendment proposal        = 3
+    //   current = claim + confirmed-claim + commitment + loop
+    //             + correction successor + other-thread claim         = 6
+    //   history = 4 terminal proposals + superseded + released
+    //             + abandoned                                         = 7
+    const page = async (bucket, extra = {}) =>
+      store.listInspectionRecords({ bucket, limit: 50, offset: 0, ...extra });
+    const pending = await page('pending');
+    check(
+      'Q5-H-1: PENDING returns ONLY the two pending proposal statuses (proposed, awaiting_decision)',
+      'inspection',
+      pending.total === 3 &&
+        pending.rows.every((row) => row.kind === 'proposal') &&
+        pending.rows.every((row) => ['proposed', 'awaiting_decision'].includes(row.status)) &&
+        pending.rows.filter((row) => row.status === 'proposed').length === 2 &&
+        pending.rows.filter((row) => row.status === 'awaiting_decision').length === 1,
+    );
+    const current = await page('current');
+    check(
+      'Q5-H-1: CURRENT returns NO proposal of any status',
+      'inspection',
+      current.rows.every((row) => row.kind !== 'proposal'),
+    );
+    check(
+      'Q5-H-1: the CURRENT total equals ONLY the canonical current records',
+      'inspection',
+      current.total === 6 && current.rows.length === 6,
+    );
+    const history = await page('history');
+    const historyStatuses = history.rows.map((row) => row.status);
+    check(
+      'Q5-H-1: HISTORY contains ALL terminal proposals and the closed/superseded records',
+      'inspection',
+      history.total === 7 &&
+        ['confirmed', 'rejected', 'amended', 'withdrawn', 'superseded'].every((status) =>
+          historyStatuses.includes(status),
+        ) &&
+        history.rows.filter((row) => row.kind === 'proposal').length === 4,
+    );
+    check(
+      'Q5-H-1: no pending proposal status appears in HISTORY and no terminal status appears in PENDING',
+      'inspection',
+      history.rows.every((row) => !['proposed', 'awaiting_decision'].includes(row.status)) &&
+        pending.rows.every(
+          (row) => !['confirmed', 'rejected', 'amended', 'withdrawn'].includes(row.status),
+        ),
+    );
+    // Deterministic, duplicate-free pagination across mixed timestamps.
+    const walkHistory = async () => {
+      const seen = [];
+      for (let offset = 0; offset < history.total; offset += 2) {
+        const got = await page('history', { limit: 2, offset });
+        seen.push(...got.rows.map((row) => row.id));
+      }
+      return seen;
+    };
+    const walked = await walkHistory();
+    check(
+      'Q5-H-1: pagination over mixed buckets content is deterministic and duplicate-free',
+      'inspection',
+      walked.length === 7 &&
+        new Set(walked).size === 7 &&
+        JSON.stringify([...walked].sort()) ===
+          JSON.stringify([...history.rows.map((row) => row.id)].sort()) &&
+        JSON.stringify(await walkHistory()) === JSON.stringify(walked),
+    );
+    // Kind and thread filters never reintroduce proposals into Current.
+    const currentProposals = await page('current', { kind: 'proposal' });
+    const currentClaims = await page('current', { kind: 'claim' });
+    check(
+      'Q5-H-1: the kind filter cannot reintroduce proposals into CURRENT',
+      'inspection',
+      currentProposals.total === 0 &&
+        currentProposals.rows.length === 0 &&
+        currentClaims.total === 4 &&
+        currentClaims.rows.every((row) => row.kind === 'claim'),
+    );
+    const currentA = await page('current', { threadId: threadA.id });
+    const currentB = await page('current', { threadId: threadB.id });
+    check(
+      'Q5-H-1: the thread filter stays truthful and never reintroduces proposals into CURRENT',
+      'inspection',
+      currentA.total === 5 &&
+        currentA.rows.every((row) => row.kind !== 'proposal') &&
+        currentB.total === 1 &&
+        currentB.rows[0].kind === 'claim',
+    );
+    store.close();
+  }
   console.log(`  inspection: ${passed} checks`);
 }
 

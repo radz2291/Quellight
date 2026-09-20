@@ -11,6 +11,7 @@ import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import {
   createQuellightComposition,
   resolveQuellightEnvironment,
@@ -114,6 +115,47 @@ async function inspectionQuery(
   return app.dispatch('act.queryInspection', { filters });
 }
 
+/**
+ * Complete durable row-state snapshot (Q5-B-1 / Q5-M-1): every user table
+ * of the shared-world db, fully ordered, via a READ-ONLY raw connection.
+ * This inspects the durable rows themselves — not any inspection
+ * projection — so a read that silently persisted anything would show.
+ */
+function durableDump(dbPath: string): string {
+  const raw = new DatabaseSync(dbPath, { readOnly: true });
+  try {
+    const tables = (
+      raw
+        .prepare(
+          "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name;",
+        )
+        .all() as { name: string }[]
+    ).map((row) => row.name);
+    const parts: string[] = [];
+    for (const table of tables) {
+      const columns = (raw.prepare(`PRAGMA table_info(${table});`).all() as { name: string }[]).map(
+        (column) => column.name,
+      );
+      const order = columns.map((column) => `"${column}"`).join(', ');
+      const rows = raw.prepare(`SELECT * FROM ${table} ORDER BY ${order};`).all();
+      parts.push(`${table}: ${JSON.stringify(rows)}`);
+    }
+    return parts.join('\n');
+  } finally {
+    raw.close();
+  }
+}
+
+/** The fully ordered durable rows of ONE table (read-only connection). */
+function tableRows(dbPath: string, table: string): Record<string, unknown>[] {
+  const raw = new DatabaseSync(dbPath, { readOnly: true });
+  try {
+    return raw.prepare(`SELECT * FROM ${table} ORDER BY id;`).all() as Record<string, unknown>[];
+  } finally {
+    raw.close();
+  }
+}
+
 describe('C-08/C-06: the Memory Mode mutation is user-attributed, idempotent, fail-closed', () => {
   it('act.setMemoryMode changes the durable mode; a same-key retry converges; a conflicting same-key payload fails', async () => {
     const dir = tempDir();
@@ -124,7 +166,7 @@ describe('C-08/C-06: the Memory Mode mutation is user-attributed, idempotent, fa
     expect((first as { value: { mode: string; revision: number } }).value.mode).toBe(
       'per-conversation',
     );
-    expect(composition.sharedWorld.memoryPolicy.resolveCurrent().mode).toBe('per-conversation');
+    expect(composition.sharedWorld.memoryPolicy.peekCurrent().mode).toBe('per-conversation');
     // Same-key SAME-payload retry: the released boundary replays truthfully.
     const replay = await app.dispatch('act.setMemoryMode', { mode: 'per-conversation' }, key);
     expect(replay.ok).toBe(true);
@@ -133,7 +175,7 @@ describe('C-08/C-06: the Memory Mode mutation is user-attributed, idempotent, fa
     expect(conflict.ok).toBe(false);
     expect((conflict as { code: string }).code).toBe('VICT_COMMAND_IDEMPOTENCY_CONFLICT');
     // The durable mode stands (zero partial effects from the conflict).
-    expect(composition.sharedWorld.memoryPolicy.resolveCurrent().mode).toBe('per-conversation');
+    expect(composition.sharedWorld.memoryPolicy.peekCurrent().mode).toBe('per-conversation');
     // Missing idempotency key: refused by the ingress.
     const unkeyed = await app.dispatch('act.setMemoryMode', { mode: 'off' });
     expect(unkeyed.ok).toBe(false);
@@ -152,7 +194,7 @@ describe('C-08/C-06: the Memory Mode mutation is user-attributed, idempotent, fa
     expect((result as { message?: string }).message ?? '').not.toContain(
       'this-conversation-and-project-x',
     );
-    expect(composition.sharedWorld.memoryPolicy.resolveCurrent().mode).toBe('across-conversations');
+    expect(composition.sharedWorld.memoryPolicy.peekCurrent().mode).toBe('across-conversations');
   });
 
   it('scope forgery through the mutation ingress fails closed (unknown fields, prohibited keys)', async () => {
@@ -172,7 +214,7 @@ describe('C-08/C-06: the Memory Mode mutation is user-attributed, idempotent, fa
     );
     expect(proto.ok).toBe(false);
     expect((proto as { code: string }).code).toBe('QLT_INGRESS_PROHIBITED_FIELD');
-    expect(composition.sharedWorld.memoryPolicy.resolveCurrent().mode).toBe('across-conversations');
+    expect(composition.sharedWorld.memoryPolicy.peekCurrent().mode).toBe('across-conversations');
   });
 });
 
@@ -478,7 +520,7 @@ describe('C-03/C-19: historical truth and truthful display through the inspectio
     expect(row.appliedPolicy?.mode).toBe('across-conversations');
   });
 
-  it('C-01: pending and terminal proposals never render as canonical Current memory', async () => {
+  it('C-01 (Q5-M-1/Q5-H-1): the bucket composition is truthful — decided proposals never render in Current', async () => {
     const dir = tempDir();
     const { composition, app } = await compose(dir);
     const created = await app.dispatch(
@@ -487,26 +529,351 @@ describe('C-03/C-19: historical truth and truthful display through the inspectio
       `create-${crypto.randomUUID()}`,
     );
     const threadId = (created as { value: { id: string } }).value.id;
-    void composition;
-    // A pending proposal exists only through the agent's inert draft —
-    // absent here, the pending bucket is truthfully empty and Current
-    // holds no proposals.
-    const pending = await inspectionQuery(app, {
-      query: 'listRecords',
-      bucket: 'pending',
-      threadId,
-    });
-    expect((pending as { value: { total: number } }).value.total).toBe(0);
-    const current = await inspectionQuery(app, { query: 'listRecords', bucket: 'current' });
-    const kinds = ((current as { value: { rows: { kind: string }[] } }).value.rows ?? []).map(
-      (row) => row.kind,
+    const actor = 'actor-quellight-local';
+    // ---- Current-effective canonical records (REAL boundary actions) ----
+    const claimA1 = await app.dispatch(
+      'act.createClaim',
+      {
+        threadId,
+        subject: 'Buckets current claim',
+        epistemicType: 'E2',
+        honestyState: 'known',
+        confidence: 'stated',
+        statement: 'A canonical current claim.',
+      },
+      `claim-a1-${crypto.randomUUID()}`,
     );
-    expect(kinds.every((kind) => kind !== 'proposal')).toBe(true);
+    expect(claimA1.ok).toBe(true);
+    const commitment = await app.dispatch(
+      'act.createCommitment',
+      {
+        threadId,
+        commitmentKey: `buckets-commitment-${crypto.randomUUID()}`,
+        statement: 'A canonical current commitment.',
+      },
+      `commitment-${crypto.randomUUID()}`,
+    );
+    expect(commitment.ok).toBe(true);
+    const loop = await app.dispatch(
+      'act.createOpenLoop',
+      {
+        threadId,
+        subject: 'Buckets current loop',
+        loopKind: 'undecided_question',
+        detail: 'A canonical current open loop.',
+      },
+      `loop-${crypto.randomUUID()}`,
+    );
+    expect(loop.ok).toBe(true);
+    // ---- Second thread: its records must be excludable by the filter ----
+    const createdB = await app.dispatch(
+      'act.createThread',
+      { title: 'Buckets B' },
+      `create-b-${crypto.randomUUID()}`,
+    );
+    const threadB = (createdB as { value: { id: string } }).value.id;
+    const claimB = await app.dispatch(
+      'act.createClaim',
+      {
+        threadId: threadB,
+        subject: 'Buckets other-thread claim',
+        epistemicType: 'E2',
+        honestyState: 'known',
+        confidence: 'stated',
+        statement: 'Another conversation claim.',
+      },
+      `claim-b-${crypto.randomUUID()}`,
+    );
+    expect(claimB.ok).toBe(true);
+    // ---- Non-vacuous proposal fixture (repository fixture boundary) ----
+    const meaning = composition.sharedWorld.meaning;
+    const claimProposal = (statement: string, subject: string) =>
+      meaning.createProposal({
+        proposalKind: 'claim',
+        content: {
+          subject,
+          epistemicType: 'E2',
+          honestyState: 'known',
+          confidence: 'stated',
+          statement,
+        },
+        proposedBy: actor,
+        sourceThreadId: threadId,
+      });
+    const pProposed = await claimProposal(
+      'The still-proposed statement.',
+      'Buckets proposed proposal',
+    );
+    const pAwaiting = await claimProposal(
+      'The awaiting-decision statement.',
+      'Buckets awaiting proposal',
+    );
+    await meaning.markProposalAwaitingDecision(pAwaiting.id, { key: 'buckets-await-1' });
+    // CONFIRMED through the REAL governed boundary.
+    const pConfirmed = await claimProposal(
+      'The to-be-confirmed statement.',
+      'Buckets confirmed proposal',
+    );
+    await meaning.markProposalAwaitingDecision(pConfirmed.id, { key: 'buckets-await-2' });
+    const confirmed = await app.dispatch(
+      'act.confirmProposal',
+      { proposalId: pConfirmed.id },
+      `confirm-${crypto.randomUUID()}`,
+    );
+    expect(confirmed.ok).toBe(true);
+    const pRejected = await claimProposal('The rejected statement.', 'Buckets rejected proposal');
+    await meaning.markProposalAwaitingDecision(pRejected.id, { key: 'buckets-await-3' });
+    await meaning.rejectProposal({
+      proposalId: pRejected.id,
+      decidedBy: actor,
+      reason: 'bucket fixture rejection',
+    });
+    const pAmended = await claimProposal(
+      'The original amended statement.',
+      'Buckets amended proposal',
+    );
+    await meaning.markProposalAwaitingDecision(pAmended.id, { key: 'buckets-await-4' });
+    const amended = await meaning.amendProposal({
+      proposalId: pAmended.id,
+      amendedBy: actor,
+      content: {
+        subject: 'Buckets amended proposal',
+        epistemicType: 'E2',
+        honestyState: 'known',
+        confidence: 'stated',
+        statement: 'The amended replacement statement.',
+      },
+      reason: 'bucket fixture amendment',
+    });
+    // Amending also creates a NEW proposed amendment proposal: pending grows.
+    expect(amended.original.status).toBe('amended');
+    expect(amended.amendment.status).toBe('proposed');
+    const pWithdrawn = await claimProposal(
+      'The withdrawn statement.',
+      'Buckets withdrawn proposal',
+    );
+    await meaning.markProposalAwaitingDecision(pWithdrawn.id, { key: 'buckets-await-5' });
+    await meaning.withdrawProposal({
+      proposalId: pWithdrawn.id,
+      withdrawnBy: actor,
+      reason: 'bucket fixture withdrawal',
+    });
+    // ---- Superseded / released / abandoned records ----
+    const supersededClaim = await app.dispatch(
+      'act.createClaim',
+      {
+        threadId,
+        subject: 'Buckets superseded claim',
+        epistemicType: 'E2',
+        honestyState: 'known',
+        confidence: 'stated',
+        statement: 'The soon-superseded statement.',
+      },
+      `claim-sup-${crypto.randomUUID()}`,
+    );
+    expect(supersededClaim.ok).toBe(true);
+    const supersededId = (supersededClaim as { value: { id: string } }).value.id;
+    await meaning.applyCorrection({
+      subjectRecordId: supersededId,
+      subjectFamily: 'claim',
+      correctionKey: `buckets-correction-${crypto.randomUUID()}`,
+      content: { statement: 'The successor statement.' },
+      correctedBy: actor,
+      sourceThreadId: threadId,
+    });
+    const releasedCommitment = await app.dispatch(
+      'act.createCommitment',
+      {
+        threadId,
+        commitmentKey: `buckets-released-${crypto.randomUUID()}`,
+        statement: 'The soon-released commitment.',
+      },
+      `commitment-rel-${crypto.randomUUID()}`,
+    );
+    await meaning.releaseCommitment({
+      recordId: (releasedCommitment as { value: { id: string } }).value.id,
+      exitedBy: actor,
+      reason: 'bucket fixture release',
+    });
+    const abandonedLoop = await app.dispatch(
+      'act.createOpenLoop',
+      {
+        threadId,
+        subject: 'Buckets abandoned loop',
+        loopKind: 'undecided_question',
+        detail: 'The soon-abandoned loop.',
+      },
+      `loop-ab-${crypto.randomUUID()}`,
+    );
+    await meaning.abandonLoop({
+      loopId: (abandonedLoop as { value: { id: string } }).value.id,
+      exitedBy: actor,
+      reason: 'bucket fixture abandonment',
+    });
+
+    // Expected composition (NO thread/kind filter):
+    // pending  = proposed + awaiting_decision + the amendment proposal = 3
+    // current  = claimA1 + confirmed-claim + commitment + loop
+    //            + correction successor                                = 5
+    //            (+ the second thread's claim => 6 total unfiltered)
+    // history  = confirmed + rejected + amended + withdrawn proposals
+    //            + superseded claim + released commitment
+    //            + abandoned loop                                      = 7
+    const list = async (bucket: string, extra: Record<string, string> = {}) =>
+      inspectionQuery(app, { query: 'listRecords', bucket, ...extra });
+    const pageOf = async (bucket: string, extra: Record<string, string> = {}) => {
+      const result = await list(bucket, extra);
+      expect(result.ok).toBe(true);
+      return (
+        result as {
+          value: {
+            rows: {
+              id: string;
+              kind: string;
+              status: string;
+              details?: { recordId?: string };
+            }[];
+            total: number;
+          };
+        }
+      ).value;
+    };
+
+    // PENDING: ONLY the two pending proposal statuses; nothing else.
+    const pending = await pageOf('pending');
+    expect(pending.total).toBe(3);
+    expect(pending.rows.every((row) => row.kind === 'proposal')).toBe(true);
+    expect(
+      pending.rows.every((row) => ['proposed', 'awaiting_decision'].includes(row.status)),
+    ).toBe(true);
+    expect(pending.rows.map((row) => row.status).sort()).toEqual(
+      ['awaiting_decision', 'proposed', 'proposed'].sort(),
+    );
+
+    // CURRENT: ZERO proposals of ANY status; total equals ONLY canonical
+    // current records (the second thread's claim is included unfiltered).
+    const current = await pageOf('current');
+    expect(current.total).toBe(6);
+    expect(current.rows.every((row) => row.kind !== 'proposal')).toBe(true);
+
+    // HISTORY: ALL terminal proposals plus the closed/superseded records.
+    const history = await pageOf('history');
+    expect(history.total).toBe(7);
+    const historyStatuses = history.rows.map((row) => row.status).sort();
+    for (const status of ['confirmed', 'rejected', 'amended', 'withdrawn', 'superseded']) {
+      expect(historyStatuses).toContain(status);
+    }
+    expect(history.rows.filter((row) => row.kind === 'proposal')).toHaveLength(4);
+    expect(
+      history.rows.some(
+        (row) => (row as { details?: { recordId?: string } }).details?.recordId === supersededId,
+      ),
+    ).toBe(true);
+
+    // PAGINATION (limit 2 walk over current): deterministic, disjoint,
+    // duplicate-free, consistent with the totals.
+    const walk = async () => {
+      const seen: string[] = [];
+      for (let offset = 0; offset < current.total; offset += 2) {
+        const page = await pageOf('current', { limit: '2', offset: String(offset) });
+        expect(page.rows.length).toBe(Math.min(2, current.total - offset));
+        seen.push(
+          ...page.rows.map(
+            (row) => (row as { details?: { recordId?: string } }).details?.recordId ?? '',
+          ),
+        );
+      }
+      return seen;
+    };
+    const recordIdOf = (row: { details?: { recordId?: string } }) => row.details?.recordId ?? '';
+    const walked = await walk();
+    expect(new Set(walked).size).toBe(walked.length);
+    expect([...walked].sort()).toEqual([...current.rows.map(recordIdOf)].sort());
+    expect(await walk()).toEqual(walked);
+
+    // A kind filter can never reintroduce proposals into Current.
+    const currentProposals = await pageOf('current', { kind: 'proposal' });
+    expect(currentProposals.total).toBe(0);
+    expect(currentProposals.rows).toEqual([]);
+
+    // Thread filtering excludes the second thread's records.
+    const currentA = await pageOf('current', { threadId });
+    expect(currentA.total).toBe(5);
+    const currentB = await pageOf('current', { threadId: threadB });
+    expect(currentB.total).toBe(1);
+    expect(currentB.rows[0].kind).toBe('claim');
+    expect(currentB.rows[0].details?.recordId).not.toBe(supersededId);
   });
 
-  it('C-19: reads create no durable effect; pagination bounds fail closed; the envelope never leaks', async () => {
+  it('C-19 (Q5-M-1/Q5-B-1): reads are durable-effect-free — the full row-state never changes; getPolicy is the truthful implicit default', async () => {
     const dir = tempDir();
-    const { app } = await compose(dir);
+    const { composition, app } = await compose(dir);
+    const dbPath = join(dir, 'data', 'shared-world.db');
+    // NOTE: no turn is admitted in this test before the purity assertions
+    // (turn admission is a LEGITIMATE write path and would seed the row).
+    // (a) Complete durable row-state snapshot of the shared-world db.
+    const snapshot1 = durableDump(dbPath);
+    // (b) getPolicy through the REAL boundary: truthful implicit default.
+    const first = await app.dispatch('act.queryInspection', {
+      filters: { query: 'getPolicy' },
+    });
+    expect(first.ok).toBe(true);
+    const implicitRow = (
+      first as {
+        value: {
+          row: {
+            policyId: string;
+            mode: string;
+            modeLabel: string;
+            revision: number;
+            updatedAtMs: number | null;
+            persisted: boolean;
+          };
+        };
+      }
+    ).value.row;
+    expect(implicitRow).toEqual({
+      policyId: 'qlt.memory-mode@1',
+      mode: 'across-conversations',
+      modeLabel: 'Across conversations',
+      revision: 1,
+      updatedAtMs: null,
+      persisted: false,
+    });
+    // (c) Second complete snapshot — identical (a declared read never wrote).
+    expect(durableDump(dbPath)).toBe(snapshot1);
+    // (d) Repeat: deterministic identity, continued zero effect.
+    const repeat = await app.dispatch('act.queryInspection', {
+      filters: { query: 'getPolicy' },
+    });
+    expect(repeat.ok).toBe(true);
+    expect((repeat as { value: { row: unknown } }).value.row).toEqual(implicitRow);
+    expect(durableDump(dbPath)).toBe(snapshot1);
+    // (e) A LEGITIMATE write path through the real boundary: exactly ONE
+    // qlt_memory_policy row, at the truthful revision 2.
+    const modeChange = await app.dispatch(
+      'act.setMemoryMode',
+      { mode: 'per-conversation' },
+      `memory-mode-${crypto.randomUUID()}`,
+    );
+    expect(modeChange.ok).toBe(true);
+    const policyRows = tableRows(dbPath, 'qlt_memory_policy');
+    expect(policyRows).toHaveLength(1);
+    expect(policyRows[0]).toMatchObject({ mode: 'per-conversation', revision: 2 });
+    expect(composition.sharedWorld.memoryPolicy.peekPolicyRow()?.updatedAtMs).toBeTypeOf('number');
+    // (f) Further getPolicy reads remain pure (snapshot unchanged).
+    const snapshot2 = durableDump(dbPath);
+    expect(snapshot2).not.toBe(snapshot1); // the durable row now exists
+    const afterWrite = await app.dispatch('act.queryInspection', {
+      filters: { query: 'getPolicy' },
+    });
+    expect(afterWrite.ok).toBe(true);
+    expect(
+      (afterWrite as { value: { row: { persisted: boolean; revision: number } } }).value.row,
+    ).toMatchObject({ persisted: true, revision: 2 });
+    expect(durableDump(dbPath)).toBe(snapshot2);
+
+    // Existing pagination-bounds and never-contains coverage (kept).
     const created = await app.dispatch(
       'act.createThread',
       { title: 'No effect' },
@@ -539,7 +906,6 @@ describe('C-03/C-19: historical truth and truthful display through the inspectio
     const serialized = JSON.stringify(before) + JSON.stringify(after);
     expect(serialized).not.toContain('QLT:SHARED-WORLD-CONTEXT');
     expect(serialized).not.toContain('QLT:RECORD');
-    void threadId;
   });
 });
 
@@ -648,13 +1014,13 @@ describe('C-10: restart preserves policy, per-turn evidence, records, and inspec
       { mode: 'per-conversation' },
       `mm-${crypto.randomUUID()}`,
     );
-    const before = first.composition.sharedWorld.memoryPolicy.resolveCurrent();
+    const before = first.composition.sharedWorld.memoryPolicy.peekCurrent();
     await first.composition.close();
     composed.length = 0;
     // A fresh composition over the SAME data directory (fresh process
     // semantics; D-6 discipline).
     const second = await compose(dir);
-    const after = second.composition.sharedWorld.memoryPolicy.resolveCurrent();
+    const after = second.composition.sharedWorld.memoryPolicy.peekCurrent();
     expect(after.mode).toBe(before.mode);
     expect(after.revision).toBe(before.revision);
     expect(after.policyId).toBe(QLT_MEMORY_MODE_POLICY_ID);

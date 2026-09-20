@@ -9,6 +9,7 @@ import { createHash } from 'node:crypto';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { createSharedWorldSqlite, type SharedWorldSqlite } from '../src/lib/sharedworld/sqlite';
 import {
   QLT_MEMORY_MODES,
@@ -26,11 +27,57 @@ const tempDirs: string[] = [];
 const stores: SharedWorldSqlite[] = [];
 
 function createStore(): SharedWorldSqlite {
+  return createStoreWithDb().store;
+}
+
+function createStoreWithDb(): { store: SharedWorldSqlite; dbPath: string } {
   const dir = mkdtempSync(join(tmpdir(), 'qlt-q5-lane-a-'));
   tempDirs.push(dir);
-  const store = createSharedWorldSqlite({ path: join(dir, 'shared-world.db') });
+  const dbPath = join(dir, 'shared-world.db');
+  const store = createSharedWorldSqlite({ path: dbPath });
   stores.push(store);
-  return store;
+  return { store, dbPath };
+}
+
+/**
+ * Complete durable row-state snapshot (Q5-B-1): every user table of the
+ * shared-world db, fully ordered, via a READ-ONLY raw connection. This
+ * inspects the durable rows themselves, not any store or inspection
+ * projection, so a read that silently persisted anything would show.
+ */
+function durableDump(dbPath: string): string {
+  const raw = new DatabaseSync(dbPath, { readOnly: true });
+  try {
+    const tables = (
+      raw
+        .prepare(
+          "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name;",
+        )
+        .all() as { name: string }[]
+    ).map((row) => row.name);
+    const parts: string[] = [];
+    for (const table of tables) {
+      const columns = (raw.prepare(`PRAGMA table_info(${table});`).all() as { name: string }[]).map(
+        (column) => column.name,
+      );
+      const order = columns.map((column) => `"${column}"`).join(', ');
+      const rows = raw.prepare(`SELECT * FROM ${table} ORDER BY ${order};`).all();
+      parts.push(`${table}: ${JSON.stringify(rows)}`);
+    }
+    return parts.join('\n');
+  } finally {
+    raw.close();
+  }
+}
+
+/** The fully ordered durable rows of ONE table (read-only connection). */
+function tableRows(dbPath: string, table: string): Record<string, unknown>[] {
+  const raw = new DatabaseSync(dbPath, { readOnly: true });
+  try {
+    return raw.prepare(`SELECT * FROM ${table} ORDER BY id;`).all() as Record<string, unknown>[];
+  } finally {
+    raw.close();
+  }
 }
 
 afterEach(() => {
@@ -77,23 +124,73 @@ function claimRow(overrides: Partial<ContextCandidateRow> & { id: string }): Con
 }
 
 describe('Q5 migration 4 — Memory Mode policy families', () => {
-  it('creates the frozen policy families and the singleton default row on first resolution', () => {
-    const store = createStore();
-    const resolved = store.memoryPolicy.resolveCurrent();
-    expect(resolved.policyId).toBe('qlt.memory-mode@1');
-    expect(resolved.mode).toBe('across-conversations');
-    expect(resolved.revision).toBe(1);
-    const raw = store.memoryPolicy.getPolicyRow();
-    expect(raw.mode).toBe('across-conversations');
-    expect(raw.revision).toBe(1);
-    expect(raw.updatedBy).toBe('actor-quellight-local');
+  it('Q5-B-1: peekCurrent/peekPolicyRow are PURE reads — the implicit default resolves in memory with zero durable effect', () => {
+    const { store, dbPath } = createStoreWithDb();
+    const before = durableDump(dbPath);
+    // Truthful implicit default, resolved IN MEMORY (no fabricated
+    // timestamp, no persisted-row claim).
+    const resolved = store.memoryPolicy.peekCurrent();
+    expect(resolved).toEqual({
+      policyId: 'qlt.memory-mode@1',
+      mode: 'across-conversations',
+      revision: 1,
+    });
+    expect(store.memoryPolicy.peekPolicyRow()).toBeUndefined();
+    // ZERO durable effect: the complete row-state dump is identical.
+    expect(durableDump(dbPath)).toBe(before);
+    // Deterministic identity; continued zero effect.
+    expect(store.memoryPolicy.peekCurrent()).toEqual(resolved);
+    expect(store.memoryPolicy.peekCurrent()).toEqual(resolved);
+    expect(durableDump(dbPath)).toBe(before);
   });
 
-  it('resolves lazily and deterministically: repeated resolution converges on one row', () => {
-    const store = createStore();
-    const first = store.memoryPolicy.getPolicyRow();
-    const second = store.memoryPolicy.getPolicyRow();
-    expect(first).toEqual(second);
+  it('Q5-B-1: ensureCurrent is the write-path resolution — it establishes EXACTLY ONE durable default row', () => {
+    const { store, dbPath } = createStoreWithDb();
+    const before = durableDump(dbPath);
+    const resolved = store.memoryPolicy.ensureCurrent();
+    expect(resolved).toEqual({
+      policyId: 'qlt.memory-mode@1',
+      mode: 'across-conversations',
+      revision: 1,
+    });
+    // Exactly ONE qlt_memory_policy row, the seeded default.
+    const policyRows = tableRows(dbPath, 'qlt_memory_policy');
+    expect(policyRows).toHaveLength(1);
+    expect(policyRows[0]).toMatchObject({
+      policy_id: 'qlt.memory-mode@1',
+      mode: 'across-conversations',
+      revision: 1,
+      updated_by: 'actor-quellight-local',
+    });
+    expect(durableDump(dbPath)).not.toBe(before);
+    // Reads from the durable row remain pure.
+    const after = durableDump(dbPath);
+    expect(store.memoryPolicy.peekCurrent()).toEqual(resolved);
+    expect(store.memoryPolicy.peekPolicyRow()).toMatchObject({ revision: 1 });
+    expect(durableDump(dbPath)).toBe(after);
+  });
+
+  it('Q5-B-1: setMode on an ABSENT row is truthful — the first effective change lands directly at revision 2', () => {
+    const { store, dbPath } = createStoreWithDb();
+    const row = store.memoryPolicy.setMode({
+      mode: 'per-conversation',
+      updatedBy: 'actor-quellight-local',
+    });
+    expect(row.mode).toBe('per-conversation');
+    // No double bump: exactly one transaction seeded then changed once.
+    expect(row.revision).toBe(2);
+    expect(tableRows(dbPath, 'qlt_memory_policy')).toHaveLength(1);
+  });
+
+  it('Q5-B-1: same-as-default setMode on an ABSENT row creates at most the ONE default row at revision 1 (no false bump)', () => {
+    const { store, dbPath } = createStoreWithDb();
+    const row = store.memoryPolicy.setMode({
+      mode: 'across-conversations',
+      updatedBy: 'actor-quellight-local',
+    });
+    expect(row.mode).toBe('across-conversations');
+    expect(row.revision).toBe(1);
+    expect(tableRows(dbPath, 'qlt_memory_policy')).toHaveLength(1);
   });
 
   it('rejects invalid modes with the stable non-echoing code (no input echo)', () => {
@@ -111,8 +208,8 @@ describe('Q5 migration 4 — Memory Mode policy families', () => {
         }
       }
     }
-    // The current mode is unchanged by every refusal.
-    expect(store.memoryPolicy.resolveCurrent().mode).toBe('across-conversations');
+    // The current mode is unchanged by every refusal (implicit default).
+    expect(store.memoryPolicy.peekCurrent().mode).toBe('across-conversations');
   });
 
   it('rejects non-user actors (agent identities can never change the mode)', () => {
@@ -120,7 +217,7 @@ describe('Q5 migration 4 — Memory Mode policy families', () => {
     expect(() =>
       store.memoryPolicy.setMode({ mode: 'off', updatedBy: 'agent-quellight' }),
     ).toThrowError(/user identity/);
-    expect(store.memoryPolicy.resolveCurrent().mode).toBe('across-conversations');
+    expect(store.memoryPolicy.peekCurrent().mode).toBe('across-conversations');
   });
 
   it('changes the mode with a monotonic revision and converges on same-value sets', () => {
@@ -139,7 +236,7 @@ describe('Q5 migration 4 — Memory Mode policy families', () => {
     expect(again.revision).toBe(2);
     const off = store.memoryPolicy.setMode({ mode: 'off', updatedBy: 'actor-quellight-local' });
     expect(off.revision).toBe(3);
-    expect(store.memoryPolicy.resolveCurrent()).toEqual({
+    expect(store.memoryPolicy.peekCurrent()).toEqual({
       policyId: 'qlt.memory-mode@1',
       mode: 'off',
       revision: 3,
@@ -160,7 +257,7 @@ describe('Q5 migration 4 — Memory Mode policy families', () => {
     first.close();
     const second = createSharedWorldSqlite({ path });
     stores.push(second);
-    expect(second.memoryPolicy.resolveCurrent()).toEqual({
+    expect(second.memoryPolicy.peekCurrent()).toEqual({
       policyId: 'qlt.memory-mode@1',
       mode: 'per-conversation',
       revision: 2,
