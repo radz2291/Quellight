@@ -1,6 +1,6 @@
 # Quellight system reference — Stage 07B/07C
 
-## Status (current, 2026-09-20 — Phase Q5 B-1/H-1 remediated, awaiting fresh independent re-verification)
+## Status (current, 2026-09-20 — Phase Q5 independently re-verified and FORMALLY CLOSED)
 
 ```text
 Stage 07B: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
@@ -8,9 +8,9 @@ Stage 07C Phase Q1: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
 Stage 07C Phase Q2: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (durable Shared World schema)
 Stage 07C Phase Q3: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (governed confirmation ceremony and quiet memory inbox)
 Stage 07C Phase Q4: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (deterministic Shared World context assembly; H-1 remediated and independently re-verified closed)
-Stage 07C Phase Q5: IMPLEMENTED — AWAITING REMEDIATION / RE-VERIFICATION (Shared World inspection, user memory control, one durable global Memory Mode; independent audit NOT VERIFIED — B-1/H-1; Q5-B-1/Q5-H-1/Q5-M-1 remediated per the frozen remediation contract; L-3 repaired; zero-warning dev-start gate)
-Stage 07C Phases Q6–Q7: NOT BEGUN
-Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 closed; Q5 implemented — B-1/H-1 remediated, awaiting fresh independent re-verification; Q6–Q7, 07D, 07E remaining)
+Stage 07C Phase Q5: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (Shared World inspection, user memory control, one durable global Memory Mode; independent audit NOT VERIFIED — B-1/H-1; Q5-B-1/Q5-H-1/Q5-M-1 remediated per the frozen remediation contract and independently re-verified closed; L-3 repaired; zero-warning dev-start gate)
+Stage 07C Phases Q6–Q7: NOT BEGUN (live-provider injection-resistance proof is Q6; contract and implementation planning is permitted — not begun)
+Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 closed; Q5 closed; Q6–Q7, 07D, 07E remaining)
 ```
 
 - **Phase Q5 — Shared World inspection and user memory control
@@ -106,6 +106,27 @@ Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed;
   `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q5-B1-H1-REMEDIATION.md`.
   Carried: M-1 unchanged with its hard deadline; L-R1/L-R2 unchanged;
   the Q3 §12 correction-proposal deferral remains.
+  Fresh independent re-verification and FORMAL CLOSURE (2026-09-20): the
+  re-verification at commit `6cf7dcd…`
+  (`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q5-B1-H1-INDEPENDENT-RE-VERIFICATION.md`)
+  returned `VERIFIED WITH NON-BLOCKING ISSUES — Q5 FORMAL CLOSURE
+PERMITTED` (0 Blocking · 0 High · 0 Medium · 2 Low carried · 0 new
+  findings): both original defects independently reproduced at the
+  audited SHA `d61532d…` and proven absent on the remediated tree
+  (B-1 read purity incl. full write-path seeding/revision semantics;
+  H-1 truthful bucket matrix, filters, pagination, tie-break, refusals),
+  the permanent coverage proven non-vacuous (12/31 discriminating
+  failures against the audited SHA; 31/31 green on the remediated tree;
+  `verify:q5` 86 checks), and the authoritative ladder green exactly
+  once with the browser ceremony passing on its first and only run.
+  Phase Q5 is FORMALLY CLOSED
+  (`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q5-FORMAL-CLOSURE.md`).
+  Carried through closure: L-1, L-2, L-R1, L-R2, the pending-correction
+  fixture limits, the Q3 §12 correction-proposal deferral,
+  D-FUTURE-STEERING-1, and VICT-M-1 (hard deadline before the Phase Q6
+  live-provider proof). Future project-scoped conversations remain
+  prepared for — NOT implemented. Phases Q6–Q7: planning permitted —
+  NOT begun.
 - The retained dependency is now the immutable coordinated release set
   `@victframework/*@0.2.0` (`vict-release-set@1/0.2.0`, content ID
   `v1_7a557983114b0743334061bd1f02ccd14f22e29f3a86697a4fd09b1722a8f172`),

@@ -621,6 +621,39 @@ database content was never opened, queried, copied, migrated, altered,
 or deleted; filesystem metadata was observed only to confirm that the
 path remained unchanged. This entry is documentation-only.
 
+## D-Q5-5 — Phase Q5 disposition after the fresh independent re-verification: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (documentation-only)
+
+The fresh independent re-verification (2026-09-20, commit `6cf7dcd…`,
+`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q5-B1-H1-INDEPENDENT-RE-VERIFICATION.md`)
+returned `VERIFIED WITH NON-BLOCKING ISSUES — Q5 FORMAL CLOSURE
+PERMITTED` (0 Blocking · 0 High · 0 Medium · 2 Low carried · 0 new
+findings): both original audit defects were independently reproduced at
+the audited SHA `d61532d…` with independently authored probes and proven
+absent on the remediated tree; Q5-B-1 (read purity), Q5-H-1 (Current-
+bucket truthfulness), and Q5-M-1 (non-vacuous permanent coverage) are
+each independently closed; the permanent suites fail 12/31 against the
+audited SHA for genuine behavioral reasons and pass 31/31 on the
+remediated tree; `verify:q5` reports 86 checks; the authoritative ladder
+(`npm ci`; `verify:consumer`; `verify:quellight`; `npm audit --omit=dev`;
+`git diff --check`) ran exactly once, green, with the browser ceremony
+passing on its first and only run after full process/port/environment
+preflight; the real operator data was never opened, queried, hashed,
+copied, migrated, altered, or deleted (filesystem metadata was not
+inspected); VICT was read-only. Phase Q5 is FORMALLY CLOSED
+(`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q5-FORMAL-CLOSURE.md`).
+Carried through closure unchanged: L-1 (unreachable `unrecorded` usage
+state), L-2 (`listTurns` metrics outside Details), L-R1 (admission
+critical-section map memory profile), L-R2 (unreachable `no-open-turn`
+union member), the pending-correction fixture limits, the Q3 §12
+correction-proposal deferral, D-FUTURE-STEERING-1 (future steering NOT
+IMPLEMENTED), and **VICT-M-1** (truthful VICT effect-class correction +
+Quellight repin — OPEN with its hard deadline BEFORE the Phase Q6
+live-provider proof and the Stage 07C final audit). Future project-
+scoped conversations remain PREPARED FOR — NOT IMPLEMENTED. Phase Q6
+contract and implementation planning is PERMITTED — NOT BEGUN (VICT-M-1
+must be resolved before the Q6 live-provider proof). Phases Q7, 07D,
+and 07E have not begun. This entry is documentation-only.
+
 ## D-11 — Dev-only `optimizeDeps` exclusion for the released renderer (development-tooling compatibility note — technical decision, recorded, not a product semantic decision)
 
 - **Decision**: `vite.config.ts` now sets
