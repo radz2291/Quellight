@@ -29,21 +29,21 @@ reachable product behaviors, not verification failures.
 
 ## 1. Chain of custody (independently established)
 
-| Item | Value |
-| --- | --- |
-| Fetch | both remotes fetched first; nothing advanced |
-| Quellight `HEAD == origin/main` | `d61532d9b03f562e0f431a6ac1e2128059c33d88` (verified) |
-| Quellight tracked tree | clean before, during, and after the audit |
-| VICT `HEAD == origin/main` | `4b9fed21430787a72eda76b1b72d448f234f05fa` (verified; read-only; pre-existing untracked `.pi/` untouched and unread) |
-| Q5 starting baseline | `587e3b4d…` — ancestor of the freeze (proven) |
-| Q5 contract freeze | `e2d84369bf31822762329cbb95ee9ee5b6eb02db` — a SINGLE commit (contract document + `policy-contract.ts` + `inspection-contract.ts` + the dated Q4-AMEND-1 edit to `context-contract.ts`), committed BEFORE all consuming implementation (ancestry proven; no Q5 amendment commits exist; no history rewrite — 80 commits, single linear `main`, no other branches) |
-| Q5 executable verification tree | `a2d1f2725694ff28751835148db789ad7e8173d2` (descendant of the freeze; ancestry proven) |
-| Documentation tip of the implementation | `f18cff8250bdac52dc37d4d4275698f3712c6966` (descendant of `a2d1f27…`) |
-| Isolation remediation / audited tree | `d61532d…` = `f18cff8…` + exactly the disclosed remediation set (`scripts/verify-dev-start.mjs`, `src/lib/server/composition.ts`, `test/dev-start-data-seam.test.ts`, remediation report, two current-documentation wording corrections) |
-| Conflicting Q5-closure/Q6 work | none on either remote (single-branch linear histories; no `verify:q6` step; no Q6 provider work anywhere) |
-| Historical Q2–Q4 reports | working trees byte-identical to their last committed state; the frozen `meaning-contract.ts` byte-identical to its Q2 freeze; `ceremony-contract.ts` changed only by the disclosed Q3 amendment `8dc0032…` (carried Q3 M-3) and never since; `context-contract.ts` changed only in the Q5 freeze commit (Q4-AMEND-1) |
-| package-lock.json | unchanged since `b802a87…` (pre-Q2); VICT pins exactly `@victframework/*@0.2.0`; release identity unchanged |
-| Applicable AGENTS.md | none exists in either repository |
+| Item                                    | Value                                                                                                                                                                                                                                                                                                                                                             |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Fetch                                   | both remotes fetched first; nothing advanced                                                                                                                                                                                                                                                                                                                      |
+| Quellight `HEAD == origin/main`         | `d61532d9b03f562e0f431a6ac1e2128059c33d88` (verified)                                                                                                                                                                                                                                                                                                             |
+| Quellight tracked tree                  | clean before, during, and after the audit                                                                                                                                                                                                                                                                                                                         |
+| VICT `HEAD == origin/main`              | `4b9fed21430787a72eda76b1b72d448f234f05fa` (verified; read-only; pre-existing untracked `.pi/` untouched and unread)                                                                                                                                                                                                                                              |
+| Q5 starting baseline                    | `587e3b4d…` — ancestor of the freeze (proven)                                                                                                                                                                                                                                                                                                                     |
+| Q5 contract freeze                      | `e2d84369bf31822762329cbb95ee9ee5b6eb02db` — a SINGLE commit (contract document + `policy-contract.ts` + `inspection-contract.ts` + the dated Q4-AMEND-1 edit to `context-contract.ts`), committed BEFORE all consuming implementation (ancestry proven; no Q5 amendment commits exist; no history rewrite — 80 commits, single linear `main`, no other branches) |
+| Q5 executable verification tree         | `a2d1f2725694ff28751835148db789ad7e8173d2` (descendant of the freeze; ancestry proven)                                                                                                                                                                                                                                                                            |
+| Documentation tip of the implementation | `f18cff8250bdac52dc37d4d4275698f3712c6966` (descendant of `a2d1f27…`)                                                                                                                                                                                                                                                                                             |
+| Isolation remediation / audited tree    | `d61532d…` = `f18cff8…` + exactly the disclosed remediation set (`scripts/verify-dev-start.mjs`, `src/lib/server/composition.ts`, `test/dev-start-data-seam.test.ts`, remediation report, two current-documentation wording corrections)                                                                                                                          |
+| Conflicting Q5-closure/Q6 work          | none on either remote (single-branch linear histories; no `verify:q6` step; no Q6 provider work anywhere)                                                                                                                                                                                                                                                         |
+| Historical Q2–Q4 reports                | working trees byte-identical to their last committed state; the frozen `meaning-contract.ts` byte-identical to its Q2 freeze; `ceremony-contract.ts` changed only by the disclosed Q3 amendment `8dc0032…` (carried Q3 M-3) and never since; `context-contract.ts` changed only in the Q5 freeze commit (Q4-AMEND-1)                                              |
+| package-lock.json                       | unchanged since `b802a87…` (pre-Q2); VICT pins exactly `@victframework/*@0.2.0`; release identity unchanged                                                                                                                                                                                                                                                       |
+| Applicable AGENTS.md                    | none exists in either repository                                                                                                                                                                                                                                                                                                                                  |
 
 The freeze commit was verified to precede every consuming implementation
 commit, to contain no implementation, and to be the only pre-implementation
@@ -57,7 +57,7 @@ its declared scope exactly.
   derived from source and execution, never from the implementation report's
   claims.
 - **Changed-file inventory re-derived from Git** (`git diff --numstat
-  e2d8436..a2d1f27`): 32 files, +5927/−462 — matches the implementation
+e2d8436..a2d1f27`): 32 files, +5927/−462 — matches the implementation
   report's inventory exactly.
 - **Lane ownership**: every Q5 commit's files were checked against the
   freeze §14 map, including the ONE disclosed adjustment (all store-level
@@ -438,22 +438,22 @@ command shapes on the released VICT 0.2.0 boundary):
 
 ## 13. Independent negative controls (all external, disposable, removed)
 
-| Control | Result |
-| --- | --- |
-| Fresh-store `getPolicy` read purity (real boundary; full dump before/after) | **FAILS — B-1 reproduced** (durable row created) |
-| All three Memory Modes through the real seam | PASS (modes, evidence, labels) |
-| Q4 default-mode parity (explicit vs mode-less evaluation identity) | PASS (byte-identical) |
-| Policy change after turn admission (gate inside the admission wrapper) | PASS (in-flight turn keeps bound policy) |
-| Restart with immutable applied-policy evidence | PASS (history never relabelled) |
-| Historical selected-version inspection after correction | PASS (pre-correction bytes, `supersededSince`) |
-| Bounded/truncated exclusions (70-record fixture) | PASS (64-entry bound disclosed) |
-| Forged actor / conversation / turn / scope / unknown fields | PASS (all refused closed, zero effect) |
-| Agent access refusal at every new surface | PASS |
-| L-3 correction proposal through the real boundary | PASS (one successor, one link, replay converges) |
-| Inspection credential/prompt canaries (18 needles) | PASS (all absent) |
-| Default-data isolation discriminator | PASS (override isolates; operator entry untouched) |
-| Operator-path cleanup/combination/case guards | PASS (all refusals verified) |
-| C-01 Current-bucket composition (exact UI query shape) | **FAILS — H-1 reproduced** |
+| Control                                                                     | Result                                             |
+| --------------------------------------------------------------------------- | -------------------------------------------------- |
+| Fresh-store `getPolicy` read purity (real boundary; full dump before/after) | **FAILS — B-1 reproduced** (durable row created)   |
+| All three Memory Modes through the real seam                                | PASS (modes, evidence, labels)                     |
+| Q4 default-mode parity (explicit vs mode-less evaluation identity)          | PASS (byte-identical)                              |
+| Policy change after turn admission (gate inside the admission wrapper)      | PASS (in-flight turn keeps bound policy)           |
+| Restart with immutable applied-policy evidence                              | PASS (history never relabelled)                    |
+| Historical selected-version inspection after correction                     | PASS (pre-correction bytes, `supersededSince`)     |
+| Bounded/truncated exclusions (70-record fixture)                            | PASS (64-entry bound disclosed)                    |
+| Forged actor / conversation / turn / scope / unknown fields                 | PASS (all refused closed, zero effect)             |
+| Agent access refusal at every new surface                                   | PASS                                               |
+| L-3 correction proposal through the real boundary                           | PASS (one successor, one link, replay converges)   |
+| Inspection credential/prompt canaries (18 needles)                          | PASS (all absent)                                  |
+| Default-data isolation discriminator                                        | PASS (override isolates; operator entry untouched) |
+| Operator-path cleanup/combination/case guards                               | PASS (all refusals verified)                       |
+| C-01 Current-bucket composition (exact UI query shape)                      | **FAILS — H-1 reproduced**                         |
 
 All probe code, disposable stores, worktree-free logs, and temporary
 directories were created under the OS temporary directory (outside both
@@ -493,18 +493,18 @@ identical before and after).
 
 ## 15. Findings register
 
-| ID | Severity | Finding | Disposition |
-| --- | --- | --- | --- |
-| B-1 | **Blocking** | Inspection `getPolicy` durably seeds the default-policy row on a freshly migrated store — a read with a durable effect, violating frozen §6 ("no durable effect from a read"); the §11 lazy-seeding clause does not truthfully declare a read-side write. Reachable by simply opening the Memory surface on a fresh store. | **Executable remediation required before re-verification.** Resolve absent rows to the frozen default in memory on every read path; seed only on write-path resolution (admission/setMode). Add a fresh-store row-state purity regression control. |
-| H-1 | **High** | `listRecords bucket:'current'` includes terminal proposals (and inflates `total`); the Memory UI's Current tab therefore renders decided proposals as canonical current memory. Violates frozen §3.2/§6 and acceptance row C-01; the implementation's C-01 coverage is vacuous (empty-store only). No injection/authority impact. | **Executable remediation required before re-verification.** Restrict the proposal branch to `pending`/`history`; add a non-vacuous C-01 regression control (a store WITH decided proposals). |
-| M-1 | **Medium** | Read-purity and bucket-composition coverage in `verify:q5` and `test/memory-authority.test.ts` (C-19, C-01) cannot detect B-1/H-1 (output-comparison only, vacuous fixtures, no policy-row state assertions). | Non-blocking for closure only because B-1/H-1 already block; MUST be remediated together with them (the audit requires any Medium finding to carry a disposition: remediate alongside B-1/H-1). |
-| L-1 | Low | The `unrecorded` usage state is frozen data but unreachable through the current inspection surface (`listTurns` lists only assembly rows; assembly-less turns return `QLT_INSPECTION_TURN_MISSING`). Truthful absence; dead state only. | Carry to the next inspection touch-point (07D retention work). |
-| L-2 | Low | `listTurns` summary rows expose `assemblerVersion`/`renderedBytes` outside the Details disclosure; UI does not render them and they are benign metrics. | Carry as a contract-wording touch-point. |
-| O-1 | Observation | The implementation report presents `getPolicy` among read-only operations without disclosing the fresh-store write (B-1's disclosure aspect); historical reports remain preserved and the correction belongs to the remediation record. | Fold into B-1's remediation record. |
-| O-2 | Observation | Admission-path resolution legitimately seeds the default row inside the critical section (write path) — contract-conformant; noted so the B-1 fix does not remove it. | None. |
-| O-3 | Observation | browser-stop-check anchors a disposable store inside the repository (`.quellight-data-stop-check`, pre-Q5, cleaned and gitignored); the operator default is never at risk. | Optional future alignment with the absolute seam. |
-| O-4 | Observation | The remediation report's §6 ladder-wording correction is accepted: this audit's own ladder ran green first-attempt with no interruption, superseding nothing. | None. |
-| O-5 | Observation | Lane A carried assertion-neutral test re-pins and the verify-q2/q3/q4 re-pins stayed with Lane D, leaving those gates red between commits — the disclosed Q4 pattern, honored within the freeze's own disclosure. | None. |
+| ID  | Severity     | Finding                                                                                                                                                                                                                                                                                                                           | Disposition                                                                                                                                                                                                                                        |
+| --- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| B-1 | **Blocking** | Inspection `getPolicy` durably seeds the default-policy row on a freshly migrated store — a read with a durable effect, violating frozen §6 ("no durable effect from a read"); the §11 lazy-seeding clause does not truthfully declare a read-side write. Reachable by simply opening the Memory surface on a fresh store.        | **Executable remediation required before re-verification.** Resolve absent rows to the frozen default in memory on every read path; seed only on write-path resolution (admission/setMode). Add a fresh-store row-state purity regression control. |
+| H-1 | **High**     | `listRecords bucket:'current'` includes terminal proposals (and inflates `total`); the Memory UI's Current tab therefore renders decided proposals as canonical current memory. Violates frozen §3.2/§6 and acceptance row C-01; the implementation's C-01 coverage is vacuous (empty-store only). No injection/authority impact. | **Executable remediation required before re-verification.** Restrict the proposal branch to `pending`/`history`; add a non-vacuous C-01 regression control (a store WITH decided proposals).                                                       |
+| M-1 | **Medium**   | Read-purity and bucket-composition coverage in `verify:q5` and `test/memory-authority.test.ts` (C-19, C-01) cannot detect B-1/H-1 (output-comparison only, vacuous fixtures, no policy-row state assertions).                                                                                                                     | Non-blocking for closure only because B-1/H-1 already block; MUST be remediated together with them (the audit requires any Medium finding to carry a disposition: remediate alongside B-1/H-1).                                                    |
+| L-1 | Low          | The `unrecorded` usage state is frozen data but unreachable through the current inspection surface (`listTurns` lists only assembly rows; assembly-less turns return `QLT_INSPECTION_TURN_MISSING`). Truthful absence; dead state only.                                                                                           | Carry to the next inspection touch-point (07D retention work).                                                                                                                                                                                     |
+| L-2 | Low          | `listTurns` summary rows expose `assemblerVersion`/`renderedBytes` outside the Details disclosure; UI does not render them and they are benign metrics.                                                                                                                                                                           | Carry as a contract-wording touch-point.                                                                                                                                                                                                           |
+| O-1 | Observation  | The implementation report presents `getPolicy` among read-only operations without disclosing the fresh-store write (B-1's disclosure aspect); historical reports remain preserved and the correction belongs to the remediation record.                                                                                           | Fold into B-1's remediation record.                                                                                                                                                                                                                |
+| O-2 | Observation  | Admission-path resolution legitimately seeds the default row inside the critical section (write path) — contract-conformant; noted so the B-1 fix does not remove it.                                                                                                                                                             | None.                                                                                                                                                                                                                                              |
+| O-3 | Observation  | browser-stop-check anchors a disposable store inside the repository (`.quellight-data-stop-check`, pre-Q5, cleaned and gitignored); the operator default is never at risk.                                                                                                                                                        | Optional future alignment with the absolute seam.                                                                                                                                                                                                  |
+| O-4 | Observation  | The remediation report's §6 ladder-wording correction is accepted: this audit's own ladder ran green first-attempt with no interruption, superseding nothing.                                                                                                                                                                     | None.                                                                                                                                                                                                                                              |
+| O-5 | Observation  | Lane A carried assertion-neutral test re-pins and the verify-q2/q3/q4 re-pins stayed with Lane D, leaving those gates red between commits — the disclosed Q4 pattern, honored within the freeze's own disclosure.                                                                                                                 | None.                                                                                                                                                                                                                                              |
 
 Carried obligations unchanged: **M-1** (VICT effect-class correction; hard
 deadline before the Q6 live-provider proof and the Stage 07C final audit),
@@ -537,7 +537,7 @@ audited executable tree was never modified.
    (store/surface fix in Lanes A/B; tests in Lane D).
 3. Request fresh independent re-verification of the remediated tree.
 4. Q5 then remains exactly `IMPLEMENTED — AWAITING REMEDIATION /
-   RE-VERIFICATION`; VICT is NOT updated; Q6 is NOT begun.
+RE-VERIFICATION`; VICT is NOT updated; Q6 is NOT begun.
 
 ## 17. Audit footprint
 
