@@ -164,13 +164,21 @@ export interface InspectionSurfaceDeps {
     | undefined
   >;
   readonly getRecordsByIds: (ids: readonly string[]) => Promise<readonly Record<string, unknown>[]>;
-  /** The current durable Memory Mode (getPolicy). */
+  /**
+   * The current Memory Mode policy (getPolicy). Q5-B-1 (remediation
+   * contract §2): a PURE peek. While the default is implicit (no durable
+   * row yet) `updatedAtMs` is `null` and `persisted` is `false` — no
+   * fabricated timestamp and no persisted-row claim; once a legitimate
+   * write path has established the row, the durable update time and
+   * `persisted: true` are reported.
+   */
   readonly getPolicy: () => {
     readonly policyId: string;
     readonly mode: string;
     readonly label: string;
     readonly revision: number;
-    readonly updatedAtMs: number;
+    readonly updatedAtMs: number | null;
+    readonly persisted: boolean;
   };
   /** The SERVER-DERIVED local user actor (never client-supplied). */
   readonly userActorId: string;
@@ -595,6 +603,7 @@ export function createInspectionSurface(deps: InspectionSurfaceDeps): {
             modeLabel: policy.label,
             revision: policy.revision,
             updatedAtMs: policy.updatedAtMs,
+            persisted: policy.persisted,
           },
         };
       }

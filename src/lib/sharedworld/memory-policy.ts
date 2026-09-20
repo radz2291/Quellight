@@ -22,6 +22,18 @@
  *   history (explicitly NOT implemented now; no project fields, tables,
  *   selectors, or placeholders exist).
  *
+ * Q5-B-1 read purity (remediation contract
+ * `QUELLIGHT-STAGE-07C-PHASE-Q5-B1-H1-REMEDIATION-CONTRACT.md` §1):
+ * read resolution and write-path establishment are SEPARATE methods whose
+ * names communicate their effect. `peekCurrent`/`peekPolicyRow` are PURE
+ * reads — on an absent row they resolve the frozen implicit default IN
+ * MEMORY and never write. `ensureCurrent` is the write-path resolution
+ * that establishes the durable default row, legitimate ONLY on write
+ * paths (turn admission inside its critical section; `setMode` seeds
+ * transactionally in its own transaction). The former read-sounding
+ * `resolveCurrent`/`getPolicyRow` (which silently inserted the row) no
+ * longer exist.
+ *
  * What this module is NOT:
  * - NOT a per-turn authority: the per-turn binding is the admission-time
  *   scope value plus the immutable `qlt_turn_memory_policy` evidence
@@ -95,11 +107,38 @@ export interface MemoryPolicyStoreOptions {
   readonly localActorId: string;
 }
 
+/**
+ * The frozen implicit default, resolved IN MEMORY while the durable row is
+ * absent (Q5-B-1: a read never persists it; revision 1; the product
+ * default mode). Never fabricates a timestamp or a persisted-row claim.
+ */
+const IMPLICIT_DEFAULT_POLICY: QltResolvedMemoryPolicy = {
+  policyId: QLT_MEMORY_MODE_POLICY_ID,
+  mode: QLT_MEMORY_MODE_DEFAULT,
+  revision: 1,
+};
+
 export interface MemoryPolicyStore {
-  /** Resolve the current durable default policy (lazily seeds the row). */
-  resolveCurrent(): QltResolvedMemoryPolicy;
-  /** Read the full durable policy row (seeding on first read). */
-  getPolicyRow(): QltMemoryPolicyRow;
+  /**
+   * PURE READ (zero durable effect): resolve the effective policy. When
+   * the durable row is absent, the frozen implicit default is returned in
+   * memory — zero INSERT, zero UPDATE, zero schema change, zero
+   * bookkeeping change (Q5-B-1).
+   */
+  peekCurrent(): QltResolvedMemoryPolicy;
+  /**
+   * PURE READ (zero durable effect): the full durable policy row, or
+   * `undefined` while the default is still implicit (not yet persisted).
+   */
+  peekPolicyRow(): QltMemoryPolicyRow | undefined;
+  /**
+   * WRITE-PATH RESOLUTION: resolve the effective policy, establishing the
+   * durable default row when absent (one INSERT inside one transaction).
+   * Legitimate ONLY on write paths: turn admission (inside its existing
+   * per-conversation critical section) — `setMode` seeds transactionally
+   * in its own transaction and does not route through here.
+   */
+  ensureCurrent(): QltResolvedMemoryPolicy;
   /**
    * Set the mode (user-attributed; value-idempotent; ONE transaction).
    * Setting the SAME mode converges without a revision bump. Returns the
@@ -191,17 +230,20 @@ export function createMemoryPolicyStore(options: MemoryPolicyStoreOptions): Memo
   }
 
   const store: MemoryPolicyStore = {
-    resolveCurrent(): QltResolvedMemoryPolicy {
-      const row = ensurePolicyRow();
-      return {
-        policyId: QLT_MEMORY_MODE_POLICY_ID,
-        mode: row.mode,
-        revision: row.revision,
-      };
+    peekCurrent(): QltResolvedMemoryPolicy {
+      const row = getPolicyRowOrNull();
+      return row === undefined
+        ? { ...IMPLICIT_DEFAULT_POLICY }
+        : { policyId: QLT_MEMORY_MODE_POLICY_ID, mode: row.mode, revision: row.revision };
     },
 
-    getPolicyRow(): QltMemoryPolicyRow {
-      return ensurePolicyRow();
+    peekPolicyRow(): QltMemoryPolicyRow | undefined {
+      return getPolicyRowOrNull();
+    },
+
+    ensureCurrent(): QltResolvedMemoryPolicy {
+      const row = ensurePolicyRow();
+      return { policyId: QLT_MEMORY_MODE_POLICY_ID, mode: row.mode, revision: row.revision };
     },
 
     setMode(input): QltMemoryPolicyRow {

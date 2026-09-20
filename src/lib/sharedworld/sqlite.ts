@@ -1658,79 +1658,92 @@ export function createSharedWorldSqlite(options: SharedWorldSqliteOptions): Shar
     const rows: QltInspectionRecordRow[] = [];
     let total = 0;
 
-    const proposalStatusesForBucket =
-      bucket === 'pending'
-        ? ['proposed', 'awaiting_decision']
-        : ['confirmed', 'rejected', 'amended', 'withdrawn'];
-    const proposalKindFilter =
-      options.kind === undefined || options.kind === 'proposal' ? undefined : options.kind;
-    const proposalWhere = [
-      `status IN (${proposalStatusesForBucket.map(() => '?').join(',')})`,
-      ...(threadFilter !== undefined ? ['source_thread_id = ?'] : []),
-      ...(proposalKindFilter !== undefined ? ['proposal_kind = ?'] : []),
-    ].join(' AND ');
-    const proposalParams = [
-      ...proposalStatusesForBucket,
-      ...(threadFilter !== undefined ? [threadFilter] : []),
-      ...(proposalKindFilter !== undefined ? [proposalKindFilter] : []),
-    ];
-    const proposalCount = db
-      .prepare(`SELECT COUNT(*) AS total FROM qlt_proposal WHERE ${proposalWhere};`)
-      .get(...proposalParams) as { total: number };
-    total += proposalCount.total;
-    const proposalRows = db
-      .prepare(
-        `SELECT * FROM qlt_proposal WHERE ${proposalWhere}
-         ORDER BY updated_at_ms DESC, id ASC LIMIT ?;`,
-      )
-      .all(...proposalParams, window) as unknown as Array<Record<string, unknown>>;
-    for (const row of proposalRows) {
-      rows.push(proposalRowOf(row));
+    // Q5-H-1 (remediation contract §3): EXPLICIT bucket branching with no
+    // fallback. Proposal rows are queried ONLY for the pending and history
+    // buckets — Current never contains any proposal status. Family rows
+    // (claims/commitments/open loops) are queried ONLY for the current and
+    // history buckets — Pending contains only awaiting proposals. There is
+    // deliberately NO else-branch: a future/unknown bucket can never
+    // silently classify as History.
+    if (bucket === 'pending' || bucket === 'history') {
+      const proposalStatusesForBucket =
+        bucket === 'pending'
+          ? ['proposed', 'awaiting_decision']
+          : ['confirmed', 'rejected', 'amended', 'withdrawn'];
+      const proposalKindFilter =
+        options.kind === undefined || options.kind === 'proposal' ? undefined : options.kind;
+      const proposalWhere = [
+        `status IN (${proposalStatusesForBucket.map(() => '?').join(',')})`,
+        ...(threadFilter !== undefined ? ['source_thread_id = ?'] : []),
+        ...(proposalKindFilter !== undefined ? ['proposal_kind = ?'] : []),
+      ].join(' AND ');
+      const proposalParams = [
+        ...proposalStatusesForBucket,
+        ...(threadFilter !== undefined ? [threadFilter] : []),
+        ...(proposalKindFilter !== undefined ? [proposalKindFilter] : []),
+      ];
+      const proposalCount = db
+        .prepare(`SELECT COUNT(*) AS total FROM qlt_proposal WHERE ${proposalWhere};`)
+        .get(...proposalParams) as { total: number };
+      total += proposalCount.total;
+      const proposalRows = db
+        .prepare(
+          `SELECT * FROM qlt_proposal WHERE ${proposalWhere}
+           ORDER BY updated_at_ms DESC, id ASC LIMIT ?;`,
+        )
+        .all(...proposalParams, window) as unknown as Array<Record<string, unknown>>;
+      for (const row of proposalRows) {
+        rows.push(proposalRowOf(row));
+      }
     }
 
-    if (options.kind === undefined || options.kind !== 'proposal') {
-      const familyFilter = options.kind;
-      for (const family of Object.keys(INSPECTION_FAMILY_TABLES) as Array<
-        keyof typeof INSPECTION_FAMILY_TABLES
-      >) {
-        if (familyFilter !== undefined && family !== familyFilter) {
-          continue;
-        }
-        const table = INSPECTION_FAMILY_TABLES[family];
-        const eligibleStatus = { claim: 'active', commitment: 'active', open_loop: 'open' }[family];
-        const threadClause = threadFilter !== undefined ? ' AND t.source_thread_id = ?' : '';
-        const params: (string | number)[] = threadFilter !== undefined ? [threadFilter] : [];
-        const countRow = db
-          .prepare(
-            `SELECT COUNT(*) AS total FROM ${table} t WHERE${' '}
-            ${
-              bucket === 'current'
-                ? `t.status = '${eligibleStatus}' AND t.retention_state = 'currently-relevant'
+    // Family rows: current → the canonical current-effective set only;
+    // history → the complement (non-current/closed/superseded). Guarded by
+    // the explicit branch below, Pending can never contain family rows.
+    if (bucket === 'current' || bucket === 'history') {
+      if (options.kind === undefined || options.kind !== 'proposal') {
+        const familyFilter = options.kind;
+        for (const family of Object.keys(INSPECTION_FAMILY_TABLES) as Array<
+          keyof typeof INSPECTION_FAMILY_TABLES
+        >) {
+          if (familyFilter !== undefined && family !== familyFilter) {
+            continue;
+          }
+          const table = INSPECTION_FAMILY_TABLES[family];
+          const eligibleStatus = {
+            claim: 'active',
+            commitment: 'active',
+            open_loop: 'open',
+          }[family];
+          const threadClause = threadFilter !== undefined ? ' AND t.source_thread_id = ?' : '';
+          const params: (string | number)[] = threadFilter !== undefined ? [threadFilter] : [];
+          // The enclosing guard proves bucket is 'current' or 'history'
+          // here; the match is stated explicitly per bucket.
+          const familyMatch =
+            bucket === 'current'
+              ? `t.status = '${eligibleStatus}' AND t.retention_state = 'currently-relevant'
                  AND NOT EXISTS (SELECT 1 FROM ${table} s WHERE s.supersedes_id = t.id)`
-                : `NOT (t.status = '${eligibleStatus}' AND t.retention_state = 'currently-relevant'
-                 AND NOT EXISTS (SELECT 1 FROM ${table} s WHERE s.supersedes_id = t.id))`
-            }${threadClause};`,
-          )
-          .get(...params) as { total: number };
-        total += countRow.total;
-        const raw = db
-          .prepare(
-            `SELECT t.*, EXISTS(
-               SELECT 1 FROM ${table} s WHERE s.supersedes_id = t.id
-             ) AS has_successor
-             FROM ${table} t
-             WHERE ${
-               bucket === 'current'
-                 ? `t.status = '${eligibleStatus}' AND t.retention_state = 'currently-relevant'
-                    AND NOT EXISTS (SELECT 1 FROM ${table} s WHERE s.supersedes_id = t.id)`
-                 : `NOT (t.status = '${eligibleStatus}' AND t.retention_state = 'currently-relevant'
-                    AND NOT EXISTS (SELECT 1 FROM ${table} s WHERE s.supersedes_id = t.id))`
-             }${threadClause}
-             ORDER BY t.updated_at_ms DESC, t.id ASC LIMIT ?;`,
-          )
-          .all(...params, window) as unknown as Array<Record<string, unknown>>;
-        for (const row of raw) {
-          rows.push(familyRowOf(family, row, Number(row['has_successor'] ?? 0) === 1));
+              : `NOT (t.status = '${eligibleStatus}' AND t.retention_state = 'currently-relevant'
+                 AND NOT EXISTS (SELECT 1 FROM ${table} s WHERE s.supersedes_id = t.id))`;
+          const countRow = db
+            .prepare(
+              `SELECT COUNT(*) AS total FROM ${table} t WHERE ${familyMatch}${threadClause};`,
+            )
+            .get(...params) as { total: number };
+          total += countRow.total;
+          const raw = db
+            .prepare(
+              `SELECT t.*, EXISTS(
+                 SELECT 1 FROM ${table} s WHERE s.supersedes_id = t.id
+               ) AS has_successor
+               FROM ${table} t
+               WHERE ${familyMatch}${threadClause}
+               ORDER BY t.updated_at_ms DESC, t.id ASC LIMIT ?;`,
+            )
+            .all(...params, window) as unknown as Array<Record<string, unknown>>;
+          for (const row of raw) {
+            rows.push(familyRowOf(family, row, Number(row['has_successor'] ?? 0) === 1));
+          }
         }
       }
     }

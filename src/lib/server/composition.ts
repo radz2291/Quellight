@@ -101,7 +101,11 @@ import {
   createLiveProviderModel,
 } from './model-seam';
 import type { QltResolvedMemoryPolicy } from '../sharedworld/policy-contract';
-import { QLT_MEMORY_MODE_LABELS } from '../sharedworld/policy-contract';
+import {
+  QLT_MEMORY_MODE_DEFAULT,
+  QLT_MEMORY_MODE_LABELS,
+  QLT_MEMORY_MODE_POLICY_ID,
+} from '../sharedworld/policy-contract';
 import {
   QLT_INSPECTION_RESOURCE_ID,
   QLT_INSPECTION_USAGE_LABELS,
@@ -750,13 +754,30 @@ export async function createQuellightComposition(
         unknown
       >[],
     getPolicy: () => {
-      const row = sharedWorld.memoryPolicy.getPolicyRow();
+      // Q5-B-1 (remediation contract §1/§2): PURE peek — a read never
+      // establishes the durable row. While the default is implicit the
+      // response is the frozen in-memory default with a NULL update time
+      // and persisted:false (no fabricated timestamp, no persisted-row
+      // claim); once a legitimate write path has established the row, the
+      // durable values are reported with persisted:true.
+      const row = sharedWorld.memoryPolicy.peekPolicyRow();
+      if (row === undefined) {
+        return {
+          policyId: QLT_MEMORY_MODE_POLICY_ID,
+          mode: QLT_MEMORY_MODE_DEFAULT,
+          label: QLT_MEMORY_MODE_LABELS[QLT_MEMORY_MODE_DEFAULT],
+          revision: 1,
+          updatedAtMs: null,
+          persisted: false,
+        };
+      }
       return {
         policyId: row.policyId,
         mode: row.mode,
         label: QLT_MEMORY_MODE_LABELS[row.mode],
         revision: row.revision,
         updatedAtMs: row.updatedAtMs,
+        persisted: true,
       };
     },
     userActorId: LOCAL_ACTOR_ID,
@@ -1034,7 +1055,12 @@ export async function createQuellightComposition(
     // per-turn evidence row is written from this value at first assembly.
     admitTurn: (input, dispatch) =>
       turnAdmission.admitTurn(input, () => {
-        const memoryPolicy: QltResolvedMemoryPolicy = sharedWorld.memoryPolicy.resolveCurrent();
+        // Write-path resolution (Q5-B-1): admission is a legitimate
+        // establishment point — the durable default row may be created
+        // here, inside the existing per-conversation critical section
+        // (audit Observation O-2 preserved). Inspection reads NEVER
+        // establish it.
+        const memoryPolicy: QltResolvedMemoryPolicy = sharedWorld.memoryPolicy.ensureCurrent();
         return runWithTurnAssemblyScope(
           {
             swThreadId: input.swThreadId,
