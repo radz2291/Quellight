@@ -431,7 +431,7 @@ describe('Quellight composition — offline deterministic conversation (WP-4)', 
     // withdraw, correct, or read any store content.
     expect(composition.activation.capabilities.length).toBe(1);
     expect(composition.activation.capabilities[0].id).toBe('qlt.proposal.draft');
-    expect(composition.activation.capabilities[0].revision).toBe('1');
+    expect(composition.activation.capabilities[0].revision).toBe('2');
 
     const thread = await composition.sharedWorld.createThread({ title: 'Isolation thread' });
     const before = await composition.sharedWorld.listThreads();

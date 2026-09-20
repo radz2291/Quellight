@@ -5,7 +5,7 @@
  *
  * Uses the ADAPTER-NODE production build on an ephemeral port with the
  * deterministic offline fixture model and a throwaway data directory — the
- * full governed path is real: real UI → /api/act → released VICT 0.2.0
+ * full governed path is real: real UI → /api/act → released VICT 0.3.0-rc.1
  * boundary → memory surface → shared-world.db; real turn streaming →
  * pinned capability (qlt.proposal.draft via the tool bridge) → inert
  * proposal. No provider credential exists or is required.

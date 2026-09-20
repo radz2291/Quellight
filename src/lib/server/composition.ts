@@ -91,6 +91,7 @@ import {
   QLT_PROPOSAL_CAPABILITY_ID,
   QLT_PROPOSAL_CAPABILITY_REVISION,
   QLT_AGENT_PROPOSER_ID,
+  QLT_HOST_QUIET_WRITE_POLICY_IDENTITY,
 } from '../sharedworld/ceremony-contract';
 import type { CapabilityDefinition } from '@victframework/sdk';
 import { getCompiledPlan, inputContractImplementations } from '$lib/application/definition';
@@ -136,9 +137,11 @@ const INSTRUCTIONS_TEXT = [
 const MEMORY_POLICY_ID = 'quellight.conversation-memory-policy';
 const MEMORY_POLICY_REVISION = '1';
 
-/** The pinned agent profile (Q4: revision 3 carries the context disclosure). */
+/** The pinned agent profile (revision 4: the truthful `write`-effect
+ * capability revision `qlt.proposal.draft@2` under the VICT-M-1
+ * remediation). */
 const PROFILE_ID = 'agent.quellight.conversation';
-const PROFILE_REVISION = '3';
+const PROFILE_REVISION = '4';
 
 /** The composed application release binding (local envelope). */
 export const APPLICATION_RELEASE_VERSION = 'quellight-local-1';
@@ -674,6 +677,30 @@ export async function createQuellightComposition(
       // Per-turn tool budget (the released adapter gate; maxToolCalls: 2,
       // fail-closed) governs capability invocations BEFORE any effect.
       budgetGate: () => productAgentRef.current!.capabilityBudgetGate(),
+      // VICT-M-1: the HOST-OWNED quiet-write approval policy. The pinned
+      // proposal-draft capability is — truthfully — a WRITE (a durable,
+      // epistemically inert proposal-row creation), and the ratified
+      // single-actor envelope keeps its in-turn completion QUIET: this
+      // exact (capabilityId, revision) entry permits that ONE write
+      // capability to execute without a separate approval wait. The
+      // policy is supplied ONLY through this trusted composition-dependency
+      // channel (never from capability code, packs, model output, tool
+      // input, or profile content); entries are validated fail closed at
+      // tool-build time; `irreversible` capabilities can never be
+      // exempted. The bridge durably records the truthful decision
+      // evidence on every invocation (write, approval-required=false,
+      // host-policy disposition); no approval row, no approver identity,
+      // and no awaiting-approval event exists for a quiet proposal write,
+      // and every other governed execution stage is unchanged.
+      quietWriteApprovals: {
+        policyIdentity: QLT_HOST_QUIET_WRITE_POLICY_IDENTITY,
+        entries: [
+          {
+            capabilityId: QLT_PROPOSAL_CAPABILITY_ID,
+            capabilityRevision: QLT_PROPOSAL_CAPABILITY_REVISION,
+          },
+        ],
+      },
       recordInvocationIntent: (input) => turnServiceRef.current!.recordToolInvocationIntent(input),
       claimInvocationRun: (command) => agentStores.invocations.claimInvocationRun(command),
       settleInvocationRun: (command) => agentStores.invocations.settleInvocationRun(command),

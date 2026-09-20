@@ -1,10 +1,13 @@
 /**
  * The ONE pinned agent capability of Stage 07C Phase Q3: drafting inert
- * pending Shared World proposals (`qlt.proposal.draft@1`).
+ * pending Shared World proposals (`qlt.proposal.draft@2` as of the
+ * VICT-M-1 remediation).
  *
  * FROZEN CONTRACT: docs/report/QUELLIGHT-STAGE-07C-PHASE-Q3-CONTRACT-FREEZE.md
  * (§3 identifiers, §4 authority matrix, §5 closed contracts, §8 server-derived
- * correlation, §3 effect-class disclosure).
+ * correlation) as superseded for this capability's identity by the M-1
+ * remediation (docs/report/QUELLIGHT-STAGE-07C-M-1-REMEDIATION.md):
+ * revision 2 truthfully declares `effect: 'write'`.
  *
  * What this capability is:
  * - the ONLY model-facing effectful surface of Quellight; the pinned agent
@@ -32,11 +35,16 @@
  * - NOT a correction path: `proposalKind: 'correction'` is rejected in Q3
  *   (agent-originated correction targeting is deferred to Q4, freeze §12).
  *
- * Effect-class disclosure (freeze §3): the capability is DECLARED
- * `read`-class so the released 0.2.0 bridge policy permits in-turn
- * completion in this ratified single-actor envelope; the declaration's
- * limits, the rejected alternatives, and the candidate framework-change
- * proposal are recorded in the freeze. Every authority boundary is enforced
+ * Effect-class disclosure (VICT-M-1, superseding the Q3-era `@1/read`
+ * disclosure preserved in the historical Q3 freeze): the capability's
+ * factual external impact is a DURABLE proposal-row creation, so revision
+ * 2 DECLARED `write`. The quiet in-turn completion is granted by the
+ * composition-supplied EXACT host quiet-write policy — never by this
+ * metadata, which cannot exempt itself. The bridge durably records the
+ * truthful decision evidence on every invocation (effect `write`,
+ * approval-required `false`, the closed-code host-policy disposition); no
+ * approval row, no approver identity, and no awaiting-approval event
+ * exists for a quiet proposal write. Every authority boundary is enforced
  * by this implementation, the store, the contracts, and the permanent
  * tests — never by the class metadata.
  */

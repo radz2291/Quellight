@@ -141,15 +141,40 @@ export const QLT_PLAN_ACTION_INVENTORY: readonly string[] = [
 // ---------------------------------------------------------------------------
 
 export const QLT_PROPOSAL_CAPABILITY_ID = 'qlt.proposal.draft';
-export const QLT_PROPOSAL_CAPABILITY_REVISION = '1';
+/**
+ * Revision 2 (VICT-M-1 remediation; frozen contract
+ * `docs/report/QUELLIGHT-STAGE-07C-M-1-REMEDIATION.md`): the capability's
+ * factual external impact is a DURABLE, EPISTEMICALLY INERT proposal-row
+ * creation, so revision 2 truthfully declares `effect: 'write'`. The
+ * revision bump follows the SDK capability-identity discipline: changing
+ * the declared effect class requires a new capability revision so
+ * activation identity can distinguish the change. The Q3-era `@1/read`
+ * disclosure remains historical record (its freeze is preserved
+ * unchanged); it no longer describes the pinned envelope.
+ */
+export const QLT_PROPOSAL_CAPABILITY_REVISION = '2';
 export const QLT_PROPOSAL_CAPABILITY_INPUT_CONTRACT = 'qlt.proposal.draft.input';
 export const QLT_PROPOSAL_CAPABILITY_OUTPUT_CONTRACT = 'qlt.proposal.draft.output';
 
-/** The capability is a `read`-class DECLARATION over an inert, keyed,
- * bounded proposal-row creation; the disclosure and its reasons are frozen
- * in freeze §3. The class never widens authority: the implementation, the
- * store, the contracts, and the tests carry every authority boundary. */
-export const QLT_PROPOSAL_CAPABILITY_DECLARED_EFFECT = 'read' as const;
+/**
+ * Truthful effect class of the durable proposal-row creation (revision 2;
+ * VICT-M-1). The class NEVER widens authority: the implementation, the
+ * store, the contracts, and the tests carry every authority boundary.
+ * The quiet in-turn completion is granted by the composition-supplied
+ * EXACT host quiet-write policy (`QLT_HOST_QUIET_WRITE_POLICY`), never
+ * by this metadata.
+ */
+export const QLT_PROPOSAL_CAPABILITY_DECLARED_EFFECT = 'write' as const;
+
+/**
+ * The composition-supplied host-owned quiet-write approval policy for the
+ * pinned capability (VICT-M-1). EXACTLY ONE entry at the exact (id,
+ * revision); no wildcard, no capability-controlled opt-out, and an
+ * `irreversible` target can never be exempted. The policy identity is a
+ * host-chosen versioned identifier (bounded identity pattern); VICT
+ * records its own closed-code disposition basis, never this content.
+ */
+export const QLT_HOST_QUIET_WRITE_POLICY_IDENTITY = 'qlt.host-policy.quiet-write@1';
 
 /** Kinds the agent may propose in Q3 ('correction' is deferred to Q4). */
 export const QLT_AGENT_PROPOSABLE_KINDS: readonly string[] = ['claim', 'commitment', 'open_loop'];

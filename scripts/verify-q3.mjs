@@ -27,7 +27,7 @@
  *                       store or SQLite; no context-assembler module exists;
  *                       the agent surface has no record-read import.
  *   5. PINS           — package.json @victframework/* deps all exactly
- *                       0.2.0 (the full gate remains `verify:consumer`).
+ *                       0.3.0-rc.1 (the full gate remains `verify:consumer`).
  *   6. WIRING         — `verify:q3` and the TEST-1 browser ceremony check
  *                       exist in package.json and the aggregate verifier
  *                       references both.
@@ -329,7 +329,7 @@ console.log('\n[4] ISOLATION — one effect path; no context assembly; no model 
 // ---------------------------------------------------------------------------
 // 5. PINS (light; the full gate remains verify:consumer)
 // ---------------------------------------------------------------------------
-console.log('\n[5] PINS — exact VICT 0.2.0 identity unchanged');
+console.log('\n[5] PINS — exact VICT 0.3.0-rc.1 identity unchanged');
 {
   const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
   const victDeps = Object.entries({
@@ -337,18 +337,18 @@ console.log('\n[5] PINS — exact VICT 0.2.0 identity unchanged');
     ...packageJson.devDependencies,
   }).filter(([name]) => name.startsWith('@victframework/'));
   check(
-    'all declared @victframework/* pins are exactly 0.2.0',
+    'all declared @victframework/* pins are exactly 0.3.0-rc.1',
     'pins',
-    victDeps.length >= 9 && victDeps.every(([, specifier]) => specifier === '0.2.0'),
+    victDeps.length >= 9 && victDeps.every(([, specifier]) => specifier === '0.3.0-rc.1'),
   );
   const require = createRequire(join(process.cwd(), 'package.json'));
   const entry = require.resolve('@victframework/server');
   const packageDir = entry.replace(/\\/g, '/').split('/dist/')[0];
   const serverPackage = JSON.parse(readFileSync(join(packageDir, 'package.json'), 'utf8'));
   check(
-    'installed @victframework/server is exactly 0.2.0',
+    'installed @victframework/server is exactly 0.3.0-rc.1',
     'pins',
-    serverPackage.version === '0.2.0',
+    serverPackage.version === '0.3.0-rc.1',
   );
   console.log(`  pins: ${sections.pins} checks`);
 }

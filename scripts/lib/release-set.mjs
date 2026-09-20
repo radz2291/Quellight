@@ -13,10 +13,13 @@
 
 import { createHash } from 'node:crypto';
 
-/** The recorded, authoritative public release identity (0.2.0). */
-export const RELEASE_IDENTITY = 'vict-release-set@1/0.2.0';
-export const CONTENT_ID = 'v1_7a557983114b0743334061bd1f02ccd14f22e29f3a86697a4fd09b1722a8f172';
-export const EXPECTED_VERSION = '0.2.0';
+/** The recorded, authoritative public release identity: the coordinated
+ * public candidate set `0.3.0-rc.1` (the M-1 remediation set; stable
+ * 0.3.0 is a LATER release after independent verification, published
+ * through the same trusted-OIDC workflow). */
+export const RELEASE_IDENTITY = 'vict-release-set@1/0.3.0-rc.1';
+export const CONTENT_ID = 'v1_9117e0cbd3f3fe520238442e237889bf3b9a50916327051487b8a497551500a4';
+export const EXPECTED_VERSION = '0.3.0-rc.1';
 
 /** The exact 13-member coordinated release set (recorded identity). */
 export const RELEASE_SET_MEMBERS = Object.freeze([
