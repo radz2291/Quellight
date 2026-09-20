@@ -14,8 +14,10 @@ Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed;
 ```
 
 - **Phase Q5 — Shared World inspection and user memory control
-  (2026-09-20): IMPLEMENTED — AWAITING INDEPENDENT VERIFICATION (not
-  verified, not closed).** Contract freeze `e2d8436…` (committed alone;
+  (2026-09-20): VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
+  (initial audit NOT VERIFIED — B-1/H-1; remediated per the frozen
+  remediation contract, independently re-verified at `6cf7dcd…`, and
+  formally closed at `6088fc3…`).** Contract freeze `e2d8436…` (committed alone;
   frozen declarative modules `src/lib/sharedworld/policy-contract.ts`
   and `src/lib/sharedworld/inspection-contract.ts`; dated Q4-AMEND-1
   committed inside the freeze per the owner's Q5 instruction:

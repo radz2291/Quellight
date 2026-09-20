@@ -189,17 +189,25 @@ steering direction (user steers an answer while it is generated, as an
 explicit operation targeting the exact active turn — never a second
 overlapping turn) is RECORDED in the decision register as a deferred
 design input requiring its own future contract; it is NOT implemented.
-Phase Q5 is IMPLEMENTED — AWAITING INDEPENDENT VERIFICATION (not
-verified, not closed); Phases Q6–Q7 have not begun. Q4 has no
-live-provider path; live-model injection resistance remains Q6. VICT
-remains pinned at the 0.2.0 boundary. Phases Q6–Q7 have not begun;
-VICT `0.1.0`/`0.1.1` remain published but
+Phase Q5 is independently re-verified and FORMALLY CLOSED (2026-09-20;
+the initial audit returned NOT VERIFIED, and Q5-B-1, Q5-H-1, and
+Q5-M-1 were remediated under the frozen remediation contract and
+independently re-verified closed — re-verification commit `6cf7dcd…`,
+formal closure `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q5-FORMAL-CLOSURE.md`
+at commit `6088fc3…`; L-1 and L-2 remain non-blocking carried issues;
+VICT-M-1 remains open); Phases Q6–Q7 have not begun. Q4 has no
+live-provider path; live-model injection resistance remains Q6 and is
+blocked until VICT-M-1 is resolved. VICT remains pinned at the 0.2.0
+boundary; VICT `0.1.0`/`0.1.1` remain published but
 are not adopted — any later change requires an explicit compatibility
 decision and fresh verification.
 
 Phase Q5 (2026-09-20) makes the existing Shared World understandable and
-controllable by the user, and is recorded as `IMPLEMENTED — AWAITING
-INDEPENDENT VERIFICATION` — not verified, not closed; see
+controllable by the user, and is independently re-verified and FORMALLY
+CLOSED (`VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED`; the
+initial audit returned NOT VERIFIED, and Q5-B-1, Q5-H-1, and Q5-M-1
+were remediated and independently closed; L-1 and L-2 remain carried);
+see
 `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q5-CONTRACT-FREEZE.md` (freeze
 SHA `e2d8436…`, no amendments) and
 `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q5-MEMORY-INSPECTION-IMPLEMENTATION.md`
