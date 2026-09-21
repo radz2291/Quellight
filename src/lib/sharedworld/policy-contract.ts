@@ -200,14 +200,14 @@ export const QLT_MEMORY_POLICY_SET_MODE_CONTRACT_ID = 'qlt.memory-policy.setMode
 export const QLT_Q5_AUTHORITY_DELTA = {
   user: 'gains read-only inspection of their own Shared World, in-UI lifecycle controls, and the global Memory Mode control; all writes remain user-attributed governed actions',
   agent:
-    'UNCHANGED: exactly qlt.proposal.draft@1; no inspection, listing, search, decision, or Memory Mode power; receives the same bounded per-turn snapshot as data (now mode-scoped)',
+    'UNCHANGED: proposal-draft-only (qlt.proposal.draft@2 as of the VICT-M-1 remediation); no inspection, listing, search, decision, or Memory Mode power; receives the same bounded per-turn snapshot as data (now mode-scoped)',
   policyResolver:
     'a typed Quellight-owned read-side component; the SINGLE resolution boundary for the effective Memory Mode; holds no authority beyond resolving the durable default',
 } as const;
 
 /** Structural assertions permanently true of the Q5 policy path (freeze §17). */
 export const QLT_Q5_STRUCTURAL_INVARIANTS: readonly string[] = [
-  'the agent envelope remains exactly qlt.proposal.draft@1 (no read/list/search capability)',
+  'the agent envelope remains proposal-draft-only: qlt.proposal.draft@2 (no read/list/search capability)',
   'the effective mode is bound at turn admission and carried immutably in the turn scope',
   'the per-turn applied-policy evidence is written once (INSERT-or-converge) and never updated',
   'the current setting never reinterprets a historical turn',

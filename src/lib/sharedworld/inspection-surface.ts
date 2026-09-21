@@ -11,7 +11,8 @@
  * Authority (freeze §6): this is a USER-FACING READ-ONLY surface exposed
  * ONLY through the released read boundary (`app.data.query` via
  * `/api/act`). It gives the agent NOTHING: the capability envelope remains
- * EXACTLY `qlt.proposal.draft@1`, and this surface requires the
+ * proposal-draft-only (`qlt.proposal.draft@2` as of the VICT-M-1
+ * remediation), and this surface requires the
  * `qlt.inspection.read` permission that no agent context ever carries.
  * An `agent-*` actor identity fails closed with zero effect. Every read
  * is bounded, deterministically ordered, and free of durable effect.

@@ -18,7 +18,8 @@
  * Authority basis: the inspection resource is USER-FACING READ-ONLY
  * surface exposed ONLY through the released read boundary
  * (`app.data.query` via `/api/act`). It gives the AGENT nothing: the
- * capability envelope remains EXACTLY `qlt.proposal.draft@1`; no
+ * capability envelope remains proposal-draft-only (`qlt.proposal.draft@2`
+ * as of the VICT-M-1 remediation); no
  * read/list/search capability enters the agent surface (freeze §0/§6).
  */
 

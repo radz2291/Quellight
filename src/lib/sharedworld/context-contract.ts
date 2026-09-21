@@ -24,7 +24,8 @@
  * authority); D-10 (governed VICT 0.2.0 boundary). Q4 activates READ-side
  * continuity only: it adds NO new model-facing capability, NO read/list/
  * search tool, NO embeddings, NO semantic retrieval, and NO second model
- * call. The agent authority envelope remains EXACTLY `qlt.proposal.draft@1`.
+ * call. The agent authority envelope remains proposal-draft-only (as of the
+ * VICT-M-1 remediation: `qlt.proposal.draft@2`, truthfully `write`).
  */
 
 // ---------------------------------------------------------------------------
@@ -436,7 +437,7 @@ export const QLT_Q4_AUTHORITY_DELTA = {
 /** Structural assertions permanently true of the context path (freeze §13). */
 export const QLT_Q4_STRUCTURAL_INVARIANTS: readonly string[] = [
   'the context block never enters the durable transcript',
-  'no model-facing read/list/search capability exists (the envelope stays exactly qlt.proposal.draft@1)',
+  'no model-facing read/list/search capability exists (the envelope stays proposal-draft-only: qlt.proposal.draft@2)',
   'system/developer instructions remain structurally superior to the data block',
   'record text cannot forge markers, record envelopes, or close the context section',
   'record text grants no tools, approvals, or authority',
