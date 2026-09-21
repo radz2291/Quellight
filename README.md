@@ -2,8 +2,8 @@
 
 A private, single-user **conversation-first workspace** built on the
 [VICT framework](https://www.npmjs.com/org/victframework) (release set
-`vict-release-set@1/0.2.0`). Quellight is implemented as a SvelteKit
-application that **consumes only published `@victframework/*@0.2.0`
+`vict-release-set@1/0.3.0`). Quellight is implemented as a SvelteKit
+application that **consumes only published `@victframework/*@0.3.0`
 packages** from the public npm registry — no VICT source is vendored,
 linked, or patched.
 
@@ -16,12 +16,16 @@ Stage 07C Phase Q2: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (durab
 Stage 07C Phase Q3: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (governed confirmation ceremony and quiet memory inbox)
 Stage 07C Phase Q4: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (deterministic Shared World context assembly; H-1 remediated and independently re-verified closed)
 Stage 07C Phase Q5: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (Shared World inspection, user memory control, one durable global Memory Mode; B-1/H-1 remediated and independently re-verified closed)
-VICT-M-1: REMEDIATED — AWAITING INDEPENDENT VERIFICATION (truthful write-effect capability; adopted verification candidate `@victframework/*@0.3.0-rc.1`; `latest` remains 0.2.0; stable 0.3.0 not yet published)
-Stage 07C Phases Q6–Q7: NOT BEGUN (live-provider injection-resistance proof is Q6; contract and implementation planning is permitted — not begun)
-Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 closed; Q5 closed; M-1 remediated; Q6–Q7, 07D, 07E remaining)
+VICT-M-1: INDEPENDENTLY VERIFIED AND FORMALLY CLOSED (truthful write-effect capability `qlt.proposal.draft@2/write`; Quellight exact-pinned to the STABLE `@victframework/*@0.3.0` = `vict-release-set@1/0.3.0`, content ID `v1_5f3a074a…`; `latest` = 0.3.0; the `0.3.0-rc.1` candidate and its recovered evidence chain remain immutable historical record)
+Stage 07C Phase Q6: NOT BEGUN (the deterministic final verification and the bounded live-provider Shared World ceremony proof; contract and implementation planning is permitted — not begun at the starting SHA)
+Stage 07C Phase Q7: NOT BEGUN (independent audit; Q6 must be implemented first)
+Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 closed; Q5 closed; M-1 CLOSED — stable 0.3.0 adopted; Q6–Q7, 07D, 07E remaining)
 ```
 
-**VICT-M-1 remediation (2026-09-21, current):** Quellight adopted the
+**VICT-M-1 remediation (2026-09-21; superseded 2026-09-21 by the
+independent re-verification and the stable release — see the status block
+and `docs/report/QUELLIGHT-STAGE-07C-M-1-STABLE-REPIN.md`; the text below
+is preserved as its dated record):** Quellight adopted the
 coordinated verification candidate `@victframework/*@0.3.0-rc.1`
 (`vict-release-set@1/0.3.0-rc.1`, published through the trusted-OIDC
 workflow under the candidate tag `vict-0.3.0-rc`; `latest` remains
@@ -37,8 +41,13 @@ ceremony, memory modes, inspection, and agent isolation are unchanged.
 The authoritative ladder (`npm ci`; `verify:consumer`; `verify:quellight`;
 `npm audit --omit=dev`; `git diff --check`) ran exactly once, first-run
 green. Record: `docs/report/QUELLIGHT-STAGE-07C-M-1-REMEDIATION.md`;
-decision register D-Q-M1-1. M-1 is REMEDIATED — AWAITING INDEPENDENT
-VERIFICATION; Phase Q6 has not begun.
+decision register D-Q-M1-1. At that date M-1 was REMEDIATED — AWAITING
+INDEPENDENT VERIFICATION; it has since been independently re-verified
+(`CLEARED — CONDITIONAL STABLE RELEASE PERMITTED`) and FORMALLY CLOSED,
+and Quellight is exact-pinned to the stable `@victframework/*@0.3.0`
+(decision register D-Q-M1-2; the `0.3.0-rc.1` details below are the dated
+candidate record). Phase Q6 had not begun at that date; Q6 contract and
+implementation planning is now permitted and has not begun.
 
 Stage 07B is formally closed (2026-09-10) against the audited evidence
 SHA `1e0c0f53d62cde6d5031f865fe871ac1d41c9a9b`; see
@@ -142,11 +151,13 @@ component- and browser-proven), L-1 (ordering repaired to
 L-2 (real-browser stale refusal through the real governed boundary in the
 EXTENDED ceremony script), L-3 (Git-derived changed-file inventory,
 independently re-derived and compared by the new `verify:q4` gate wired
-into `verify:quellight` step 2e). M-1 remains recorded with its hard
-deadline (the truthful noncanonical/proposal VICT effect-class correction
-must land before the Phase Q6 live-provider proof and the Stage 07C final
-audit). Q4 has no live-provider path; live-model injection resistance
-remains Q6. Phase Q5 has not begun.
+into `verify:quellight` step 2e). M-1 remained recorded at that date
+with its hard deadline (the truthful noncanonical/proposal VICT
+effect-class correction had to land before the Phase Q6 live-provider
+proof and the Stage 07C final audit) — it has since been independently
+re-verified and FORMALLY CLOSED (2026-09-21; see the status block).
+Q4 has no live-provider path; live-model injection resistance
+remains Q6. Phase Q5 had not begun at this Q4 checkpoint.
 
 The Q4 independent verification (2026-09-16,
 `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q4-INDEPENDENT-VERIFICATION.md`,
@@ -203,8 +214,10 @@ of a duplicate source-thread link, while the active production
 correction path remains `applyCorrection`) is recorded as a Q5/backlog
 obligation only and is NOT repaired by the remediation. The pending-
 correction fixture limitation and the Q3 correction-proposal deferral
-remain preserved; M-1 keeps its hard deadline (before the Phase Q6
-live-provider proof and the Stage 07C final audit). A FUTURE turn-
+remain preserved; M-1 kept its hard deadline at this Q4-H1 checkpoint
+(before the Phase Q6 live-provider proof and the Stage 07C final audit)
+— it has since been independently re-verified and FORMALLY CLOSED
+(2026-09-21; see the status block). A FUTURE turn-
 steering direction (user steers an answer while it is generated, as an
 explicit operation targeting the exact active turn — never a second
 overlapping turn) is RECORDED in the decision register as a deferred
@@ -215,10 +228,15 @@ Q5-M-1 were remediated under the frozen remediation contract and
 independently re-verified closed — re-verification commit `6cf7dcd…`,
 formal closure `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q5-FORMAL-CLOSURE.md`
 at commit `6088fc3…`; L-1 and L-2 remain non-blocking carried issues;
-VICT-M-1 remains open); Phases Q6–Q7 have not begun. Q4 has no
-live-provider path; live-model injection resistance remains Q6 and is
-blocked until VICT-M-1 is resolved. VICT remains pinned at the 0.2.0
-boundary; VICT `0.1.0`/`0.1.1` remain published but
+VICT-M-1 was still open at that date — it has since been independently
+re-verified and FORMALLY CLOSED, 2026-09-21); at this Q4-H1 checkpoint
+Q6–Q7 had not begun. Q4 has no
+live-provider path; live-model injection resistance remains Q6 and was
+blocked until VICT-M-1 was resolved — that resolution completed
+2026-09-21 with the stable `@victframework/*@0.3.0` repin. VICT was
+pinned at the 0.2.0 boundary when Q1 adopted it and is now pinned at the
+STABLE `0.3.0` boundary (see the status block); VICT `0.1.0`/`0.1.1`
+remain published but
 are not adopted — any later change requires an explicit compatibility
 decision and fresh verification.
 
@@ -257,8 +275,10 @@ and no Memory Mode authority. The narrow L-3 defect (correction-kind
 proposal confirmation rollback) is repaired without authority expansion,
 and the three D-11 deferred Svelte warnings are repaired with a permanent
 zero-warning development-start gate (`verify:dev-start` fails on every
-project warning). M-1 remains open with its hard deadline (before the
-Phase Q6 live-provider proof and the Stage 07C final audit).
+project warning). M-1 remained open with its hard deadline at this Q5
+closure checkpoint (before the Phase Q6 live-provider proof and the
+Stage 07C final audit) — it has since been independently re-verified and
+FORMALLY CLOSED (2026-09-21; see the status block).
 
 Stage 07B/07C-Q1 deliver the **conversation foundation** on the governed
 mutation boundary: one pinned provider profile, real streaming
@@ -268,9 +288,12 @@ disconnect / reconnect / cancel / forced-restart behavior,
 Quellight-owned SQLite foundations, a minimal responsive accessible UI,
 and the governed `/api/act` ingress.
 
-It is **not yet** a persistent cognitive partner: Shared World meaning,
-ceremony (07C), retention/recovery completion (07D), and the exit gate
-(07E) are later stages. Transcript persistence is **not** Shared World
+It is **not yet** a persistent cognitive partner in full: Shared World
+meaning, the governed ceremony, deterministic context assembly, and user
+inspection/Memory Mode exist (Q2–Q5, each independently verified and
+formally closed); real-use retention/data-protection proof
+(retention/recovery completion, 07D) and the exit gate (07E) are later
+stages. Transcript persistence is **not** Shared World
 continuity.
 
 ## Quick start
@@ -291,7 +314,7 @@ store layout.
 ## Verification
 
 ```bash
-npm run verify:consumer        # registry-only dependency proof (N-1/N-2; 0.2.0 set)
+npm run verify:consumer        # registry-only dependency proof (N-1/N-2; 0.3.0 set)
 npm run verify:governance      # governed mutation boundary structural gate (Phase Q1)
 npm run verify:q2              # Q2 durable-schema conformance gate (schema/deterministic/repository/structural)
 npm run verify:q3              # Q3 governed-ceremony structural + deterministic gate
