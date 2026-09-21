@@ -932,3 +932,56 @@ and 07E have not begun. This entry is documentation-only.
   **The authoritative live-provider execution count remains ZERO.**
   **Phase Q7 remains BLOCKED — NOT BEGUN.**
 - **Date**: 2026-09-22. Documentation-only decision entry.
+
+## D-Q6-4 — Phase Q6 live ceremony proof executed once and FAILED: provider credential rejected; fresh owner decision required before any further live execution (documentation-only)
+
+- **What happened**: the ONE owner-authorized bounded live-provider
+  ceremony proof (N-C24, `npm run verify:q6:live` with
+  `QUELLIGHT_LIVE_PROOF=1` for the proof process only) was executed on
+  2026-09-21 at tree `8d1273bf51b1bfd2921cd51d0e9bdf1135ad9556`
+  (`HEAD == origin/main`, clean tree; the harness and workspace-helper
+  bytes matched the pushed safety-hardened tree exactly; VICT read-only
+  at `15338487…`). It **FAILED truthfully at its first provider turn
+  (t1)**: the frozen provider endpoint returned an HTTP 401
+  (authentication failure) response class, rejecting the configured
+  credential. The true process exit was **1** (captured directly, no
+  masking). Record:
+  `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-LIVE-PROOF-FAILURE.md`.
+- **Turn accounting**: 1 provider turn used of the allowed 6 (planned
+  3); t1 settled `failed` (`VICT_AGENT_TURN_FAILED`) in 1,020 ms; the
+  same-key t1 retry replayed the idempotent receipt with no second
+  provider turn; t2/t3 were never reached; zero retries were dispatched
+  and no fallback, model, prompt, timeout, or bound change occurred.
+- **Consequences within the frozen bounds**: ZERO durable Shared World
+  state was created (no proposal, no canonical record, no
+  confirmation); no model response exercised user authority; both
+  byte-level credential leak scans completed and found zero occurrences
+  (presence-only credential discipline held end to end — the value was
+  never printed, hashed, serialized, or persisted).
+- **Cleanup**: the harness's fail-closed dispose could not remove the
+  owned OS-temp root under Windows (reported as a proof failure, never
+  a note); safe manual cleanup afterward removed exactly that one
+  task-owned `qlt-q6-live-*` directory (verified) plus the temporary
+  launcher; no `qlt-*` directory, process, listener, or task file
+  remains; the operator `.quellight-data` directory was never accessed
+  (file mtime unchanged; metadata-only observation); the repository
+  tree is byte-clean.
+- **Execution accounting**: the authoritative live-provider execution
+  count is now **exactly ONE, and that execution FAILED**. The run was
+  NOT rerun (freeze §3: never silently re-run). **The one-execution
+  allowance of that authorization is CONSUMED; any further live
+  execution requires a fresh dated owner decision** (for example after
+  the operator refreshes or corrects their Ollama Cloud credential in
+  their own environment).
+- **Scope preserved**: no source, test, script, package, lockfile,
+  schema, or frozen-contract change before, during, or after the
+  execution; VICT read-only and untouched; no provider connectivity
+  probe, no Stage 07B live verifier, no second model/provider check.
+  The offline Q6 evidence (verify:q6, verify:stage7c, the 21
+  lifecycle/safety suites, the authoritative ladder) is unchanged and
+  remains green; only the live evidence item is outstanding.
+- **Status**: Q6 is `IMPLEMENTED — AWAITING INDEPENDENT Q7
+VERIFICATION` with the live proof EXECUTED ONCE and FAILED. Q6 is NOT
+  independently verified and NOT formally closed. **Phase Q7 remains
+  BLOCKED — NOT BEGUN. Stage 07 remains In Progress.**
+- **Date**: 2026-09-21. Documentation-only decision entry.
