@@ -352,12 +352,12 @@ console.log('\n[1] CONTRACT — frozen Q6 bounds, identity, envelope, status lan
     'contract',
     QLT_Q6_UNCHANGED_ENVELOPE.capabilityId === QLT_PROPOSAL_CAPABILITY_ID &&
       QLT_Q6_UNCHANGED_ENVELOPE.capabilityRevision === QLT_PROPOSAL_CAPABILITY_REVISION &&
-      QLT_Q6_UNCHANGED_ENVELOPE.capabilityRevision === '2' &&
+      QLT_Q6_UNCHANGED_ENVELOPE.capabilityRevision === '3' &&
       QLT_Q6_UNCHANGED_ENVELOPE.declaredEffect === 'write' &&
       QLT_Q6_UNCHANGED_ENVELOPE.hostQuietWritePolicyIdentity ===
         QLT_HOST_QUIET_WRITE_POLICY_IDENTITY &&
       QLT_Q6_UNCHANGED_ENVELOPE.actionInventory === 21 &&
-      QLT_Q6_UNCHANGED_ENVELOPE.agentProfileRevision === '5' &&
+      QLT_Q6_UNCHANGED_ENVELOPE.agentProfileRevision === '6' &&
       QLT_Q6_UNCHANGED_ENVELOPE.conversationInstructionsRevision === '4' &&
       QLT_Q6_UNCHANGED_ENVELOPE.maxToolCalls === 2,
   );
@@ -442,7 +442,7 @@ console.log('\n[2] ENVELOPE — exactly 21 actions, empty bindings, proposal-onl
   check(
     'the composition pins the agent profile revision 5 binding the revision-4 discretion instructions',
     'envelope',
-    compositionSource.includes("const PROFILE_REVISION = '5'") &&
+    compositionSource.includes("const PROFILE_REVISION = '6'") &&
       compositionSource.includes("const INSTRUCTIONS_REVISION = '4'") &&
       compositionSource.includes('maxToolCalls: 2, onLimit'),
   );
@@ -487,6 +487,54 @@ console.log('\n[2] ENVELOPE — exactly 21 actions, empty bindings, proposal-onl
 // ---------------------------------------------------------------------------
 console.log('\n[3] LIVE-GATE — explicit double gate; never invoked by automatic gates');
 {
+  // Execution-3 remediation structural gate: the live worker source carries
+  // the repaired boundaries (awaited evidence; full-composition reply
+  // restore; stable non-echoing failures).
+  const matrixSource = readFileSync('scripts/lib/q6-live-matrix.mjs', 'utf8');
+  const workerSource = readFileSync('scripts/lib/q6-live-worker.mjs', 'utf8');
+  const matrixLines = matrixSource.split('\n');
+  let floatingEvidenceCalls = 0;
+  for (const line of matrixLines) {
+    if (!line.includes('checkInvocationTruth(')) {
+      continue;
+    }
+    const isDeclaration = line.includes('const checkInvocationTruth');
+    const isAwaited = line.trimStart().startsWith('await checkInvocationTruth(');
+    if (!isDeclaration && !isAwaited) {
+      floatingEvidenceCalls += 1;
+    }
+  }
+  check(
+    'every evidence-check call site is awaited or the declaration (no floating calls)',
+    'live-gate',
+    floatingEvidenceCalls === 0 &&
+      (matrixSource.match(/await checkInvocationTruth\(/g) ?? []).length === 2,
+  );
+  check(
+    'the reply boundary is the full composition (the Execution-3 defect cannot reappear)',
+    'live-gate',
+    !matrixSource.includes('sharedWorld.restoreThread') &&
+      matrixSource.includes('.restoreThread(threadId)') &&
+      matrixSource.includes('composition2.restoreThread(threadB.id)'),
+  );
+  check(
+    'findings are stable non-echoing codes (no arbitrary error-message slicing)',
+    'live-gate',
+    !matrixSource.includes('safeCrashMessage') &&
+      !workerSource.includes('safeCrashMessage') &&
+      !matrixSource.includes('.slice(0, 300)') &&
+      matrixSource.includes('QLT_Q6_LIVE_MATRIX_FAILED') &&
+      matrixSource.includes('QLT_Q6_REPLY_RESTORE_FAILED') &&
+      matrixSource.includes('QLT_Q6_EVIDENCE_CHECK_FAILED'),
+  );
+  check(
+    'the worker deletion-free adoption boundary is intact',
+    'live-gate',
+    workerSource.includes('adoptQ6LiveWorkspace') &&
+      !workerSource.includes('rmSync') &&
+      !workerSource.includes('unlink'),
+  );
+
   const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
   const scriptNames = Object.keys(pkg.scripts ?? {});
   // No automatic script chain references the live gate.
@@ -573,8 +621,8 @@ console.log('\n[3] LIVE-GATE — explicit double gate; never invoked by automati
       'live-gate',
       parentLibSource.includes('QLT_Q6_LIVE_BOUNDS.maxOutputTokensPerTurn') &&
         parentLibSource.includes('QLT_Q6_LIVE_BOUNDS.turnDeadlineMs') &&
-        workerSource.includes('QLT_Q6_LIVE_BOUNDS.maxOutputTokensPerTurn') &&
-        workerSource.includes('QLT_Q6_LIVE_BOUNDS.turnDeadlineMs'),
+        matrixSource.includes('QLT_Q6_LIVE_BOUNDS.maxOutputTokensPerTurn') &&
+        matrixSource.includes('QLT_Q6_LIVE_BOUNDS.turnDeadlineMs'),
     );
     check(
       'package.json maps verify:q6:live to the live harness',
@@ -588,7 +636,7 @@ console.log('\n[3] LIVE-GATE — explicit double gate; never invoked by automati
       'the live harness scans persisted bytes for the credential value (leak scan present, parent-side after the worker exits)',
       'live-gate',
       parentLibSource.includes('scanForCredential(credential)') &&
-        workerSource.includes('includes(credential)'),
+        matrixSource.includes('includes(credential)'),
     );
     console.log('  live-gate: live harness present and fully enforced');
   } else {
@@ -648,9 +696,9 @@ console.log('\n[3] LIVE-GATE — explicit double gate; never invoked by automati
     workspacePassed += wcheck(
       'every composition is handed the owned root explicitly and identity-asserted pre-turn (worker-side)',
       workerSource.includes('adoptQ6LiveWorkspace') &&
-        (workerSource.match(/composeLive\(ownedDataDir\)/g) ?? []).length === 2 &&
-        workerSource.includes('requireCompositionDataDir') &&
-        workerSource.includes('requireResolvedEnvironmentDataDir'),
+        (matrixSource.match(/composeMatrix\(ownedRoot\)/g) ?? []).length === 2 &&
+        matrixSource.includes('requireCompositionDataDir') &&
+        matrixSource.includes('requireResolvedEnvironmentDataDir'),
     );
     workspacePassed += wcheck(
       'the parent/worker ordering is structural: scan and removal happen ONLY after the worker exits',
@@ -719,8 +767,13 @@ console.log('\n[3] LIVE-GATE — explicit double gate; never invoked by automati
     );
     workspacePassed += wcheck(
       'identity failures are stable and non-echoing, with environment pre-validation before composition (worker-side)',
-      (workerSource.match(/path not echoed/g) ?? []).length >= 3 &&
-        workerSource.includes('requireResolvedEnvironmentDataDir'),
+      (workerSource.match(/path not echoed/g) ?? []).length >= 1 &&
+        workerSource.includes('content not echoed') &&
+        workerSource.includes('details not echoed') &&
+        workerSource.includes('requireResolvedEnvironmentDataDir') &&
+        !matrixSource.includes('error.message') &&
+        !matrixSource.includes('String(error') &&
+        matrixSource.includes('Q6MatrixFailure'),
     );
     // S-2 scan hardening: an incomplete scan is never credential-clean.
     workspacePassed += wcheck(
