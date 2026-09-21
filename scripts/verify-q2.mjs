@@ -616,7 +616,7 @@ console.log('\n[5] RELEASE PINS — exact VICT 0.3.0 identity unchanged');
   check(
     'all declared @victframework/* pins are exactly 0.3.0',
     'pins',
-    victDeps.length >= 9 && victDeps.every(([, specifier]) => specifier === '0.3.1-rc.1'),
+    victDeps.length >= 9 && victDeps.every(([, specifier]) => specifier === '0.3.1-rc.2'),
   );
   const require = createRequire(join(process.cwd(), 'package.json'));
   const entry = require.resolve('@victframework/server');
@@ -625,7 +625,7 @@ console.log('\n[5] RELEASE PINS — exact VICT 0.3.0 identity unchanged');
   check(
     'installed @victframework/server is exactly 0.3.0',
     'pins',
-    serverPackage.version === '0.3.1-rc.1',
+    serverPackage.version === '0.3.1-rc.2',
   );
   console.log(`  pins: ${sections.pins} checks`);
 }

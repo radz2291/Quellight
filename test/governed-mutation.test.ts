@@ -203,7 +203,7 @@ describe('VICT 0.2.0 adoption gates (permanent)', () => {
   it('the recorded content identity is the sha256 of the sorted 13-member name@version list', () => {
     const versions = new Map(RELEASE_SET_MEMBERS.map((name) => [name, EXPECTED_VERSION]));
     expect(deriveContentId(versions)).toBe(CONTENT_ID);
-    expect(RELEASE_IDENTITY).toBe('vict-release-set@1/0.3.1-rc.1');
+    expect(RELEASE_IDENTITY).toBe('vict-release-set@1/0.3.1-rc.2');
   });
 
   it('the released audited mutation boundary is genuinely installed (public server package)', () => {

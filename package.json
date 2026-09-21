@@ -37,15 +37,15 @@
     "verify:q6:live": "node --import tsx scripts/verify-q6-live.mjs"
   },
   "dependencies": {
-    "@victframework/application": "0.3.1-rc.1",
-    "@victframework/contracts": "0.3.1-rc.1",
-    "@victframework/control": "0.3.1-rc.1",
-    "@victframework/mastra": "0.3.1-rc.1",
-    "@victframework/renderer-svelte": "0.3.1-rc.1",
-    "@victframework/runtime": "0.3.1-rc.1",
-    "@victframework/sdk": "0.3.1-rc.1",
-    "@victframework/server": "0.3.1-rc.1",
-    "@victframework/store-sqlite": "0.3.1-rc.1"
+    "@victframework/application": "0.3.1-rc.2",
+    "@victframework/contracts": "0.3.1-rc.2",
+    "@victframework/control": "0.3.1-rc.2",
+    "@victframework/mastra": "0.3.1-rc.2",
+    "@victframework/renderer-svelte": "0.3.1-rc.2",
+    "@victframework/runtime": "0.3.1-rc.2",
+    "@victframework/sdk": "0.3.1-rc.2",
+    "@victframework/server": "0.3.1-rc.2",
+    "@victframework/store-sqlite": "0.3.1-rc.2"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
@@ -53,7 +53,7 @@
     "@sveltejs/adapter-node": "^5.2.12",
     "@sveltejs/kit": "^2.20.0",
     "@sveltejs/vite-plugin-svelte": "^5.0.3",
-    "@victframework/scaffolder": "0.3.1-rc.1",
+    "@victframework/scaffolder": "0.3.1-rc.2",
     "happy-dom": "^15.11.7",
     "prettier": "^3.9.6",
     "svelte": "^5.28.0",

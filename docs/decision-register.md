@@ -1199,3 +1199,44 @@ credential access, **no Execution 4**, no Q7 work, no bound change, no
 provider change, no authority widening, no action or schema change.
 Q6 remains NOT independently verified and NOT formally closed; Stage 07
 remains In Progress.
+
+## D-Q6-9 — Mechanical candidate repin to the VICT verification candidate `0.3.1-rc.2` (version-only; the audit-remediation adoption; no live execution authorized)
+
+**Date:** 2026-09-22. **Governing decision:** the VICT audit-remediation
+contract (`docs/report/VICT-MODEL-FACING-CAPABILITY-SCHEMA-AUDIT-REMEDIATION-CONTRACT.md`,
+VICT; frozen alone before executable change) implemented the four
+findings of the independent `0.3.1-rc.1` verification (B-1 real
+serialized UTF-8 byte bound; B-2 symbol-keyed fields rejected never
+dropped; B-3 native proxy rejection before any inspection; B-4 raw
+prototype-key guard before upstream normalization) and published the
+coordinated candidate `vict-release-set@1/0.3.1-rc.2` (13 members,
+release source `a7b0018…`, publication run `35661159776` — ALL 13
+published, final same-run registry verification failed on CDN
+propagation lag; read-only successor evidence run `35662077320`
+terminal-`success` per the VICT rc.2 amendment).
+
+Adopted (mechanical, version-only):
+
+1. The ten exact `@victframework/*` pins moved `0.3.1-rc.1` →
+   `0.3.1-rc.2`; the lockfile was regenerated SOLELY through the public
+   registry; the central release-set identity
+   (`scripts/lib/release-set.mjs`) and the derived exact-pin gates were
+   updated; record:
+   `docs/report/QUELLIGHT-STAGE-07C-CANDIDATE-REPIN-0.3.1-RC.2.md`.
+2. NOTHING else changed: `qlt.proposal.draft@3`/`write`, profile
+   revision 6, instructions revision 4, the exact host quiet-write
+   policy, every ceremony/memory/authority/UI/provider/fixture/Q6
+   acceptance behavior are byte-preserved. The Q6 harness remediation
+   remains independently verified offline (prior record preserved).
+3. The authoritative offline ladder ran ONCE on the repinned tree,
+   first-run green (`npm ci`, `verify:consumer`, `verify:quellight`,
+   `verify:stage7c`, `npm audit --omit=dev`, `git diff --check`);
+   `verify:q6:live` NOT executed.
+
+NOT adopted / NOT authorized: no stable repin (`0.3.1` does not exist;
+`latest` remains `0.3.0`), no live-provider proof, no provider
+credential access, **no Execution 4**, no Q7 work, no bound change, no
+provider change, no authority widening. The `0.3.1-rc.2` candidate is a
+verification candidate AWAITING FRESH INDEPENDENT RE-VERIFICATION; Q6
+remains NOT formally closed; **Phase Q7 remains BLOCKED — NOT BEGUN**;
+Stage 07 remains In Progress.

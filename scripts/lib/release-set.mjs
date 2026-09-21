@@ -16,18 +16,25 @@
  * docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-EXECUTION-3-REMEDIATION-CONTRACT.md §5)
  * after its trusted-OIDC publication (run 35625570254 + the read-only
  * successor evidence run).
+ *
+ * Audit-remediation repin (2026-09-22): the recorded identity moved
+ * mechanically from `0.3.1-rc.1` to the verification candidate
+ * `0.3.1-rc.2` (VICT audit-remediation contract §5; publication run
+ * 35661159776 + the read-only successor evidence run 35662077320) — a
+ * version-only repin: no product, ceremony, memory, authority, UI,
+ * provider, fixture, or Q6 acceptance change.
  */
 
 import { createHash } from 'node:crypto';
 
 /** The recorded, authoritative public release identity: the coordinated
- * verification candidate `0.3.1-rc.1` — the B-1 model-facing
- * capability-schema remediation content, published under the candidate
- * tag `vict-0.3.1-rc` through the trusted-OIDC workflow (latest remains
- * `0.3.0`; stable `0.3.1` remains unpublished). */
-export const RELEASE_IDENTITY = 'vict-release-set@1/0.3.1-rc.1';
-export const CONTENT_ID = 'v1_b6e39c1f6d6f627c03dfe12e8eb4bc0b6b8bb7f7746b4b871cf00d3c7f7ae731';
-export const EXPECTED_VERSION = '0.3.1-rc.1';
+ * verification candidate `0.3.1-rc.2` — the B-1..B-4 model-facing
+ * capability-schema audit-remediation content, published under the
+ * candidate tag `vict-0.3.1-rc` through the trusted-OIDC workflow (latest
+ * remains `0.3.0`; stable `0.3.1` remains unpublished). */
+export const RELEASE_IDENTITY = 'vict-release-set@1/0.3.1-rc.2';
+export const CONTENT_ID = 'v1_55d1ad2eb0afaf0e487b3e0b457069e7cfe2ac0bdaed7d443a13287287f0e31f';
+export const EXPECTED_VERSION = '0.3.1-rc.2';
 
 /** The exact 13-member coordinated release set (recorded identity). */
 export const RELEASE_SET_MEMBERS = Object.freeze([
