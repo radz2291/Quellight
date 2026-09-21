@@ -883,3 +883,52 @@ and 07E have not begun. This entry is documentation-only.
   **Phase Q7 remains BLOCKED — NOT BEGUN.**
 - **Date**: 2026-09-22. Documentation-only decision entry (the
   remediation enforces the frozen contract's own requirements).
+
+## D-Q6-3 — Q6 live-harness safety hardening: unowned paths never deleted; incomplete scans fail closed (implementation-conformance correction; contract unchanged)
+
+- **S-1 (deletion of an unowned path)**: the live harness's
+  composition-directory-mismatch handler recursively deleted the
+  REJECTED path (`rmSync(resolve(composition.dataDir), …)`). A path
+  rejected for not being the owned workspace must never be deleted — a
+  future composition defect reporting the repository, operator data, or
+  an unrelated location could have destroyed unowned data. Corrected
+  (commit `6a81f66…`): the harness now has NO deletion capability at all
+  (`rmSync`, `node:fs`, and `path.resolve` imports removed); the only
+  permitted removal target is the verified owned workspace root through
+  the workspace dispose (exactly once, in the proof's finally); a
+  mismatch closes the composition, records a stable NON-ECHOING failure
+  (`path not echoed`), leaves the unowned path untouched, and the
+  RESOLVED environment's data directory is validated against the owned
+  root BEFORE composition construction (ownership chain: caller-passed
+  root → dataEnv → resolved environment → composition-reported dataDir,
+  asserted at every link, all before any provider turn).
+- **S-2 (swallowable final scan)**: the final credential scan treated
+  every exception as "nothing left to scan" and the helper treated an
+  absent workspace root as an empty CLEAN scan — invalid evidence.
+  Corrected: `scanForCredential` FAILS unless traversal COMPLETES
+  (absent root, non-directory root, unreadable entry, traversal error),
+  and the harness converts every scan exception into a proof failure
+  ("an incomplete scan is never treated as credential-clean") without
+  echoing the credential or file contents; cleanup still proceeds on
+  the owned root only, and an unremovable root remains a proof failure.
+- **Regression proof**: 10 new permanent offline safety suites
+  (`test/q6-live-workspace-safety.test.ts`) + the 11 lifecycle suites —
+  rejected foreign/repository/operator-named paths with sentinels are
+  provably untouched; no `rmSync`/`node:fs` in the harness; exactly one
+  owned dispose (sibling sentinels survive); absent-root and incomplete
+  scans fail; cleanup proceeds after scan failure; completed traversals
+  still detect nested canaries; the same-root initial/restart path stays
+  green. `verify:q6` grew to 100 checks (11 live-workspace) with both
+  behavioral suites wired in — S-1 and S-2 cannot regress unnoticed.
+- **Scope preserved**: no product source or durable schema change; no
+  package/lockfile change; provider identity, turn/token/deadline
+  bounds, ceremony behavior, authority rules, the frozen Q6 contract,
+  and all historical reports unchanged. Bounded FastGate set green:
+  format:check, typecheck, 21 suites, verify:q6 (100 checks),
+  verify:stage7c, git diff --check.
+- **Status**: Q6 remains
+  `IMPLEMENTED — AWAITING INDEPENDENT Q7 VERIFICATION` with the live
+  proof NOT executed. `OLLAMA_API_KEY` was neither present nor accessed.
+  **The authoritative live-provider execution count remains ZERO.**
+  **Phase Q7 remains BLOCKED — NOT BEGUN.**
+- **Date**: 2026-09-22. Documentation-only decision entry.

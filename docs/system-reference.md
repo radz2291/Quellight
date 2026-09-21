@@ -10,7 +10,7 @@ Stage 07C Phase Q2: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (durab
 Stage 07C Phase Q3: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (governed confirmation ceremony and quiet memory inbox)
 Stage 07C Phase Q4: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (deterministic Shared World context assembly; H-1 remediated and independently re-verified closed)
 Stage 07C Phase Q5: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (Shared World inspection, user memory control, one durable global Memory Mode; independent audit NOT VERIFIED — B-1/H-1; Q5-B-1/Q5-H-1/Q5-M-1 remediated per the frozen remediation contract and independently re-verified closed; L-3 repaired; zero-warning dev-start gate)
-Stage 07C Phase Q6: IMPLEMENTED — AWAITING INDEPENDENT Q7 VERIFICATION (deterministic final verification; offline gates and the N-C25 aggregate green; the bounded live-provider ceremony proof N-C24 BLOCKED — the operator credential OLLAMA_API_KEY is absent from the implementation environment; the live gate refused truthfully, exit 2; freeze commit ca82892…, zero amendments; implementation commits cd70bc8…, d25d9c3…; the authoritative ladder ran exactly once, first-run green, 0 vulnerabilities; a live-harness data-directory identity defect was found and remediated BEFORE any live execution — one verified disposable root shared by composition, restart, leak scan, and cleanup, with pre-turn identity assertions and fail-closed cleanup, commit c0e5a93…; the live execution count remains zero)
+Stage 07C Phase Q6: IMPLEMENTED — AWAITING INDEPENDENT Q7 VERIFICATION (deterministic final verification; offline gates and the N-C25 aggregate green; the bounded live-provider ceremony proof N-C24 BLOCKED — the operator credential OLLAMA_API_KEY is absent from the implementation environment; the live gate refused truthfully, exit 2; freeze commit ca82892…, zero amendments; implementation commits cd70bc8…, d25d9c3…; the authoritative ladder ran exactly once, first-run green, 0 vulnerabilities; a live-harness data-directory identity defect was found and remediated BEFORE any live execution — one verified disposable root shared by composition, restart, leak scan, and cleanup, with pre-turn identity assertions and fail-closed cleanup, commit c0e5a93…; a final safety hardening made ownership and scanning fail-closed — unowned paths are never deleted or echoed and incomplete credential scans fail the proof, commit 6a81f66…; the live execution count remains zero)
 Stage 07C Phase Q7: BLOCKED — NOT BEGUN (permitted only after the Q6 live proof has executed exactly once and passed)
 Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 closed; Q5 closed; M-1 CLOSED — stable 0.3.0 adopted; Q6 implemented — live proof blocked; Q7, 07D, 07E remaining)
 ```
@@ -104,6 +104,25 @@ Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed;
   `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-LIVE-DATA-ISOLATION-REMEDIATION.md`.
   The live execution count remains ZERO; Q7 remains BLOCKED — NOT
   BEGUN.
+
+- **Phase Q6 live-harness safety hardening (2026-09-22): final bounded
+  correction; contract, bounds, provider identity, ceremony, and
+  authority unchanged.** Two safety defects were corrected fail-closed
+  (commit `6a81f66…`; record
+  `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-LIVE-HARNESS-SAFETY-HARDENING.md`):
+  (S-1) the live harness no longer recursively deletes ANY unowned or
+  rejected path (the `rmSync`/`node:fs` capability is removed from the
+  script entirely — only the verified owned workspace root may be
+  removed, through the workspace dispose, exactly once); identity
+  failures are stable and non-echoing, and the RESOLVED environment's
+  data directory is validated against the owned root BEFORE composition
+  is constructed; (S-2) a credential scan that cannot COMPLETE (absent
+  root, non-directory root, unreadable entry, traversal error) is now a
+  PROOF FAILURE — never a clean result — while cleanup still proceeds on
+  the owned root. Permanent offline evidence: 10 new safety suites plus
+  the 11 lifecycle suites (21 total), and `verify:q6` grew to 100 checks
+  (11 live-workspace) with the behavioral suites wired in. The live
+  execution count remains ZERO; Q7 remains BLOCKED — NOT BEGUN.
 
 - **Phase Q5 — Shared World inspection and user memory control The pinned capability advanced to
   `qlt.proposal.draft@2` with the truthful effect class `write` (the
