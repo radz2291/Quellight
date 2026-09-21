@@ -448,9 +448,7 @@ describe('qlt.proposal.draft@3 — the exact model-facing presentation', () => {
     };
     // The provider-facing input declaration is the EXACT presentation:
     const exposed = (
-      tool.inputSchema['~standard'].jsonSchema.input as (options?: {
-        target?: string;
-      }) => unknown
+      tool.inputSchema['~standard'].jsonSchema.input as (options?: { target?: string }) => unknown
     )({ target: 'draft-07' });
     expect(same(exposed, proposalDraftInputContract.descriptiveJsonSchema)).toBe(true);
     const serialized = JSON.stringify(exposed);
