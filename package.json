@@ -33,7 +33,8 @@
     "verify:q4": "node --import tsx scripts/verify-q4.mjs",
     "verify:q5": "node --import tsx scripts/verify-q5.mjs",
     "verify:q6": "node --import tsx scripts/verify-q6.mjs",
-    "verify:stage7c": "node --import tsx scripts/verify-stage7c.mjs"
+    "verify:stage7c": "node --import tsx scripts/verify-stage7c.mjs",
+    "verify:q6:live": "node --import tsx scripts/verify-q6-live.mjs"
   },
   "dependencies": {
     "@victframework/application": "0.3.0",
