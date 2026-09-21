@@ -15,7 +15,7 @@
  *    is re-added to the composition;
  *  - an effectful action identifier referenced by the UI is not declared
  *    in the compiled plan (undeclared effectful action);
- *  - any VICT dependency is not the exact coordinated 0.3.0-rc.1 release pin;
+ *  - any VICT dependency is not the exact coordinated 0.3.0 release pin;
  *  - the lockfile resolves any dependency outside the public registry;
  *  - YAML presence is treated as governance evidence (no YAML file or
  *    YAML parser participates in the application definition);
@@ -160,7 +160,7 @@ console.log('\n[4] undeclared-effectful-action gate (UI identifiers ⊆ compiled
   );
 }
 
-// 5. Dependency graph: exact 0.3.0-rc.1 coordinated set, registry-only.
+// 5. Dependency graph: exact 0.3.0 coordinated set, registry-only.
 console.log('\n[5] dependency-graph conformance');
 {
   const packageJson = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf8'));
@@ -210,7 +210,7 @@ console.log('\n[6] YAML is not treated as governance evidence');
   note('authoritative representation is the typed definition + compiled plan; no YAML file used');
 }
 
-// 7. The adopted 0.3.0-rc.1 boundary is genuinely installed (no local stand-in).
+// 7. The adopted 0.3.0 boundary is genuinely installed (no local stand-in).
 console.log('\n[7] released boundary provenance (public package, not a local checkout)');
 {
   const entry = require.resolve('@victframework/server');

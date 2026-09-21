@@ -26,7 +26,7 @@
  *      that no module aliasing or `@victframework` resolution override
  *      exists in `vite.config.ts` / `svelte.config.js` / `tsconfig.json`,
  *      and that the renderer resolves (realpath) from THIS repository's
- *      `node_modules` at the released `0.3.0-rc.1` with its intact TypeScript
+ *      `node_modules` at the released `0.3.0` with its intact TypeScript
  *      source (`export interface` present in `mount.svelte.ts`) — i.e.
  *      the package is not replaced, aliased, vendored, or resolved from
  *      a local VICT checkout.
@@ -163,10 +163,10 @@ const rendererPackage = JSON.parse(
 );
 if (
   rendererPackage.name !== '@victframework/renderer-svelte' ||
-  rendererPackage.version !== '0.3.0-rc.1'
+  rendererPackage.version !== '0.3.0'
 ) {
   fail(
-    `released renderer identity changed: ${rendererPackage.name}@${rendererPackage.version} (expected @victframework/renderer-svelte@0.3.0-rc.1).`,
+    `released renderer identity changed: ${rendererPackage.name}@${rendererPackage.version} (expected @victframework/renderer-svelte@0.3.0).`,
   );
 }
 const mountSource = readFileSync(join(expectedRendererRoot, 'src', 'mount.svelte.ts'), 'utf8');

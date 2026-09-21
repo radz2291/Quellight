@@ -31,7 +31,7 @@
  *                       declares exactly its four mutations and the Q3
  *                       memory resource exactly its thirteen ops.
  *   5. PINS           — package.json @victframework/* deps all exactly
- *                       0.3.0-rc.1; installed @victframework/server is 0.3.0-rc.1
+ *                       0.3.0; installed @victframework/server is 0.3.0
  *                       (the full gate remains `verify:consumer`).
  *   6. WIRING         — `verify:q2` exists in package.json and the
  *                       aggregate verifier references this script.
@@ -606,7 +606,7 @@ await (async () => {
 // ---------------------------------------------------------------------------
 // 5. RELEASE PINS (light; the full gate remains verify:consumer)
 // ---------------------------------------------------------------------------
-console.log('\n[5] RELEASE PINS — exact VICT 0.3.0-rc.1 identity unchanged');
+console.log('\n[5] RELEASE PINS — exact VICT 0.3.0 identity unchanged');
 {
   const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
   const victDeps = Object.entries({
@@ -614,18 +614,18 @@ console.log('\n[5] RELEASE PINS — exact VICT 0.3.0-rc.1 identity unchanged');
     ...packageJson.devDependencies,
   }).filter(([name]) => name.startsWith('@victframework/'));
   check(
-    'all declared @victframework/* pins are exactly 0.3.0-rc.1',
+    'all declared @victframework/* pins are exactly 0.3.0',
     'pins',
-    victDeps.length >= 9 && victDeps.every(([, specifier]) => specifier === '0.3.0-rc.1'),
+    victDeps.length >= 9 && victDeps.every(([, specifier]) => specifier === '0.3.0'),
   );
   const require = createRequire(join(process.cwd(), 'package.json'));
   const entry = require.resolve('@victframework/server');
   const packageDir = entry.replace(/\\/g, '/').split('/dist/')[0];
   const serverPackage = JSON.parse(readFileSync(join(packageDir, 'package.json'), 'utf8'));
   check(
-    'installed @victframework/server is exactly 0.3.0-rc.1',
+    'installed @victframework/server is exactly 0.3.0',
     'pins',
-    serverPackage.version === '0.3.0-rc.1',
+    serverPackage.version === '0.3.0',
   );
   console.log(`  pins: ${sections.pins} checks`);
 }

@@ -2,7 +2,7 @@
  * VICT-M-1 focused integration evidence (frozen contract
  * docs/report/QUELLIGHT-STAGE-07C-M-1-REMEDIATION.md, controls 15–16).
  *
- * Through the REAL Quellight composition — the released 0.3.0-rc.1 VICT
+ * Through the REAL Quellight composition — the released 0.3.0 VICT
  * bridge, the pinned `qlt.proposal.draft@2` capability truthfully declared
  * `write`, and the exact composition-supplied host quiet-write policy — a
  * scripted agent turn must:

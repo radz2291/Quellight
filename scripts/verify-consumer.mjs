@@ -3,18 +3,18 @@
  * Quellight consumer verification — registry-only dependency proof (N-1)
  * and the unreachable-registry negative control (N-2). Stage 07C Phase
  * Q1: the adopted release identity is the coordinated, independently
- * adopted public set `@victframework/*@0.3.0-rc.1`
- * (`vict-release-set@1/0.3.0-rc.1`, content ID
+ * adopted public set `@victframework/*@0.3.0`
+ * (`vict-release-set@1/0.3.0`, content ID
  * `v1_7a557983114b0743334061bd1f02ccd14f22e29f3a86697a4fd09b1722a8f172`).
  *
  * Passes ONLY when:
  *  1. every @victframework dependency in package.json is the exact public
- *     release pin (`@victframework/*@0.3.0-rc.1`) — no range, tag, workspace,
+ *     release pin (`@victframework/*@0.3.0`) — no range, tag, workspace,
  *     file, git, or local-path specifier;
  *  2. the lockfile contains no workspace:/file:/link:/git dependency and
  *     resolves @victframework packages from the public npm registry with
  *     integrity metadata — and NO installed VICT package version is
- *     anything but exactly 0.3.0-rc.1 (a mixed set fails);
+ *     anything but exactly 0.3.0 (a mixed set fails);
  *  3. the coordinated content identity re-derives from the PUBLIC
  *     REGISTRY's published versions of the full 13-member set;
  *  4. each package is actually fetchable from the registry right now
@@ -68,7 +68,7 @@ if (victDeps.length < 9) {
 }
 
 // 2. Lockfile hygiene: no forbidden protocols, registry-only resolution,
-//    and the FULL resolved graph (direct + transitive) at exactly 0.3.0-rc.1.
+//    and the FULL resolved graph (direct + transitive) at exactly 0.3.0.
 console.log('\n[2] lockfile hygiene (no workspace:/file:/link:/git, registry URLs only)');
 const lockPackages = Object.entries(lockfile.packages ?? {});
 for (const [key, entry] of lockPackages) {
