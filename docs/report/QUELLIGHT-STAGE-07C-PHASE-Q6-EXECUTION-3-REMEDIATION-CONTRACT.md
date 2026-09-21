@@ -43,23 +43,23 @@ retrieval with exactly the one recorded finding.
 
 Two independent Execution-3 defects are therefore in scope:
 
-* **B-1 (framework presentation; remediated in VICT):** the model never
+- **B-1 (framework presentation; remediated in VICT):** the model never
   received the proposal tool's input structure (generic
   `{ "type": "object" }` schema; generic description), so its attempts
   were empty or single-field and every attempt was truthfully rejected by
   the authoritative contract fence. Zero durable effect.
-* **H-1' (this remediation; the wrong transcript-restore receiver):** the
+- **H-1' (this remediation; the wrong transcript-restore receiver):** the
   worker called `restoreThread` on the Shared World store instead of the
   full composition.
 
 Additional harness defects confirmed by audit and remediated here:
 
-* **M-1 (unawaited asynchronous evidence checks):** the worker called the
+- **M-1 (unawaited asynchronous evidence checks):** the worker called the
   asynchronous durable-invocation checker for proposal-bearing turns
   WITHOUT awaiting it (`checkInvocationTruth(composition, t1.turnId,
-  't1')` and the t2 call) — evidence checks could race or escape result
+'t1')` and the t2 call) — evidence checks could race or escape result
   accounting entirely.
-* **M-2 (unsafe crash-message derivation):** the worker derived a finding
+- **M-2 (unsafe crash-message derivation):** the worker derived a finding
   from a bounded slice of arbitrary `error.message`
   (`String(error…).slice(0, 300)`), so raw provider, fixture, path,
   proposal, response, or credential-derived error text could enter the
@@ -77,15 +77,15 @@ PRESERVED UNCHANGED and are never weakened.
 
 ## 3. Awaited evidence rules (frozen)
 
-* EVERY asynchronous evidence function in the live worker is `await`ed.
+- EVERY asynchronous evidence function in the live worker is `await`ed.
   The durable-invocation-truth checks on proposal-bearing turns are part
   of the governed evidence chain: awaited, failure-recorded, and settled
   BEFORE result serialization.
-* A failing or rejecting evidence check produces the stable code
+- A failing or rejecting evidence check produces the stable code
   `QLT_Q6_EVIDENCE_CHECK_FAILED` as a finding; it can never vanish
   through a floating promise, and it can never crash the worker past the
   result record.
-* A STRUCTURAL GATE (part of the permanent offline verification) fails on
+- A STRUCTURAL GATE (part of the permanent offline verification) fails on
   any known floating call of an evidence function in the live worker
   source, and BEHAVIORAL TESTS prove that an asynchronous evidence
   failure enters the final findings before result serialization.
@@ -127,37 +127,37 @@ Q6 harness repairs is preserved.
 
 Because the bound contract/model-facing behavior changes:
 
-* proposal capability `qlt.proposal.draft`: revision **2 → 3**; declared
+- proposal capability `qlt.proposal.draft`: revision **2 → 3**; declared
   effect REMAINS `write`; the input/output contract identities and their
   authoritative `Contract.parse` semantics remain unchanged-or-stricter;
-* the EXACT host quiet-write policy entry (`qlt.host-policy.quiet-write@1`,
+- the EXACT host quiet-write policy entry (`qlt.host-policy.quiet-write@1`,
   exactly one entry) references the capability at revision **3**;
-* agent profile `agent.quellight.conversation`: revision **5 → 6**;
-* conversation instructions artifact: REMAINS revision **4** (the
+- agent profile `agent.quellight.conversation`: revision **5 → 6**;
+- conversation instructions artifact: REMAINS revision **4** (the
   D-Q6-6 rule-guided discretion policy is unchanged);
-* the authority envelope keeps EXACTLY ONE model capability and
+- the authority envelope keeps EXACTLY ONE model capability and
   `maxToolCalls: 2`;
-* ADDED: no authority, no read surface, no confirmation power, no
+- ADDED: no authority, no read surface, no confirmation power, no
   action, no migration, no provider change, no bound change.
 
 The model-facing presentation added to the capability (per the VICT
 candidate):
 
-* a bounded description stating that the tool drafts an INERT proposal
+- a bounded description stating that the tool drafts an INERT proposal
   for user review, NEVER confirms or saves canonical memory, accepts
   ONLY `claim`, `commitment`, or `open_loop`, and must receive the
   correct content shape for the selected kind;
-* an EXACT closed input schema:
-  * `proposalKind: 'claim'` → `content`: `subject`, `epistemicType`,
+- an EXACT closed input schema:
+  - `proposalKind: 'claim'` → `content`: `subject`, `epistemicType`,
     `honestyState`, `confidence`, `statement` (all required; unknown
     fields refused);
-  * `proposalKind: 'commitment'` → `content`: `commitmentKey`,
+  - `proposalKind: 'commitment'` → `content`: `commitmentKey`,
     `statement` (all required; unknown fields refused);
-  * `proposalKind: 'open_loop'` → `content`: `subject`, `loopKind`,
+  - `proposalKind: 'open_loop'` → `content`: `subject`, `loopKind`,
     `detail` (all required; unknown fields refused);
-* a passive output-schema representation of the closed accepted/refused
+- a passive output-schema representation of the closed accepted/refused
   union ("where applicable");
-* authoritative `Contract.parse` remains unchanged or stricter than the
+- authoritative `Contract.parse` remains unchanged or stricter than the
   presentation.
 
 ## 7. Full offline worker-path proof (frozen)
@@ -195,13 +195,13 @@ not independently verified and not formally closed.
 
 ## 9. Lane ownership (frozen)
 
-* **Lane C** — capability revision/schema adoption (proposal capability
+- **Lane C** — capability revision/schema adoption (proposal capability
   revision 3 + presentation; composition profile revision 6; frozen
   declarative envelope data; focused suites).
-* **Lane D** — worker boundary, awaited evidence, stable failures, and
+- **Lane D** — worker boundary, awaited evidence, stable failures, and
   the offline matrix proof (worker refactor with mode injection;
   structural gate; behavioral fault-injection suites).
-* **Integration lane** — candidate repin, registry-only lockfile,
+- **Integration lane** — candidate repin, registry-only lockfile,
   authoritative offline ladder, documentation.
 
 If isolated parallel workers are unavailable, the lanes execute

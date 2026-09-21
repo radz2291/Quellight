@@ -16,10 +16,6 @@ import {
   type ProposalDraftInvocationContext,
 } from '../src/lib/agent/proposal-capability';
 import type { QltProposal } from '../src/lib/sharedworld/meaning-contract';
-import {
-  proposalDraftInputContract,
-  proposalDraftOutputContract,
-} from '../src/lib/agent/proposal-capability';
 import { bridgeCapabilityToolToMastra } from '@victframework/mastra';
 
 /**
@@ -388,9 +384,9 @@ describe('qlt.proposal.draft@3 — the exact model-facing presentation', () => {
     )['content'] as Record<string, unknown>;
     expect(same(commitmentContent['required'], ['commitmentKey', 'statement'])).toBe(true);
     expect(commitmentContent['additionalProperties']).toBe(false);
-    const openLoopContent = (branchOf(schema, 'open_loop')['properties'] as Record<string, unknown>)[
-      'content'
-    ] as Record<string, unknown>;
+    const openLoopContent = (
+      branchOf(schema, 'open_loop')['properties'] as Record<string, unknown>
+    )['content'] as Record<string, unknown>;
     expect(same(openLoopContent['required'], ['subject', 'loopKind', 'detail'])).toBe(true);
     expect(openLoopContent['additionalProperties']).toBe(false);
   });
@@ -451,10 +447,21 @@ describe('qlt.proposal.draft@3 — the exact model-facing presentation', () => {
       description?: string;
     };
     // The provider-facing input declaration is the EXACT presentation:
-    const exposed = tool.inputSchema['~standard'].jsonSchema.input({ target: 'draft-07' });
+    const exposed = (
+      tool.inputSchema['~standard'].jsonSchema.input as (options?: {
+        target?: string;
+      }) => unknown
+    )({ target: 'draft-07' });
     expect(same(exposed, proposalDraftInputContract.descriptiveJsonSchema)).toBe(true);
     const serialized = JSON.stringify(exposed);
-    for (const token of ['proposalKind', 'content', 'required', 'claim', 'commitment', 'open_loop']) {
+    for (const token of [
+      'proposalKind',
+      'content',
+      'required',
+      'claim',
+      'commitment',
+      'open_loop',
+    ]) {
       expect(serialized).toContain(token);
     }
     // The bounded description rides the REAL tool description:

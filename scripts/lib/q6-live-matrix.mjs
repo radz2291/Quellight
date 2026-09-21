@@ -220,11 +220,24 @@ export function offlineModelFactoryFor(script) {
                 toolCallOccurrence += 1;
                 const toolCallId = `offline-call-${step.toolName}-${toolCallOccurrence}`;
                 const inputJson = JSON.stringify(step.args ?? {});
-                controller.enqueue({ type: 'tool-input-start', id: toolCallId, toolName: step.toolName });
+                controller.enqueue({
+                  type: 'tool-input-start',
+                  id: toolCallId,
+                  toolName: step.toolName,
+                });
                 controller.enqueue({ type: 'tool-input-delta', id: toolCallId, delta: inputJson });
                 controller.enqueue({ type: 'tool-input-end', id: toolCallId });
-                controller.enqueue({ type: 'tool-call', toolCallId, toolName: step.toolName, input: inputJson });
-                controller.enqueue({ type: 'finish', finishReason: 'tool-calls', usage: OFFLINE_USAGE });
+                controller.enqueue({
+                  type: 'tool-call',
+                  toolCallId,
+                  toolName: step.toolName,
+                  input: inputJson,
+                });
+                controller.enqueue({
+                  type: 'finish',
+                  finishReason: 'tool-calls',
+                  usage: OFFLINE_USAGE,
+                });
                 controller.close();
                 return;
               }
@@ -405,7 +418,8 @@ export async function runQ6LiveMatrix(options) {
      */
     const checkInvocationTruth = async (truthComposition, turnId, label) => {
       try {
-        const invocations = await truthComposition.stores.invocations.listInvocationsForTurn(turnId);
+        const invocations =
+          await truthComposition.stores.invocations.listInvocationsForTurn(turnId);
         const invocation = invocations.at(-1);
         if (invocation === undefined) {
           fail(`${label}: no durable invocation record exists for the turn`);
@@ -449,8 +463,9 @@ export async function runQ6LiveMatrix(options) {
     ) => {
       phase = label;
       const before = await canonicalTotals(sharedWorld);
-      const proposalsBefore = (await sharedWorld.meaning.listProposals({ sourceThreadId: swThreadId }))
-        .total;
+      const proposalsBefore = (
+        await sharedWorld.meaning.listProposals({ sourceThreadId: swThreadId })
+      ).total;
       providerTurnCount += 1;
       const turn = await startTurnAdmitted(turnComposition, swThreadId, mastraThreadId, input, key);
       const settled = await awaitTerminal(turnComposition, turn.turnId);
@@ -463,8 +478,12 @@ export async function runQ6LiveMatrix(options) {
       if (settled.elapsedMs > QLT_Q6_LIVE_BOUNDS.turnDeadlineMs + 5_000) {
         fail(`${label} exceeded the per-turn deadline bound (elapsed ${settled.elapsedMs}ms)`);
       }
-      const invocations = await turnComposition.stores.invocations.listInvocationsForTurn(turn.turnId);
-      const proposalsAfter = await sharedWorld.meaning.listProposals({ sourceThreadId: swThreadId });
+      const invocations = await turnComposition.stores.invocations.listInvocationsForTurn(
+        turn.turnId,
+      );
+      const proposalsAfter = await sharedWorld.meaning.listProposals({
+        sourceThreadId: swThreadId,
+      });
       const after = await canonicalTotals(sharedWorld);
       turnRecords.push({
         id: label,
@@ -679,13 +698,17 @@ export async function runQ6LiveMatrix(options) {
       'q6-live-confirm-1',
     );
     if (confirmOutcome.replayed !== false || confirmOutcome.ok !== true) {
-      fail(`the governed confirmation failed truthfully (code ${confirmOutcome.code ?? 'unknown'})`);
+      fail(
+        `the governed confirmation failed truthfully (code ${confirmOutcome.code ?? 'unknown'})`,
+      );
     } else {
       note('the real-user confirmation crossed the governed ceremony (only the t2 commitment)');
     }
     let canonical = await canonicalTotals(composition.sharedWorld);
     if (canonical.total !== 1) {
-      fail(`expected EXACTLY ONE canonical record after the confirmation, found ${canonical.total}`);
+      fail(
+        `expected EXACTLY ONE canonical record after the confirmation, found ${canonical.total}`,
+      );
     }
     const canonicalCommitment = canonical.commitments.rows[0];
     if (canonicalCommitment === undefined) {
@@ -738,7 +761,9 @@ export async function runQ6LiveMatrix(options) {
 
     // ---- restart against the SAME verified owned root -----------------------
     phase = 'restart';
-    const assemblyEvidenceBefore = await composition.sharedWorld.getContextAssemblyByTurn(t2.turnId);
+    const assemblyEvidenceBefore = await composition.sharedWorld.getContextAssemblyByTurn(
+      t2.turnId,
+    );
     const restartBeganAt = clock();
     await composition.close();
     {
@@ -772,7 +797,9 @@ export async function runQ6LiveMatrix(options) {
     } else {
       note('restart preserved the record lineage');
     }
-    const assemblyEvidenceAfter = await composition2.sharedWorld.getContextAssemblyByTurn(t2.turnId);
+    const assemblyEvidenceAfter = await composition2.sharedWorld.getContextAssemblyByTurn(
+      t2.turnId,
+    );
     if (JSON.stringify(assemblyEvidenceAfter) !== JSON.stringify(assemblyEvidenceBefore)) {
       fail('restart did not preserve the immutable per-turn assembly evidence');
     } else {
@@ -859,7 +886,9 @@ export async function runQ6LiveMatrix(options) {
         JSON.stringify(commitmentBeforeConflict.content) ||
       commitmentAfterConflict.status !== 'active'
     ) {
-      fail('the hypothetical silently changed the standing commitment (identity, version, or bytes)');
+      fail(
+        'the hypothetical silently changed the standing commitment (identity, version, or bytes)',
+      );
     } else {
       note(
         'the hypothetical left the standing commitment unchanged (identity, version, bytes) while it stayed available',
@@ -902,7 +931,9 @@ export async function runQ6LiveMatrix(options) {
         `authority violation: ${canonicalFinal.total} canonical records exist (expected exactly 1)`,
       );
     } else {
-      note('authority: exactly ONE canonical record exists — created only by the user confirmation');
+      note(
+        'authority: exactly ONE canonical record exists — created only by the user confirmation',
+      );
     }
     const allFramesText = [];
     for (const streamId of [t1.streamId, t2.streamId, t3.streamId, t4.streamId, t5.streamId]) {

@@ -206,8 +206,7 @@ const proposalInputPresentation = {
     proposalKind: {
       type: 'string',
       enum: ['claim', 'commitment', 'open_loop'],
-      description:
-        "The kind of proposal to draft: 'claim', 'commitment', or 'open_loop'.",
+      description: "The kind of proposal to draft: 'claim', 'commitment', or 'open_loop'.",
     },
     content: { type: 'object' },
   },
