@@ -10,8 +10,9 @@ Stage 07C Phase Q2: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (durab
 Stage 07C Phase Q3: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (governed confirmation ceremony and quiet memory inbox)
 Stage 07C Phase Q4: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (deterministic Shared World context assembly; H-1 remediated and independently re-verified closed)
 Stage 07C Phase Q5: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (Shared World inspection, user memory control, one durable global Memory Mode; independent audit NOT VERIFIED — B-1/H-1; Q5-B-1/Q5-H-1/Q5-M-1 remediated per the frozen remediation contract and independently re-verified closed; L-3 repaired; zero-warning dev-start gate)
-Stage 07C Phases Q6–Q7: NOT BEGUN (live-provider injection-resistance proof is Q6; contract and implementation planning is permitted — not begun)
-Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 closed; Q5 closed; M-1 CLOSED — stable 0.3.0 adopted; Q6–Q7, 07D, 07E remaining)
+Stage 07C Phase Q6: IMPLEMENTED — AWAITING INDEPENDENT Q7 VERIFICATION (deterministic final verification; offline gates and the N-C25 aggregate green; the bounded live-provider ceremony proof N-C24 BLOCKED — the operator credential OLLAMA_API_KEY is absent from the implementation environment; the live gate refused truthfully, exit 2; freeze commit ca82892…, zero amendments; implementation commits cd70bc8…, d25d9c3…; the authoritative ladder ran exactly once, first-run green, 0 vulnerabilities)
+Stage 07C Phase Q7: BLOCKED — NOT BEGUN (permitted only after the Q6 live proof has executed exactly once and passed)
+Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 closed; Q5 closed; M-1 CLOSED — stable 0.3.0 adopted; Q6 implemented — live proof blocked; Q7, 07D, 07E remaining)
 ```
 
 - **VICT-M-1 (2026-09-21): INDEPENDENTLY VERIFIED AND FORMALLY
@@ -37,7 +38,50 @@ Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed;
   `docs/report/VICT-M-1-STABLE-RELEASE-AND-FORMAL-CLOSURE.md`;
   re-verification record:
   `docs/report/VICT-M-1-INDEPENDENT-RE-VERIFICATION.md` (VICT);
-  decision register D-Q-M1-1/D-Q-M1-2. Phase Q6 has not begun.
+  decision register D-Q-M1-1/D-Q-M1-2. At that date Phase Q6 had not
+  begun; Q6 is now implemented (see the Phase Q6 entry below and the
+  current status block).
+
+- **Phase Q6 — deterministic final verification and the bounded
+  live-provider Shared World ceremony proof (2026-09-22):
+  IMPLEMENTED — AWAITING INDEPENDENT Q7 VERIFICATION; the live proof is
+  BLOCKED (credential absent).** Contract freeze `ca82892…` (committed
+  alone; zero amendments; frozen declarative module
+  `src/lib/sharedworld/q6-contract.ts`) and implementation record
+  `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-IMPLEMENTATION.md`
+  (implementation commits `cd70bc8…`, `d25d9c3…`). Q6 is verification
+  hardening ONLY: no new capability, action, migration, or agent
+  authority (the envelope stays exactly `qlt.proposal.draft@2/write`
+  with the one-entry quiet-write policy; the plan stays at 21 actions;
+  migration bookkeeping stays `[1,2,3,4]`). New permanent gates:
+  `verify:q6` (89 checks: frozen bounds/identity/envelope, live-gate
+  refusal structure and never-automatic enforcement, durable invocation
+  truth, epistemic inertness, fresh-thread C1 recovery with zero
+  transcript pollution, conflict non-mutation, hostile-memory
+  containment, restart preservation, the fail-closed isolation seam,
+  wiring), `verify:stage7c` (the N-C25 aggregate: the N-C1..N-C25
+  coverage manifest with missing-constituent and missing-row negative
+  controls, the lockfile re-derivation of the stable release identity,
+  and the five focused Q2–Q5+Q6 gates — never the large suites twice,
+  never the live gate), and `verify:q6:live` (the N-C24 bounded live
+  ceremony, double-gated, never automatic). The authoritative ladder
+  (`npm ci`; `verify:consumer`; `verify:quellight` incl. the EXTENDED
+  real-browser ceremony with the Q6 fresh-conversation continuity
+  scenario; `verify:stage7c`; `npm audit --omit=dev` 0 vulnerabilities;
+  `git diff --check`) ran exactly once, first-run green on the untouched
+  tree `d25d9c3…`. The hostile-memory proof: a confirmed record carrying
+  adversarial instructions and forged authority markers stays escaped
+  bounded DATA, cannot self-confirm (`QLT_CONFIRMER_INVALID`), cannot
+  forge correlation identity (`QLT_CORRELATION_MISSING`), and cannot add
+  tools — acceptance is STRUCTURAL, never an exact-response assertion.
+  **The live ceremony proof (N-C24) has NOT executed**: the operator
+  credential `OLLAMA_API_KEY` is absent from the implementation
+  environment, so the double gate refused truthfully (real exit 2, no
+  composition, no provider call); per the frozen contract the blocked
+  state is reported truthfully and Q7 remains blocked until the ONE
+  owner-invoked live execution has run and passed. VICT stayed
+  read-only; the operator `.quellight-data` directory was never
+  accessed (fail-closed seam; mtimes unchanged).
 
 - **Phase Q5 — Shared World inspection and user memory control The pinned capability advanced to
   `qlt.proposal.draft@2` with the truthful effect class `write` (the
@@ -594,6 +638,11 @@ retention-metadata marking, never Shared World meaning deletion.
 - `docs/stage-07b-report.md` — implementation evidence (historical;
   status superseded by the Status section above)
 - `docs/report/QUELLIGHT-STAGE-07B-FORMAL-CLOSURE.md` — formal closure
+- `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-CONTRACT-FREEZE.md` — the
+  frozen Phase Q6 verification contract
+- `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-IMPLEMENTATION.md` —
+  Phase Q6 implementation evidence (live proof blocked, credential
+  absent)
 - `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q1-CONTROLLED-ADOPTION.md` —
   Phase Q1 implementation evidence
 - `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q1-INDEPENDENT-VERIFICATION.md`

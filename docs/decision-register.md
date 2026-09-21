@@ -785,3 +785,57 @@ and 07E have not begun. This entry is documentation-only.
   PERMITTED — NOT BEGUN.** Stage 07 remains In Progress.
 - **Date**: 2026-09-21. Quellight record:
   `docs/report/QUELLIGHT-STAGE-07C-M-1-STABLE-REPIN.md`.
+
+## D-Q6-1 — Phase Q6 disposition: deterministic final verification implemented; the live ceremony proof BLOCKED (documentation-only)
+
+- **Contract**: Phase Q6 was contract-frozen ALONE before any executable
+  change (`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-CONTRACT-FREEZE.md`,
+  freeze commit `ca82892…`; frozen declarative module
+  `src/lib/sharedworld/q6-contract.ts`). ZERO amendments were needed.
+- **What Q6 is**: verification hardening only — the deterministic final
+  verification of the already-implemented Shared World system plus the
+  ONE bounded live-provider ceremony proof (N-C24). No new capability,
+  action, migration, or agent authority exists (the envelope stays
+  exactly `qlt.proposal.draft@2/write` with the one-entry
+  `qlt.host-policy.quiet-write@1` policy; the plan stays at 21 actions;
+  migration bookkeeping stays `[1,2,3,4]`).
+- **Delivered** (commits `cd70bc8…`, `d25d9c3…`; record
+  `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-IMPLEMENTATION.md`): the
+  focused permanent gate `verify:q6` (89 checks), the Stage 07C
+  aggregate gate `verify:stage7c` (N-C25: the N-C1..N-C25 coverage
+  manifest with absent-constituent and missing-row negative controls,
+  the lockfile re-derivation of the exact stable release identity, and
+  the focused Q2–Q5+Q6 gates — never the large suites twice, never the
+  live gate), the bounded live harness `verify:q6:live` (double-gated,
+  never automatic, credential presence-only, leak scans, verified
+  cleanup), the hostile-memory authority/injection suites, the
+  fresh-thread C1/restart/conflict suites over the real composition and
+  the real released `app.data.mutate` boundary, and the Q6
+  fresh-conversation continuity scenario in the EXISTING real-browser
+  ceremony session.
+- **Verification**: the authoritative offline ladder (`npm ci`;
+  `verify:consumer`; `verify:quellight` incl. the extended browser
+  ceremony; `verify:stage7c`; `npm audit --omit=dev` — 0
+  vulnerabilities; `git diff --check`) ran exactly once, first-run
+  green, on the untouched tree `d25d9c3…`.
+- **Status**: Q6 is `IMPLEMENTED — AWAITING INDEPENDENT Q7 VERIFICATION`
+  — NOT independently verified and NOT formally closed. **The live
+  ceremony proof (N-C24) has NOT executed**: the operator credential
+  `OLLAMA_API_KEY` is absent from the implementation environment; the
+  double gate refused truthfully (real exit 2, nothing composed, no
+  provider call). Per the frozen contract the blocked state is reported
+  truthfully, the completion marker is not used, and **Phase Q7 remains
+  BLOCKED — NOT BEGUN** until the ONE owner-invoked live execution has
+  run and passed. The frozen live plan (3 provider turns: statement →
+  proposal; fresh conversation; conflicting statement — plus the
+  governed confirmation, replay, stale-version control, restart, and
+  leak scans) stands ready within the frozen bounds.
+- **Data safety**: VICT stayed read-only (its `.pi/` material untouched);
+  the operator `.quellight-data` directory was never opened, read,
+  migrated, hashed, or modified (fail-closed seam negative controls;
+  file mtimes unchanged, metadata-only observation); all task stores
+  were disposable OS-temporary directories and were removed after the
+  ladder.
+- **Date**: 2026-09-22. This entry is documentation-only (no new
+  architectural decision; the phase followed the frozen contract and the
+  ratified OQ6 authority model without owner-level amendment).

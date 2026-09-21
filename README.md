@@ -17,9 +17,9 @@ Stage 07C Phase Q3: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (gover
 Stage 07C Phase Q4: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (deterministic Shared World context assembly; H-1 remediated and independently re-verified closed)
 Stage 07C Phase Q5: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (Shared World inspection, user memory control, one durable global Memory Mode; B-1/H-1 remediated and independently re-verified closed)
 VICT-M-1: INDEPENDENTLY VERIFIED AND FORMALLY CLOSED (truthful write-effect capability `qlt.proposal.draft@2/write`; Quellight exact-pinned to the STABLE `@victframework/*@0.3.0` = `vict-release-set@1/0.3.0`, content ID `v1_5f3a074a…`; `latest` = 0.3.0; the `0.3.0-rc.1` candidate and its recovered evidence chain remain immutable historical record)
-Stage 07C Phase Q6: NOT BEGUN (the deterministic final verification and the bounded live-provider Shared World ceremony proof; contract and implementation planning is permitted — not begun at the starting SHA)
-Stage 07C Phase Q7: NOT BEGUN (independent audit; Q6 must be implemented first)
-Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 closed; Q5 closed; M-1 CLOSED — stable 0.3.0 adopted; Q6–Q7, 07D, 07E remaining)
+Stage 07C Phase Q6: IMPLEMENTED — AWAITING INDEPENDENT Q7 VERIFICATION (deterministic final verification: the offline gates and the aggregate N-C25 are green; the bounded live-provider ceremony proof N-C24 is BLOCKED — the operator credential `OLLAMA_API_KEY` is absent from the implementation environment; the live gate is wired, double-gated, and refused truthfully with exit 2; the freeze had zero amendments)
+Stage 07C Phase Q7: BLOCKED — NOT BEGUN (the independent audit is permitted only after the live proof has executed exactly once and passed)
+Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 closed; Q5 closed; M-1 CLOSED — stable 0.3.0 adopted; Q6 implemented — live proof blocked; Q7, 07D, 07E remaining)
 ```
 
 **VICT-M-1 remediation (2026-09-21; superseded 2026-09-21 by the
@@ -318,14 +318,25 @@ npm run verify:consumer        # registry-only dependency proof (N-1/N-2; 0.3.0 
 npm run verify:governance      # governed mutation boundary structural gate (Phase Q1)
 npm run verify:q2              # Q2 durable-schema conformance gate (schema/deterministic/repository/structural)
 npm run verify:q3              # Q3 governed-ceremony structural + deterministic gate
-npm run verify:browser-ceremony # TEST-1 real-browser ceremony recovery proof (Q3, extended Q4 + Q5)
+npm run verify:browser-ceremony # TEST-1 real-browser ceremony recovery proof (Q3, extended Q4 + Q5 + Q6)
 npm run verify:quellight       # full deterministic offline gate (N-20, incl. Q1–Q5 gates + TEST-1)
-npm run verify:live-provider   # bounded live proof (requires explicit gate)
+npm run verify:q6              # Q6 focused deterministic gate (bounds/envelope/live-gate/authority/fresh-thread/hostile/restart/seam)
+npm run verify:stage7c         # the Stage 07C aggregate gate (N-C25; N-C1..N-C25 coverage manifest + Q2–Q5 + Q6 gates)
+npm run verify:live-provider   # bounded live proof (requires explicit gate; Stage 07B)
+npm run verify:q6:live         # the bounded LIVE Shared World ceremony proof (N-C24; requires explicit gate; NEVER automatic)
 ```
 
 `verify:live-provider` refuses to run unless `QUELLIGHT_LIVE_PROOF=1`
 **and** `OLLAMA_API_KEY` is present in the process environment. It is an
 operator action, never part of the automated test suite.
+`verify:q6:live` (the Q6 bounded live ceremony, N-C24) has the same
+explicit double gate, runs OUTSIDE every automatic gate, and must run
+EXACTLY ONCE after all offline gates. At the current status it is
+BLOCKED: the credential was absent from the implementation environment,
+so the gate refused truthfully (exit 2) and the live ceremony has not
+executed. See
+`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-IMPLEMENTATION.md` and the
+frozen `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-CONTRACT-FREEZE.md`.
 
 ## License
 
