@@ -203,7 +203,13 @@ describe('Q6 parent/worker ordering and cleanup (modeled; offline)', () => {
     tempDirs.push(fixtureDir);
     const fixtureFile = join(fixtureDir, 'fixture.txt');
     writeFileSync(fixtureFile, FAKE_FIXTURE, 'utf8');
-    const before = readdirSync(tmpdir()).length;
+    // The precise invariant: the gate allocates NOTHING — no new
+    // qlt-q6-live-* directory may appear. (A global tmpdir-entry count is
+    // inherently racy under parallel suites, which legitimately create
+    // unrelated temporary entries concurrently.)
+    const liveRootsBefore = readdirSync(tmpdir()).filter((entry) =>
+      entry.startsWith(Q6_LIVE_WORKSPACE_PREFIX),
+    ).length;
     const refused1 = await runQ6LiveProof({
       env: {
         QUELLIGHT_LIVE_PROOF: '0',
@@ -221,8 +227,10 @@ describe('Q6 parent/worker ordering and cleanup (modeled; offline)', () => {
     });
     expect(refused1.exit).toBe(2);
     expect(refused2.exit).toBe(2);
-    const after = readdirSync(tmpdir()).length;
-    expect(after).toBe(before);
+    const liveRootsAfter = readdirSync(tmpdir()).filter((entry) =>
+      entry.startsWith(Q6_LIVE_WORKSPACE_PREFIX),
+    ).length;
+    expect(liveRootsAfter).toBe(liveRootsBefore);
   });
 
   it('an invalid fixture refuses (exit 2) before the worker spawns and before any allocation', async () => {
