@@ -1153,3 +1153,49 @@ instructions` revision 3 → 4; agent profile
   remains In Progress.**
 - **Date**: 2026-09-21. Record:
   `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-LIVE-PROOF-EXECUTION-3.md`.
+
+## D-Q6-8 — Execution-3 remediation: corrected chronology, harness repairs, model-facing proposal presentation, and exact repin to the VICT verification candidate `0.3.1-rc.1` (implementation decision under the frozen remediation contract; no live execution authorized)
+
+**Date:** 2026-09-22. **Governing contract (frozen, committed alone at
+`ffecfd7…`):**
+`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-EXECUTION-3-REMEDIATION-CONTRACT.md`.
+
+Adopted:
+
+1. **Corrected Execution-3 chronology (additive):** the live matrix
+   crashed at TURN-1 REPLY RETRIEVAL — `runMatrixTurn` requests the
+   reply immediately after Turn 1, and the prepared worker called
+   `sharedWorld.restoreThread`, which does not exist on the Shared World
+   store binding — NOT at the restart/fresh-thread boundary named in the
+   historical record (preserved byte-unchanged; superseded on this one
+   point).
+2. **H-1' repair:** reply retrieval uses `composition.restoreThread`
+   (the full-composition boundary) before and after the restart.
+3. **M-1 repair:** every asynchronous evidence check is awaited and
+   recorded before result serialization (`QLT_Q6_EVIDENCE_CHECK_FAILED`);
+   structural + behavioral gates make floating evidence calls impossible
+   to reintroduce.
+4. **M-2 repair:** findings are the closed non-echoing codes
+   `QLT_Q6_LIVE_MATRIX_FAILED` / `QLT_Q6_REPLY_RESTORE_FAILED` /
+   `QLT_Q6_EVIDENCE_CHECK_FAILED` (+ a stable phase label); arbitrary
+   error-message slicing is removed.
+5. **Capability presentation:** `qlt.proposal.draft` revision 2 → 3
+   carries the VICT descriptive presentation (exact closed three-branch
+   input schema; closed output union; bounded description); declared
+   effect stays `write`; `Contract.parse` unchanged-or-stricter; profile
+   revision 5 → 6; instructions stay revision 4; exactly one model
+   capability; `maxToolCalls: 2`.
+6. **Candidate repin:** exact `@victframework/*@0.3.1-rc.1`
+   (`vict-release-set@1/0.3.1-rc.1`, content ID `v1_b6e39c1f…`),
+   registry-only lockfile through the central release-set source.
+7. **Offline proof:** the REAL worker orchestration runs the full
+   five-turn matrix offline (mode-injected deterministic driver through
+   the existing `offlineModelFactory` seam), spawning the real worker
+   process and traversing the parent scan-and-cleanup phase — permanent,
+   fail-closed, and non-weakening of any live acceptance rule.
+
+NOT adopted / NOT authorized: no live-provider proof, no provider
+credential access, **no Execution 4**, no Q7 work, no bound change, no
+provider change, no authority widening, no action or schema change.
+Q6 remains NOT independently verified and NOT formally closed; Stage 07
+remains In Progress.
