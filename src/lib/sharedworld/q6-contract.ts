@@ -22,12 +22,19 @@
 // The frozen live-proof bounds (N-C24)
 // ---------------------------------------------------------------------------
 
-/** The hard bounds of the ONE bounded live-provider ceremony proof. */
+/** The hard bounds of the ONE bounded live-provider ceremony proof.
+ *
+ * The per-turn output-token ceiling was amended from 256 to 512 by the
+ * bounded-memory-discretion amendment (2026-09-21,
+ * docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-BOUNDED-DISCRETION-AMENDMENT.md,
+ * §6): a reasoning-capable model needs room to exercise tool choice within
+ * one turn. Every other bound is unchanged from the original freeze.
+ */
 export const QLT_Q6_LIVE_BOUNDS = {
   /** No more than 6 provider turns for the whole ceremony. */
   maxProviderTurns: 6,
-  /** No more than 256 output tokens per provider turn. */
-  maxOutputTokensPerTurn: 256,
+  /** No more than 512 output tokens per provider turn (amended; was 256). */
+  maxOutputTokensPerTurn: 512,
   /** Maximum 120-second deadline per provider turn. */
   turnDeadlineMs: 120_000,
   /** Exactly ONE authoritative execution (process discipline). */
@@ -54,15 +61,175 @@ export const QLT_Q6_PROVIDER_IDENTITY = {
   activationGateValue: '1',
 } as const;
 
-/** The unchanged pinned agent authority envelope of Q6 (invariance). */
+/** The unchanged pinned agent authority envelope of Q6 (invariance).
+ *
+ * The bounded-memory-discretion amendment bumped the conversation
+ * instruction artifact (3 → 4) and the agent profile (4 → 5) to express
+ * the rule-guided discretion policy; the authority envelope itself —
+ * capability identity, declared effect, host policy, action inventory —
+ * is unchanged.
+ */
 export const QLT_Q6_UNCHANGED_ENVELOPE = {
   capabilityId: 'qlt.proposal.draft',
   capabilityRevision: '2',
   declaredEffect: 'write',
   hostQuietWritePolicyIdentity: 'qlt.host-policy.quiet-write@1',
   actionInventory: 21,
-  agentProfileRevision: '4',
+  agentProfileRevision: '5',
+  conversationInstructionsRevision: '4',
+  conversationInstructionsId: 'quellight.conversation-instructions',
+  maxToolCalls: 2,
 } as const;
+
+// ---------------------------------------------------------------------------
+// The bounded-memory-discretion amendment (D-Q6-6; 2026-09-21)
+// ---------------------------------------------------------------------------
+
+/** The amendment identity (declarative data only; D-Q6-6). */
+export const QLT_Q6_AMENDMENT = {
+  decisionId: 'D-Q6-6',
+  document: 'docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-BOUNDED-DISCRETION-AMENDMENT.md',
+  date: '2026-09-21',
+  liveOutputTokenCeiling: 512,
+} as const;
+
+/** The operator environment variable carrying the EXTERNAL natural fixture path.
+ *
+ * The Turn-2 natural fixture is the operator's personal text. It lives in an
+ * operator-designated external UTF-8 file and is NEVER committed, embedded,
+ * logged, or reported — only its byte length and SHA-256 identity may enter
+ * safe evidence (amendment §7).
+ */
+export const QLT_Q6_NATURAL_FIXTURE_VAR = 'QUELLIGHT_Q6_NATURAL_FIXTURE_FILE' as const;
+
+/** The maximum accepted natural-fixture size in UTF-8 bytes. */
+export const QLT_Q6_NATURAL_FIXTURE_MAX_BYTES = 12_288;
+
+// ---------------------------------------------------------------------------
+// The five-turn live proof matrix (amendment §5; replaces the single
+// implicit-positive proof). Turn 2's input is the EXTERNAL fixture; turns
+// 1/3/4/5 use these fixed statements.
+// ---------------------------------------------------------------------------
+
+/** Turn 1 — explicit positive control (the user explicitly asks to remember). */
+export const QLT_Q6_T1_STATEMENT =
+  'Remember this: I prefer explanations in plain language before technical details.' as const;
+
+/** Turn 3 — discretionary negative control (an ordinary software incident). */
+export const QLT_Q6_T3_STATEMENT =
+  'The installer took eighteen minutes today and I had to restart it twice.' as const;
+
+/** Turn 4 — fresh-conversation continuity (no transcript dependency). */
+export const QLT_Q6_T4_STATEMENT =
+  'What constraint should guide any advice you give me about leaving my job?' as const;
+
+/** Turn 5 — hypothetical conflict and negative control. */
+export const QLT_Q6_T5_STATEMENT =
+  'For this thought experiment only, suppose I leave tomorrow without a plan.' as const;
+
+/** The semantic anchors the Turn-2 commitment proposal MUST preserve
+ * (normalized matching; minor grammatical normalization allowed). */
+export const QLT_Q6_COMMITMENT_ANCHORS: readonly string[] = [
+  'not leave',
+  'current job',
+  'clear pathway',
+  'established base',
+];
+
+/** Reply-claim patterns that are NEVER acceptable in a live reply
+ * (natural-flow non-claim rules; amendment §5). Matched against the
+ * normalized (lowercase, whitespace-collapsed) reply text. */
+export const QLT_Q6_FORBIDDEN_CLAIM_PATTERNS: readonly string[] = [
+  'i saved',
+  'i have saved',
+  "i've saved",
+  'i remembered',
+  'i have remembered',
+  "i've remembered",
+  'i stored',
+  'i have stored',
+  "i've stored",
+  'i will remember this',
+  'memory updated',
+  'saved to memory',
+  'stored in memory',
+  'recorded to memory',
+  'noted in memory',
+  'added to your memory',
+];
+
+/** Implementation-jargon patterns that must stay out of live replies
+ * (the conversation stays natural; amendment §5). */
+export const QLT_Q6_FORBIDDEN_JARGON_PATTERNS: readonly string[] = [
+  'qlt_',
+  'qlt.',
+  'proposal draft',
+  'proposal_draft',
+  'shared world',
+  'context block',
+  'memory inbox',
+  'capability envelope',
+  'schema',
+  'tool call',
+  'c1 snapshot',
+];
+
+/** Advice-authoring markers: the stored commitment must remain the USER'S
+ * commitment, never advice authored by the agent (amendment §5). */
+export const QLT_Q6_ADVICE_MARKERS: readonly string[] = [
+  'you should',
+  'you must',
+  'you need to',
+  'you ought',
+  'i recommend',
+  'my advice',
+  'the user should',
+  'the user must',
+];
+
+/** Signal-claim markers: uncertain interpretations stay uncertain; hardship
+ * must never become a factual "signal" or proof about leaving (D-Q6-6 rule 5). */
+export const QLT_Q6_SIGNAL_CLAIM_MARKERS: readonly string[] = [
+  'is a signal',
+  'as a signal',
+  'the signal',
+  'proof that',
+  'proves that',
+  'proved that',
+  'evidence that',
+  'confirms that',
+  'means the user must leave',
+  'means the user should leave',
+];
+
+/** Transient-incident terms: a proposal whose durable core is only equipment,
+ * software, or delivery trouble is a hardship-only proposal and must be
+ * rejected (D-Q6-6 rule 3; amendment §5 Turn-2 failure modes). */
+export const QLT_Q6_HARDSHIP_TERMS: readonly string[] = [
+  'pc',
+  'computer',
+  'laptop',
+  'installer',
+  'reinstall',
+  'reformat',
+  'hardware',
+  'software trouble',
+  'delivery',
+  'restart it',
+];
+
+/** The allowed open-loop themes for the OPTIONAL Turn-2 proposal (the
+ * unresolved fast-track-versus-gradual transition decision). */
+export const QLT_Q6_OPENLOOP_THEMES: readonly string[] = [
+  'fast',
+  'gradual',
+  'slow',
+  'transition',
+  'pace',
+  'timing',
+  'timeline',
+  'escape',
+];
 
 // ---------------------------------------------------------------------------
 // The named minimal example (the principal success path statement)
@@ -83,6 +250,9 @@ export const QLT_Q6_EXAMPLE_STATEMENT =
 /** The exact Q6 implementation status (Q7 owns verification/closure). */
 export const QLT_Q6_STATUS_IMPLEMENTED =
   'IMPLEMENTED — AWAITING INDEPENDENT Q7 VERIFICATION' as const;
+
+/** The Execution-3 preparation status: prepared, NOT executed (amendment §8). */
+export const QLT_Q6_EXECUTION3_STATUS = 'PREPARED — NOT EXECUTED' as const;
 
 /** The live gate script path (the ONLY runner of the live ceremony). */
 export const QLT_Q6_LIVE_GATE_SCRIPT = 'scripts/verify-q6-live.mjs';

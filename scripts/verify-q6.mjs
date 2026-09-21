@@ -67,6 +67,14 @@ import {
   QLT_Q6_STATUS_IMPLEMENTED,
   QLT_Q6_LIVE_GATE_SCRIPT,
   QLT_Q6_NEVER_AUTOMATIC,
+  QLT_Q6_AMENDMENT,
+  QLT_Q6_NATURAL_FIXTURE_VAR,
+  QLT_Q6_NATURAL_FIXTURE_MAX_BYTES,
+  QLT_Q6_T1_STATEMENT,
+  QLT_Q6_T3_STATEMENT,
+  QLT_Q6_T4_STATEMENT,
+  QLT_Q6_T5_STATEMENT,
+  QLT_Q6_COMMITMENT_ANCHORS,
 } from '../src/lib/sharedworld/q6-contract.ts';
 import {
   QLT_PROPOSAL_CAPABILITY_ID,
@@ -276,9 +284,33 @@ console.log('\n[1] CONTRACT — frozen Q6 bounds, identity, envelope, status lan
 {
   check('the live provider-turn bound is 6', 'contract', QLT_Q6_LIVE_BOUNDS.maxProviderTurns === 6);
   check(
-    'the live output-token bound is 256 per turn',
+    'the live output-token bound is 512 per turn (amended from 256 by D-Q6-6)',
     'contract',
-    QLT_Q6_LIVE_BOUNDS.maxOutputTokensPerTurn === 256,
+    QLT_Q6_LIVE_BOUNDS.maxOutputTokensPerTurn === 512,
+  );
+  check(
+    'the amendment identity is declarative and cites the bounded-discretion amendment',
+    'contract',
+    QLT_Q6_AMENDMENT.decisionId === 'D-Q6-6' &&
+      QLT_Q6_AMENDMENT.liveOutputTokenCeiling === 512 &&
+      QLT_Q6_AMENDMENT.document ===
+        'docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-BOUNDED-DISCRETION-AMENDMENT.md',
+  );
+  check(
+    'the external natural-fixture boundary data is the amended privacy rule',
+    'contract',
+    QLT_Q6_NATURAL_FIXTURE_VAR === 'QUELLIGHT_Q6_NATURAL_FIXTURE_FILE' &&
+      QLT_Q6_NATURAL_FIXTURE_MAX_BYTES === 12_288,
+  );
+  check(
+    'the five-turn matrix statements and commitment anchors are the amended proof data',
+    'contract',
+    QLT_Q6_T1_STATEMENT.startsWith('Remember this:') &&
+      QLT_Q6_T3_STATEMENT.startsWith('The installer took eighteen minutes') &&
+      QLT_Q6_T4_STATEMENT.startsWith('What constraint should guide') &&
+      QLT_Q6_T5_STATEMENT.startsWith('For this thought experiment only') &&
+      JSON.stringify(QLT_Q6_COMMITMENT_ANCHORS) ===
+        JSON.stringify(['not leave', 'current job', 'clear pathway', 'established base']),
   );
   check(
     'the live per-turn deadline bound is 120000 ms',
@@ -325,7 +357,9 @@ console.log('\n[1] CONTRACT — frozen Q6 bounds, identity, envelope, status lan
       QLT_Q6_UNCHANGED_ENVELOPE.hostQuietWritePolicyIdentity ===
         QLT_HOST_QUIET_WRITE_POLICY_IDENTITY &&
       QLT_Q6_UNCHANGED_ENVELOPE.actionInventory === 21 &&
-      QLT_Q6_UNCHANGED_ENVELOPE.agentProfileRevision === '4',
+      QLT_Q6_UNCHANGED_ENVELOPE.agentProfileRevision === '5' &&
+      QLT_Q6_UNCHANGED_ENVELOPE.conversationInstructionsRevision === '4' &&
+      QLT_Q6_UNCHANGED_ENVELOPE.maxToolCalls === 2,
   );
   check(
     'the named minimal example statement is the frozen architecture example',
@@ -406,10 +440,24 @@ console.log('\n[2] ENVELOPE — exactly 21 actions, empty bindings, proposal-onl
     ),
   );
   check(
-    'the composition pins the agent profile revision 4 with the bounded generation',
+    'the composition pins the agent profile revision 5 binding the revision-4 discretion instructions',
     'envelope',
-    compositionSource.includes("const PROFILE_REVISION = '4'") &&
+    compositionSource.includes("const PROFILE_REVISION = '5'") &&
+      compositionSource.includes("const INSTRUCTIONS_REVISION = '4'") &&
       compositionSource.includes('maxToolCalls: 2, onLimit'),
+  );
+  check(
+    'the composition instructions carry the D-Q6-6 rule-guided discretion policy',
+    'envelope',
+    compositionSource.includes('rule-guided, not arbitrary') &&
+      compositionSource.includes('explicitly asks you to remember') &&
+      compositionSource.includes('unresolved issue likely to matter in later conversations') &&
+      compositionSource.includes('software or equipment trouble') &&
+      compositionSource.includes('extract only the durable core') &&
+      compositionSource.includes('never convert "this might be a signal" into a factual claim') &&
+      compositionSource.includes('at most two proposals in one turn') &&
+      compositionSource.includes('never claim that anything was saved, remembered, or recorded') &&
+      !compositionSource.includes('Use it sparingly'),
   );
   check(
     'the composition pins the live seam to the frozen router identity and endpoint',
