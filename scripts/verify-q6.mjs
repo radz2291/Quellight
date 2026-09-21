@@ -576,8 +576,9 @@ console.log('\n[3] LIVE-GATE — explicit double gate; never invoked by automati
       'the workspace helper imports only node builtins (no provider surface)',
       helperImports.length > 0 && helperImports.every((source) => source.startsWith('node:')),
     );
-    // BEHAVIORAL guard: run the focused lifecycle suites (offline; no
-    // provider, no credential) so the regression cannot return unnoticed.
+    // BEHAVIORAL guard: run the focused lifecycle AND safety suites
+    // (offline; no provider, no credential) so the regression cannot
+    // return unnoticed.
     const vitestResult = spawnSync(
       process.execPath,
       [
@@ -585,12 +586,14 @@ console.log('\n[3] LIVE-GATE — explicit double gate; never invoked by automati
         'run',
         '--config',
         'vitest.node.config.ts',
+        '--no-file-parallelism',
         'test/q6-live-workspace-lifecycle.test.ts',
+        'test/q6-live-workspace-safety.test.ts',
       ],
       { encoding: 'utf8', timeout: 300_000 },
     );
     workspacePassed += wcheck(
-      'the focused live-workspace lifecycle suites pass (behavioral; offline)',
+      'the focused live-workspace lifecycle AND safety suites pass (behavioral; offline)',
       vitestResult.status === 0,
     );
     if (vitestResult.status !== 0) {
@@ -598,6 +601,34 @@ console.log('\n[3] LIVE-GATE — explicit double gate; never invoked by automati
         (vitestResult.stdout ?? '') + (vitestResult.stderr ?? 'vitest produced no output'),
       );
     }
+    // S-1 ownership hardening: the harness must never recursively delete
+    // any composition-reported (or any other unowned) path — only the
+    // owned workspace root, through the workspace's own dispose.
+    workspacePassed += wcheck(
+      'the live harness performs NO recursive deletion of an unowned path (no rmSync, no fs import)',
+      !/rmSync/.test(liveSource) && !/from\s+['"]node:fs['"]/.test(liveSource),
+    );
+    workspacePassed += wcheck(
+      'removal happens ONLY through the owned workspace dispose, exactly once',
+      (liveSource.match(/workspace\.dispose\(\)/g) ?? []).length === 1,
+    );
+    workspacePassed += wcheck(
+      'identity failures are stable and non-echoing, with environment pre-validation before composition',
+      (liveSource.match(/path not echoed/g) ?? []).length >= 3 &&
+        liveSource.includes('requireResolvedEnvironmentDataDir'),
+    );
+    // S-2 scan hardening: an incomplete scan is never credential-clean.
+    workspacePassed += wcheck(
+      'the final scan failure is converted to a proof failure (never swallowed)',
+      liveSource.includes('never treated as credential-clean') &&
+        !liveSource.includes('nothing left to scan'),
+    );
+    workspacePassed += wcheck(
+      'the helper fails closed on an absent root and on incomplete traversal (never a clean scan)',
+      helperSource.includes('unexpectedly absent') &&
+        helperSource.includes('not a directory') &&
+        helperSource.includes('must surface to the caller as'),
+    );
     console.log(`  live-workspace: ${workspacePassed} checks`);
   }
 }

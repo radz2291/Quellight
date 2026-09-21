@@ -25,7 +25,7 @@ import {
 } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { tmpdir } from 'node:os';
-import { join, resolve, sep } from 'node:path';
+import { basename, join, resolve, sep } from 'node:path';
 import {
   createQ6LiveWorkspace,
   OPERATOR_DATA_DIR_NAME,
@@ -36,12 +36,17 @@ const ownedTempEntries = () =>
   readdirSync(tmpdir()).filter((entry) => entry.startsWith(Q6_LIVE_WORKSPACE_PREFIX));
 
 describe('Q6 live workspace: exactly one disposable root', () => {
-  it('allocates EXACTLY ONE new qlt-q6-live-* directory per workspace', async () => {
-    const before = ownedTempEntries().length;
+  it('allocates a FRESH disposable root and leaves nothing behind after dispose', async () => {
+    // Attribution form (deterministic under parallel test workers): the
+    // root must be newly allocated and fully removed; the strict
+    // single-allocation property is pinned by the structural
+    // single-mkdtempSync proof below and by verify:q6.
+    const before = new Set(ownedTempEntries());
     const workspace = createQ6LiveWorkspace();
     try {
-      const after = ownedTempEntries().length;
-      expect(after - before).toBe(1);
+      const rootName = basename(workspace.root);
+      expect(before.has(rootName)).toBe(false);
+      expect(ownedTempEntries().some((entry) => entry === rootName)).toBe(true);
       // The root is canonical (resolved) and lives inside the OS temp dir.
       expect(workspace.root).toBe(resolve(workspace.root));
       expect(workspace.root.startsWith(resolve(tmpdir()) + sep)).toBe(true);

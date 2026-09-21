@@ -68,8 +68,6 @@
  * This script runs OUTSIDE every automatic gate, by explicit operator
  * invocation, after ALL offline gates are green, exactly once.
  */
-import { rmSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { createQ6LiveWorkspace } from './lib/q6-live-workspace.mjs';
 import {
   QLT_Q6_LIVE_BOUNDS,
@@ -133,32 +131,56 @@ const composed = [];
 const composeLive = async (directory) => {
   // Ownership is explicit at the call site: the caller passes the exact
   // owned root; anything else is refused before any composition exists.
-  workspace.requireOwned(directory, 'composeLive');
-  const composition = await createQuellightComposition({
-    env: resolveQuellightEnvironment(
-      {
-        ...workspace.dataEnv(directory),
-        QUELLIGHT_LIVE_PROOF: '1',
-        QUELLIGHT_MAX_OUTPUT_TOKENS: String(QLT_Q6_LIVE_BOUNDS.maxOutputTokensPerTurn),
-        QUELLIGHT_TURN_DEADLINE_MS: String(QLT_Q6_LIVE_BOUNDS.turnDeadlineMs),
-      },
-      process.cwd(),
-    ),
-    skipListen: true,
-  });
   try {
-    // Fail closed BEFORE any provider turn if the resolved directory
-    // identity differs from the owned root.
+    workspace.requireOwned(directory, 'composeLive');
+  } catch {
+    // S-1: a non-owned path is NEVER touched and NEVER echoed.
+    fail(
+      'composeLive refused a directory that is not the owned workspace root (path not echoed) — failing closed',
+    );
+    throw new Error(
+      'Q6 LIVE WORKSPACE IDENTITY VIOLATION — failing closed before any composition or provider turn',
+    );
+  }
+  const env = resolveQuellightEnvironment(
+    {
+      ...workspace.dataEnv(directory),
+      QUELLIGHT_LIVE_PROOF: '1',
+      QUELLIGHT_MAX_OUTPUT_TOKENS: String(QLT_Q6_LIVE_BOUNDS.maxOutputTokensPerTurn),
+      QUELLIGHT_TURN_DEADLINE_MS: String(QLT_Q6_LIVE_BOUNDS.turnDeadlineMs),
+    },
+    process.cwd(),
+  );
+  try {
+    // Validate the RESOLVED environment's data directory against the
+    // owned root BEFORE constructing the composition.
+    workspace.requireResolvedEnvironmentDataDir(env);
+  } catch {
+    // S-1: never touch and never echo the rejected path.
+    fail(
+      'the resolved environment data directory is not the owned workspace root (path not echoed) — failing closed before composition',
+    );
+    throw new Error(
+      'Q6 LIVE WORKSPACE IDENTITY VIOLATION — failing closed before any composition or provider turn',
+    );
+  }
+  const composition = await createQuellightComposition({ env, skipListen: true });
+  try {
+    // Fail closed BEFORE any provider turn if the composition-reported
+    // directory identity differs from the owned root.
     workspace.requireCompositionDataDir(composition, 'composeLive');
-  } catch (error) {
-    // The foreign directory must not escape cleanup either.
+  } catch {
+    // S-1: close the composition; the REJECTED path is left COMPLETELY
+    // untouched (never recursively deleted, never echoed) — only the
+    // verified owned workspace root may ever be removed, and only by
+    // the owned workspace dispose in the proof's finally block.
     await composition.close().catch(() => undefined);
-    try {
-      rmSync(resolve(composition.dataDir), { recursive: true, force: true });
-    } catch {
-      /* best-effort; the proof is already failing closed */
-    }
-    throw error;
+    fail(
+      'the composition reported a data directory that is not the owned workspace root (path not echoed) — failing closed before any provider turn; the unowned path was left untouched',
+    );
+    throw new Error(
+      'Q6 LIVE WORKSPACE IDENTITY VIOLATION — failing closed before any provider turn',
+    );
   }
   composed.push(composition);
   return composition;
@@ -630,8 +652,11 @@ try {
     await composition.close().catch(() => undefined);
   }
   // Final leak scan over every byte of the ONE owned workspace (also on
-  // the failure path), then VERIFIED cleanup: an unremovable root FAILS
-  // the proof rather than emitting a note.
+  // the failure path), then VERIFIED cleanup. An INCOMPLETE scan is a
+  // proof failure: an unreadable or unexpectedly missing workspace is
+  // never treated as credential-clean. Cleanup runs regardless, and it
+  // is restricted to the single owned root (an unremovable root FAILS
+  // the proof rather than emitting a note).
   try {
     const offending = workspace.scanForCredential(CREDENTIAL);
     for (const file of offending) {
@@ -641,7 +666,11 @@ try {
       note('final leak scan: every byte of the owned workspace scanned — credential absent');
     }
   } catch {
-    /* nothing left to scan */
+    // S-2: never swallow a scan failure; never echo the credential or
+    // file contents. Cleanup below still runs on the owned root only.
+    fail(
+      'the final credential scan could not complete — an incomplete scan is never treated as credential-clean',
+    );
   }
   const { removed } = await workspace.dispose();
   if (removed) {
