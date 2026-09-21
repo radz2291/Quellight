@@ -1040,3 +1040,73 @@ VERIFICATION` with the live proof EXECUTED TWICE, BOTH FAILED. Q6 is
   remains BLOCKED — NOT BEGUN. Stage 07 remains In Progress.**
 - **Date**: 2026-09-21. Documentation-only decision entry. Record:
   `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-LIVE-PROOF-FAILURE.md`.
+
+## D-Q6-6 — Bounded memory discretion amendment: rule-guided memory proposal discretion adopted; instructions revision 4, profile revision 5; five-turn live matrix and parent/worker lifecycle prepared; Execution 3 NOT executed (owner-approved policy; binding behavior decision)
+
+- **Why**: the revision-3 instruction "use it sparingly" was one-sided —
+  it restrained over-drafting but gave NO rule for when drafting is
+  appropriate, so Execution 2 of the live proof (a successful provider
+  turn with zero capability invocations) demonstrated that drafting on
+  genuinely durable meaning was unconstrained coin-flipping. A bounded
+  live proof cannot rest on unspecified behavior. Owner-approved
+  correction: discretion is RULE-GUIDED, not arbitrary.
+- **The policy (amendment §3)**: (1) explicit remember requests draft
+  one reviewable pending proposal; (2) implicit durable meaning (clear
+  durable preference, commitment, ongoing goal, identity-relevant fact,
+  unresolved issue likely to matter later) is drafted even unasked;
+  (3) temporary logistics, one-off incidents, software trouble,
+  momentary feelings, speculative causal interpretations, and ordinary
+  conversational detail never become proposals merely by being
+  mentioned; (4) mixed messages yield only the durable core; (5)
+  uncertainty stays uncertain — hardship is never converted into a
+  factual claim that the user should leave a job; (6) at most two
+  proposals per turn, one per durable semantic item; (7) drafting stays
+  quiet and epistemically inert — the reply continues naturally and
+  never claims a save; (8) only the user's governed confirmation
+  creates canonical Shared World meaning. The capability envelope is
+  unchanged: exactly `qlt.proposal.draft@2/write` under
+  `qlt.host-policy.quiet-write@1`, `maxToolCalls: 2`.
+- **Identity**: conversation instructions `quellight.conversation-
+instructions` revision 3 → 4; agent profile
+  `agent.quellight.conversation` revision 4 → 5. Preserved: model,
+  provider, capability, authority, memory policy, 21-action inventory,
+  host quiet-write policy. Added: NOTHING (no capability, query,
+  mutation, schema, migration, or autonomous behavior).
+- **Live-proof changes (prepared only)**: the single implicit-positive
+  proof is REPLACED by a five-turn matrix (explicit positive control;
+  naturalistic discretionary positive driven by the operator's EXTERNAL
+  private fixture `QUELLIGHT_Q6_NATURAL_FIXTURE_FILE` — absolute,
+  outside the repository and `.quellight-data`, <= 12,288 UTF-8 bytes,
+  no NUL bytes, never committed, echoed, or reported; only byte length
+  - SHA-256 enter evidence; discretionary negative control; the
+    governed user ceremony with replay and stale-version proofs; a
+    close/restart on the same verified root; fresh-thread C1 continuity;
+    a hypothetical-conflict negative control). ONLY the Q6 live output
+    ceiling was raised: 256 → 512 tokens/turn. Six turns, 120 s/turn,
+    zero retries, one provider, one model, no fallback, and the
+    one-execution-per-authorization discipline are retained.
+- **Parent/worker lifecycle**: the live harness is split so the
+  composition-owning process no longer removes its own SQLite
+  workspace (the cause of both prior Windows cleanup failures): the
+  worker runs every composition and exits; the parent then scans for
+  the credential, re-verifies the external fixture's byte identity, and
+  disposes the ONE owned root. Cleanup failure remains proof failure;
+  the worker has no deletion capability; all S-1/S-2 protections are
+  preserved and re-proven.
+- **Verification**: three new permanent suites (16 + 12 + 10 tests)
+  plus the updated lifecycle (11) and safety (10) suites, all offline
+  with deterministic fake models and a SYNTHETIC non-personal fixture;
+  `verify:q6` grew to 107 checks; the authoritative ladder (npm ci,
+  verify:consumer, verify:quellight, verify:stage7c, npm audit
+  --omit=dev, git diff --check) ran green on the committed tree
+  `67d5223…`. The offline suites prove the predicates and the wiring,
+  NOT real-model discretion — only Execution 3 can.
+- **Status**: Execution 3 is `PREPARED — NOT EXECUTED`; it remains
+  unconsumed and requires a separate owner invocation after review. Q6
+  is `IMPLEMENTED — AWAITING INDEPENDENT Q7 VERIFICATION`; NOT
+  independently verified; NOT formally closed. **Phase Q7 remains
+  BLOCKED — NOT BEGUN. Stage 07 remains In Progress.**
+- **Date**: 2026-09-21. Amendment commit `365259f…`; implementation
+  commits `d11d9e9…`, `6844bfe…`, `67d5223…`. Records:
+  `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-BOUNDED-DISCRETION-AMENDMENT.md`,
+  `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-EXECUTION-3-PREPARATION.md`.
