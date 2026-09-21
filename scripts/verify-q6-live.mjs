@@ -37,7 +37,9 @@
  *      duplicates nothing; a stale expectedVersion is refused with zero
  *      effect.
  *   Restart: the composition closes and recomposes on the SAME disposable
- *      data directory; the confirmed record, its lineage, and the
+ *      data directory (the ONE owned workspace root, passed explicitly to
+ *      both compositions and identity-asserted before any provider
+ *      turn); the confirmed record, its lineage, and the
  *      assembly evidence survive.
  *   t2 (thread B, genuinely fresh, NO transcript dependency): the model
  *      receives the confirmed meaning through the per-turn C1 snapshot
@@ -54,19 +56,21 @@
  *      user-attributed mutation.
  *
  * METADATA ONLY: no conversation content is ever printed (ids, statuses,
- * counts, and elapsed times only). Every byte under the disposable data
- * directory, every captured ledger frame, and the serialized operator
- * configuration are scanned for the credential VALUE on success AND on
- * failure; any hit fails the proof. Provider 429/5xx/timeout/malformed
- * responses settle truthfully as a FAILED proof; nothing is retried.
+ * counts, and elapsed times only). Every byte under the ONE owned
+ * disposable data root — the exact directory every composition runs
+ * against (workspace ownership is explicit and asserted at runtime;
+ * scripts/lib/q6-live-workspace.mjs) —, every captured ledger frame,
+ * and the serialized operator configuration are scanned for the
+ * credential VALUE on success AND on failure; any hit fails the proof.
+ * Provider 429/5xx/timeout/malformed responses settle truthfully as a
+ * FAILED proof; nothing is retried.
  *
  * This script runs OUTSIDE every automatic gate, by explicit operator
  * invocation, after ALL offline gates are green, exactly once.
  */
-import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { rmSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { createQ6LiveWorkspace } from './lib/q6-live-workspace.mjs';
 import {
   QLT_Q6_LIVE_BOUNDS,
   QLT_Q6_PROVIDER_IDENTITY,
@@ -115,20 +119,47 @@ const { getCompiledPlan } = await import(
   new URL('../src/lib/application/definition.ts', import.meta.url).href
 );
 
-const dataDir = mkdtempSync(join(tmpdir(), 'qlt-q6-live-'));
+// ---------- the ONE owned disposable workspace (explicit ownership) ------
+// Exactly ONE root is allocated for the whole proof; every composition
+// (initial and restart) is handed THIS exact path explicitly, its
+// resolved data directory is asserted to be this root BEFORE any provider
+// turn, the leak scans cover every byte under it, and cleanup removes it
+// (verified; an unremovable root FAILS the proof). There is no second
+// mkdtempSync and no untracked composition directory.
+const workspace = createQ6LiveWorkspace();
+const ownedDataDir = workspace.root;
+
 const composed = [];
-const composeLive = async (reuseDataDir = false) => {
-  const dir = reuseDataDir ? dataDir : mkdtempSync(join(tmpdir(), 'qlt-q6-live-'));
-  const env = resolveQuellightEnvironment(
-    {
-      QUELLIGHT_DATA_DIR_ABSOLUTE: dir,
-      QUELLIGHT_LIVE_PROOF: '1',
-      QUELLIGHT_MAX_OUTPUT_TOKENS: String(QLT_Q6_LIVE_BOUNDS.maxOutputTokensPerTurn),
-      QUELLIGHT_TURN_DEADLINE_MS: String(QLT_Q6_LIVE_BOUNDS.turnDeadlineMs),
-    },
-    process.cwd(),
-  );
-  const composition = await createQuellightComposition({ env, skipListen: true });
+const composeLive = async (directory) => {
+  // Ownership is explicit at the call site: the caller passes the exact
+  // owned root; anything else is refused before any composition exists.
+  workspace.requireOwned(directory, 'composeLive');
+  const composition = await createQuellightComposition({
+    env: resolveQuellightEnvironment(
+      {
+        ...workspace.dataEnv(directory),
+        QUELLIGHT_LIVE_PROOF: '1',
+        QUELLIGHT_MAX_OUTPUT_TOKENS: String(QLT_Q6_LIVE_BOUNDS.maxOutputTokensPerTurn),
+        QUELLIGHT_TURN_DEADLINE_MS: String(QLT_Q6_LIVE_BOUNDS.turnDeadlineMs),
+      },
+      process.cwd(),
+    ),
+    skipListen: true,
+  });
+  try {
+    // Fail closed BEFORE any provider turn if the resolved directory
+    // identity differs from the owned root.
+    workspace.requireCompositionDataDir(composition, 'composeLive');
+  } catch (error) {
+    // The foreign directory must not escape cleanup either.
+    await composition.close().catch(() => undefined);
+    try {
+      rmSync(resolve(composition.dataDir), { recursive: true, force: true });
+    } catch {
+      /* best-effort; the proof is already failing closed */
+    }
+    throw error;
+  }
   composed.push(composition);
   return composition;
 };
@@ -217,26 +248,20 @@ const governedMutate = async (composition, actionId, input, idempotencyKey) => {
 
 let providerTurnCount = 0;
 const leakScan = (label) => {
-  const walk = (dir) => {
-    for (const entry of readdirSync(dir)) {
-      const full = join(dir, entry);
-      const stats = statSync(full);
-      if (stats.isDirectory()) {
-        walk(full);
-      } else {
-        const bytes = readFileSync(full);
-        if (bytes.includes(CREDENTIAL)) {
-          fail(`${label}: credential value found in ${entry} — LEAK`);
-        }
-      }
-    }
-  };
-  walk(dataDir);
+  // Every file under the ONE owned root (nested included) — the exact
+  // directory every composition ran against.
+  const offending = workspace.scanForCredential(CREDENTIAL);
+  for (const file of offending) {
+    fail(`${label}: credential value found in ${file} — LEAK`);
+  }
+  if (offending.length === 0) {
+    note(`leak scan (${label}): every persisted byte scanned — credential absent`);
+  }
 };
 
 try {
-  // ---------- composition (live mode) ----------
-  const composition = await composeLive();
+  // ---------- composition (live mode; the ONE owned root) ----------
+  const composition = await composeLive(ownedDataDir);
   if (composition.modelMode !== 'live') {
     fail(`modelMode is ${composition.modelMode}, expected live`);
   } else {
@@ -405,11 +430,14 @@ try {
   const assemblyEvidenceBefore = await composition.sharedWorld.getContextAssemblyByTurn(
     turn1.turnId,
   );
-  const restartDataDir = composition.dataDir;
   const restartBeganAt = Date.now();
   await composition.close();
   composed.length = 0;
-  const composition2 = await composeLive(true);
+  // The restart recomposes against the SAME owned root, passed
+  // explicitly; composeLive re-asserts the resolved identity before any
+  // provider turn (the former unused `restartDataDir` assignment is
+  // replaced by this enforced identity check).
+  const composition2 = await composeLive(ownedDataDir);
   note(`restarted the live composition on the same data dir in ${Date.now() - restartBeganAt}ms`);
   const claimAfterRestart = await composition2.sharedWorld.meaning.getClaim(claimId);
   if (
@@ -601,49 +629,25 @@ try {
   for (const composition of composed.splice(0)) {
     await composition.close().catch(() => undefined);
   }
-  // Final leak scan over every byte of the disposable data directory (also
-  // on the failure path), then verified cleanup.
+  // Final leak scan over every byte of the ONE owned workspace (also on
+  // the failure path), then VERIFIED cleanup: an unremovable root FAILS
+  // the proof rather than emitting a note.
   try {
-    const walk = (dir) => {
-      for (const entry of readdirSync(dir)) {
-        const full = join(dir, entry);
-        if (statSync(full).isDirectory()) {
-          walk(full);
-        } else if (readFileSync(full).includes(CREDENTIAL)) {
-          fail(`final leak scan: credential value found in ${entry}`);
-        }
-      }
-    };
-    walk(dataDir);
+    const offending = workspace.scanForCredential(CREDENTIAL);
+    for (const file of offending) {
+      fail(`final leak scan: credential value found in ${file}`);
+    }
+    if (offending.length === 0) {
+      note('final leak scan: every byte of the owned workspace scanned — credential absent');
+    }
   } catch {
-    /* the directory may already be removed */
+    /* nothing left to scan */
   }
-  const attempt = (remaining) => {
-    try {
-      rmSync(dataDir, { recursive: true, force: true });
-    } catch {
-      if (remaining > 0) {
-        spawnSync(process.platform === 'win32' ? 'timeout' : 'sleep', [
-          process.platform === 'win32' ? '/t' : '0.5',
-          ...(process.platform === 'win32' ? ['1', '/nobreak'] : []),
-        ]);
-        attempt(remaining - 1);
-      }
-    }
-  };
-  attempt(5);
-  const removed = (() => {
-    try {
-      statSync(dataDir);
-      return false;
-    } catch {
-      return true;
-    }
-  })();
+  const { removed } = await workspace.dispose();
   if (removed) {
-    note('cleanup: the disposable data directory was removed');
+    note('cleanup: the owned disposable workspace was removed (verified)');
   } else {
-    note('cleanup: the disposable data directory could not be fully removed (best-effort; D-6)');
+    fail('cleanup: the owned disposable workspace could NOT be removed — the proof fails closed');
   }
 }
 

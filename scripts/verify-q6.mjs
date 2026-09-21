@@ -55,6 +55,7 @@
  * repository; the operator `.quellight-data` directory is never touched.
  * Emits per-section counts; exits non-zero on ANY failure.
  */
+import { spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -531,6 +532,74 @@ console.log('\n[3] LIVE-GATE — explicit double gate; never invoked by automati
     );
   }
   console.log(`  live-gate: ${passed} checks`);
+  // --- live-WORKSPACE single-root discipline (regression-proofed) ------
+  // The original live harness allocated one directory for scan/cleanup
+  // ownership but let compositions silently allocate a SECOND one
+  // (the `reuseDataDir` boolean), so the restart recomposed against the
+  // wrong store, leak scans could miss the real directory, and cleanup
+  // could strand it. Structural checks below are belt-and-braces; the
+  // REAL guard is the behavioral lifecycle suite run here.
+  if (liveScriptExists) {
+    let workspacePassed = 0;
+    const wcheck = (label, condition) => {
+      check(label, 'live-workspace', condition);
+      return condition ? 1 : 0;
+    };
+    const workspaceHelper = 'scripts/lib/q6-live-workspace.mjs';
+    const liveSource = readFileSync(join(process.cwd(), QLT_Q6_LIVE_GATE_SCRIPT), 'utf8');
+    const helperSource = readFileSync(join(process.cwd(), workspaceHelper), 'utf8');
+    // EXACTLY ONE allocation exists in the whole live proof: the helper's.
+    const liveAllocations = [...liveSource.matchAll(/mkdtempSync\s*\(/g)].length;
+    const helperAllocations = [...helperSource.matchAll(/mkdtempSync\s*\(/g)].length;
+    workspacePassed += wcheck(
+      'the live proof allocates EXACTLY ONE disposable directory (helper-owned; none in the script)',
+      liveAllocations === 0 && helperAllocations === 1,
+    );
+    workspacePassed += wcheck(
+      'the retired reuseDataDir boolean and unused restartDataDir assignment are gone',
+      !/reuseDataDir/.test(liveSource) && !/const\s+restartDataDir\s*=/.test(liveSource),
+    );
+    workspacePassed += wcheck(
+      'every composition is handed the owned root explicitly and identity-asserted pre-turn',
+      liveSource.includes('createQ6LiveWorkspace') &&
+        (liveSource.match(/composeLive\(ownedDataDir\)/g) ?? []).length === 2 &&
+        liveSource.includes('requireCompositionDataDir'),
+    );
+    workspacePassed += wcheck(
+      'cleanup failure FAILS the proof (never a note)',
+      /could NOT be removed[\s\S]{0,80}fails closed/.test(liveSource),
+    );
+    const helperImports = [...helperSource.matchAll(/from\s+['"]([^'"]+)['"]/g)].map(
+      (match) => match[1],
+    );
+    workspacePassed += wcheck(
+      'the workspace helper imports only node builtins (no provider surface)',
+      helperImports.length > 0 && helperImports.every((source) => source.startsWith('node:')),
+    );
+    // BEHAVIORAL guard: run the focused lifecycle suites (offline; no
+    // provider, no credential) so the regression cannot return unnoticed.
+    const vitestResult = spawnSync(
+      process.execPath,
+      [
+        join('node_modules', 'vitest', 'vitest.mjs'),
+        'run',
+        '--config',
+        'vitest.node.config.ts',
+        'test/q6-live-workspace-lifecycle.test.ts',
+      ],
+      { encoding: 'utf8', timeout: 300_000 },
+    );
+    workspacePassed += wcheck(
+      'the focused live-workspace lifecycle suites pass (behavioral; offline)',
+      vitestResult.status === 0,
+    );
+    if (vitestResult.status !== 0) {
+      console.error(
+        (vitestResult.stdout ?? '') + (vitestResult.stderr ?? 'vitest produced no output'),
+      );
+    }
+    console.log(`  live-workspace: ${workspacePassed} checks`);
+  }
 }
 
 // ---------------------------------------------------------------------------
