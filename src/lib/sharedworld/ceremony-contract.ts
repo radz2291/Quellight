@@ -142,17 +142,21 @@ export const QLT_PLAN_ACTION_INVENTORY: readonly string[] = [
 
 export const QLT_PROPOSAL_CAPABILITY_ID = 'qlt.proposal.draft';
 /**
- * Revision 2 (VICT-M-1 remediation; frozen contract
- * `docs/report/QUELLIGHT-STAGE-07C-M-1-REMEDIATION.md`): the capability's
- * factual external impact is a DURABLE, EPISTEMICALLY INERT proposal-row
- * creation, so revision 2 truthfully declares `effect: 'write'`. The
- * revision bump follows the SDK capability-identity discipline: changing
- * the declared effect class requires a new capability revision so
- * activation identity can distinguish the change. The Q3-era `@1/read`
- * disclosure remains historical record (its freeze is preserved
- * unchanged); it no longer describes the pinned envelope.
+ * Revision 3 (Execution-3 remediation; frozen contract
+ * `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-EXECUTION-3-REMEDIATION-CONTRACT.md`,
+ * superseding revision 2 of the VICT-M-1 remediation): the capability's
+ * MODEL-FACING presentation changes — revision 3 adopts the VICT 0.3.1-rc.1
+ * descriptive presentation API (an exact closed input schema, a passive
+ * output-schema representation, and the bounded model-facing description)
+ * so the model finally receives the proposal-tool structure. The accepted
+ * shape is UNCHANGED (the authoritative `Contract.parse` remains the same
+ * closed fence, unchanged-or-stricter), the declared effect REMAINS
+ * `write`, and no authority moves. The revision bump follows the SDK
+ * capability-identity discipline: changing the bound contract's
+ * model-facing behavior requires a new capability revision so activation
+ * identity can distinguish the change.
  */
-export const QLT_PROPOSAL_CAPABILITY_REVISION = '2';
+export const QLT_PROPOSAL_CAPABILITY_REVISION = '3';
 export const QLT_PROPOSAL_CAPABILITY_INPUT_CONTRACT = 'qlt.proposal.draft.input';
 export const QLT_PROPOSAL_CAPABILITY_OUTPUT_CONTRACT = 'qlt.proposal.draft.output';
 

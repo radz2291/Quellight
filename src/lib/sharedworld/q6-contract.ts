@@ -61,21 +61,23 @@ export const QLT_Q6_PROVIDER_IDENTITY = {
   activationGateValue: '1',
 } as const;
 
-/** The unchanged pinned agent authority envelope of Q6 (invariance).
+/** The pinned agent authority envelope of Q6 (invariance data).
  *
- * The bounded-memory-discretion amendment bumped the conversation
- * instruction artifact (3 → 4) and the agent profile (4 → 5) to express
- * the rule-guided discretion policy; the authority envelope itself —
- * capability identity, declared effect, host policy, action inventory —
- * is unchanged.
+ * The Execution-3 remediation (2026-09-22,
+ * docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-EXECUTION-3-REMEDIATION-CONTRACT.md)
+ * bumped the proposal capability (2 → 3: model-facing presentation only;
+ * declared effect stays `write`) and the agent profile (5 → 6, binding the
+ * revision-3 capability and the unchanged revision-4 discretion
+ * instructions). The authority envelope itself — declared effect, host
+ * policy, action inventory, maxToolCalls — is unchanged.
  */
 export const QLT_Q6_UNCHANGED_ENVELOPE = {
   capabilityId: 'qlt.proposal.draft',
-  capabilityRevision: '2',
+  capabilityRevision: '3',
   declaredEffect: 'write',
   hostQuietWritePolicyIdentity: 'qlt.host-policy.quiet-write@1',
   actionInventory: 21,
-  agentProfileRevision: '5',
+  agentProfileRevision: '6',
   conversationInstructionsRevision: '4',
   conversationInstructionsId: 'quellight.conversation-instructions',
   maxToolCalls: 2,

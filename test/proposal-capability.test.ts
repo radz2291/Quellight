@@ -16,6 +16,11 @@ import {
   type ProposalDraftInvocationContext,
 } from '../src/lib/agent/proposal-capability';
 import type { QltProposal } from '../src/lib/sharedworld/meaning-contract';
+import {
+  proposalDraftInputContract,
+  proposalDraftOutputContract,
+} from '../src/lib/agent/proposal-capability';
+import { bridgeCapabilityToolToMastra } from '@victframework/mastra';
 
 /**
  * Lane B focused tests (freeze §16 file ownership): the pinned agent
@@ -305,6 +310,7 @@ describe('qlt.proposal.draft — inert proposals, correlation, idempotency', () 
     expect(hostile).toEqual({ accepted: false, code: 'QLT_INPUT_REJECTED' });
     const capabilityKeys = Object.keys(capability).sort();
     expect(capabilityKeys).toEqual([
+      'description',
       'effect',
       'id',
       'idempotency',
@@ -313,6 +319,154 @@ describe('qlt.proposal.draft — inert proposals, correlation, idempotency', () 
       'output',
       'revision',
     ]);
+    store.close();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Execution-3 remediation: the model-facing presentation (revision 3)
+// ---------------------------------------------------------------------------
+
+describe('qlt.proposal.draft@3 — the exact model-facing presentation', () => {
+  const canon = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(canon);
+    if (value !== null && typeof value === 'object') {
+      const out: Record<string, unknown> = {};
+      for (const key of Object.keys(value as Record<string, unknown>).sort()) {
+        out[key] = canon((value as Record<string, unknown>)[key]);
+      }
+      return out;
+    }
+    return value;
+  };
+  const same = (a: unknown, b: unknown): boolean =>
+    JSON.stringify(canon(a)) === JSON.stringify(canon(b));
+  const branchOf = (schema: Record<string, unknown>, kind: string): Record<string, unknown> => {
+    const branches = schema['oneOf'] as Array<Record<string, unknown>>;
+    return (
+      branches.find(
+        (branch) =>
+          (
+            (branch['properties'] as Record<string, unknown>)['proposalKind'] as Record<
+              string,
+              unknown
+            >
+          )['const'] === kind,
+      ) ?? {}
+    );
+  };
+
+  it('the input contract declares the EXACT closed three-branch presentation', () => {
+    const schema = proposalDraftInputContract.descriptiveJsonSchema as Record<string, unknown>;
+    expect(schema).toBeDefined();
+    expect(schema['type']).toBe('object');
+    expect(schema['additionalProperties']).toBe(false);
+    expect(same(schema['required'], ['proposalKind', 'content'])).toBe(true);
+    const branches = schema['oneOf'] as Array<Record<string, unknown>>;
+    expect(branches.length).toBe(3);
+    for (const kind of ['claim', 'commitment', 'open_loop']) {
+      const branch = branchOf(schema, kind);
+      expect(branch['type']).toBe('object');
+      expect(branch['additionalProperties']).toBe(false);
+      expect(same(branch['required'], ['proposalKind', 'content'])).toBe(true);
+    }
+    const claimContent = (branchOf(schema, 'claim')['properties'] as Record<string, unknown>)[
+      'content'
+    ] as Record<string, unknown>;
+    expect(
+      same(claimContent['required'], [
+        'subject',
+        'epistemicType',
+        'honestyState',
+        'confidence',
+        'statement',
+      ]),
+    ).toBe(true);
+    expect(claimContent['additionalProperties']).toBe(false);
+    const commitmentContent = (
+      branchOf(schema, 'commitment')['properties'] as Record<string, unknown>
+    )['content'] as Record<string, unknown>;
+    expect(same(commitmentContent['required'], ['commitmentKey', 'statement'])).toBe(true);
+    expect(commitmentContent['additionalProperties']).toBe(false);
+    const openLoopContent = (branchOf(schema, 'open_loop')['properties'] as Record<string, unknown>)[
+      'content'
+    ] as Record<string, unknown>;
+    expect(same(openLoopContent['required'], ['subject', 'loopKind', 'detail'])).toBe(true);
+    expect(openLoopContent['additionalProperties']).toBe(false);
+  });
+
+  it('the output contract declares the closed accepted/refused union presentation', () => {
+    const schema = proposalDraftOutputContract.descriptiveJsonSchema as Record<string, unknown>;
+    expect(schema).toBeDefined();
+    expect(schema['type']).toBe('object');
+    const branches = schema['oneOf'] as Array<Record<string, unknown>>;
+    expect(branches.length).toBe(2);
+    for (const branch of branches) {
+      expect(branch['additionalProperties']).toBe(false);
+      expect(Array.isArray(branch['required'])).toBe(true);
+    }
+  });
+
+  it('the capability carries a bounded description stating what the tool does and never does', () => {
+    const { store } = openStore();
+    const capability = createProposalDraftCapability({
+      meaning: store.meaning,
+      resolveTurnCorrelation: async () => undefined,
+    });
+    const description = capability.description ?? '';
+    expect(description.length).toBeGreaterThan(0);
+    expect(description.length).toBeLessThanOrEqual(1024);
+    expect(description).toContain('never confirm, save, or change canonical memory');
+    expect(description).toContain('claim');
+    expect(description).toContain('commitment');
+    expect(description).toContain('open_loop');
+    expect(description).toContain('EXACT shape');
+    store.close();
+  });
+
+  it('the REAL Mastra bridge presents the exact schema and description to the provider', () => {
+    const { store } = openStore();
+    const capability = createProposalDraftCapability({
+      meaning: store.meaning,
+      resolveTurnCorrelation: async () => undefined,
+    });
+    const activation = {
+      activationVersion: 'v1_act',
+      agentProfileVersion: 'v1_profile',
+      capabilities: [
+        { id: QLT_PROPOSAL_CAPABILITY_ID, revision: QLT_PROPOSAL_CAPABILITY_REVISION },
+      ],
+    } as unknown as Parameters<typeof bridgeCapabilityToolToMastra>[0];
+    const deps = {
+      resolveCapability: () => capability as never,
+      invoke: async () => ({ accepted: true, proposalId: 'qlt-p-probe' }),
+    } as never;
+    const tool = bridgeCapabilityToolToMastra(activation, capability as never, deps) as {
+      inputSchema: {
+        '~standard': {
+          jsonSchema: { input: () => unknown; output: () => unknown };
+          validate: (v: unknown) => unknown;
+        };
+      };
+      description?: string;
+    };
+    // The provider-facing input declaration is the EXACT presentation:
+    const exposed = tool.inputSchema['~standard'].jsonSchema.input({ target: 'draft-07' });
+    expect(same(exposed, proposalDraftInputContract.descriptiveJsonSchema)).toBe(true);
+    const serialized = JSON.stringify(exposed);
+    for (const token of ['proposalKind', 'content', 'required', 'claim', 'commitment', 'open_loop']) {
+      expect(serialized).toContain(token);
+    }
+    // The bounded description rides the REAL tool description:
+    expect(tool.description ?? '').toContain('never confirm, save, or change canonical memory');
+    // The output presentation is exposed too:
+    const exposedOutput = tool.inputSchema['~standard'].jsonSchema.output();
+    expect(same(exposedOutput, proposalDraftOutputContract.descriptiveJsonSchema)).toBe(true);
+    // Authority separation, at the real tool boundary: the schema's own
+    // validate STILL delegates to the authoritative contract — a hostile
+    // presentation could never wave an argument through.
+    const hostile = tool.inputSchema['~standard'].validate({});
+    expect((hostile as { issues?: unknown }).issues).toBeDefined();
     store.close();
   });
 });

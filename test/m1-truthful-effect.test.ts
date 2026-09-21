@@ -3,7 +3,7 @@
  * docs/report/QUELLIGHT-STAGE-07C-M-1-REMEDIATION.md, controls 15–16).
  *
  * Through the REAL Quellight composition — the released 0.3.0 VICT
- * bridge, the pinned `qlt.proposal.draft@2` capability truthfully declared
+ * bridge, the pinned proposal capability (revision 2 as recorded; 3 as of the Execution-3 remediation) truthfully declared
  * `write`, and the exact composition-supplied host quiet-write policy — a
  * scripted agent turn must:
  *
@@ -74,7 +74,7 @@ describe('VICT-M-1: the real composition records truthful write evidence and sta
     const actor = { ...composition.actor, presentedTokenKind: 'local-test' as const };
 
     // The pinned envelope carries the new truthful identity.
-    expect(QLT_PROPOSAL_CAPABILITY_REVISION).toBe('2');
+    expect(QLT_PROPOSAL_CAPABILITY_REVISION).toBe('3');
     expect(QLT_PROPOSAL_CAPABILITY_DECLARED_EFFECT).toBe('write');
 
     const created = await app.dispatch(
@@ -109,7 +109,7 @@ describe('VICT-M-1: the real composition records truthful write evidence and sta
     const record = invocations.at(-1);
     expect(record).toBeDefined();
     expect(record!.capabilityId).toBe(QLT_PROPOSAL_CAPABILITY_ID);
-    expect(record!.capabilityRevision).toBe('2');
+    expect(record!.capabilityRevision).toBe('3');
     // Truthful effect and decision evidence, durably recorded.
     expect(record!.effect).toBe('write');
     expect(record!.approvalRequired).toBe(false);

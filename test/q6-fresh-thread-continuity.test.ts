@@ -196,7 +196,7 @@ describe('Q6 fresh-thread continuity (real composition, offline)', () => {
     const invocations = await composition.stores.invocations.listInvocationsForTurn(turn1);
     const record = invocations.at(-1)!;
     expect(record.capabilityId).toBe('qlt.proposal.draft');
-    expect(record.capabilityRevision).toBe('2');
+    expect(record.capabilityRevision).toBe('3');
     expect(record.effect).toBe('write');
     expect(record.approvalRequired).toBe(false);
     expect(record.approvalDisposition).toBe('host-policy-write-without-separate-approval');

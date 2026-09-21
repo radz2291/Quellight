@@ -465,7 +465,7 @@ describe('Q4 model-seam injection (composition level)', () => {
       const composition = await compose({}, recorded);
       expect(composition.activation.capabilities.length).toBe(1);
       expect(composition.activation.capabilities[0]!.id).toBe('qlt.proposal.draft');
-      expect(composition.activation.capabilities[0]!.revision).toBe('2');
+      expect(composition.activation.capabilities[0]!.revision).toBe('3');
     })();
   });
 });

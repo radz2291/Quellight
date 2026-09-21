@@ -151,13 +151,14 @@ const INSTRUCTIONS_TEXT = [
 const MEMORY_POLICY_ID = 'quellight.conversation-memory-policy';
 const MEMORY_POLICY_REVISION = '1';
 
-/** The pinned agent profile (revision 5: binds the revision-4
- * bounded-discretion instructions; amendment D-Q6-6. The authority envelope
- * — the truthful `write`-effect capability `qlt.proposal.draft@2`, the
+/** The pinned agent profile (revision 6: binds the revision-4
+ * bounded-discretion instructions AND the revision-3 model-facing proposal
+ * capability presentation (Execution-3 remediation). The authority envelope
+ * — the truthful `write`-effect capability `qlt.proposal.draft@3`, the
  * one-entry quiet-write policy, the model/provider identity, and the
- * turn budget — is unchanged from revision 4). */
+ * turn budget — is otherwise unchanged from revision 5). */
 const PROFILE_ID = 'agent.quellight.conversation';
-const PROFILE_REVISION = '5';
+const PROFILE_REVISION = '6';
 
 /** The composed application release binding (local envelope). */
 export const APPLICATION_RELEASE_VERSION = 'quellight-local-1';

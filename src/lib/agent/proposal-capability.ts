@@ -142,6 +142,123 @@ const INPUT_FIELDS = ['proposalKind', 'content'] as const;
 const OUTPUT_ACCEPTED_FIELDS = ['accepted', 'proposalId'] as const;
 const OUTPUT_REFUSED_FIELDS = ['accepted', 'code'] as const;
 
+// ---------------------------------------------------------------------------
+// The EXACT closed model-facing presentation (Execution-3 remediation;
+// frozen contract §6). Passive draft-07-style data only: the VICT bridge
+// captures it as inert bounded data at tool construction and presents it to
+// the provider — it is NEVER executed and NEVER replaces the authoritative
+// Contract.parse above. Every branch declares its required content fields
+// and refuses unknown fields (additionalProperties: false).
+// ---------------------------------------------------------------------------
+
+const MODEL_DESCRIPTION =
+  'Draft ONE inert pending proposal for the user to review later. ' +
+  'You never confirm, save, or change canonical memory, and the proposal is never shown back to you. ' +
+  "Choose proposalKind 'claim', 'commitment', or 'open_loop', and send 'content' in the EXACT shape " +
+  'required for that kind: claim needs subject, epistemicType, honestyState, confidence, and statement; ' +
+  'commitment needs commitmentKey and statement; open_loop needs subject, loopKind, and detail. ' +
+  'Send every required field as a non-empty string and no unknown fields; empty or single-field ' +
+  'arguments are always refused.';
+
+const CLAIM_CONTENT_PRESENTATION = {
+  type: 'object',
+  properties: {
+    subject: { type: 'string', minLength: 1, maxLength: 200 },
+    epistemicType: { type: 'string', enum: ['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7'] },
+    honestyState: {
+      type: 'string',
+      enum: ['known', 'likely', 'uncertain', 'stale', 'conflicted'],
+    },
+    confidence: { type: 'string', enum: ['stated', 'qualified', 'uncertain'] },
+    statement: { type: 'string', minLength: 1, maxLength: 2000 },
+  },
+  required: ['subject', 'epistemicType', 'honestyState', 'confidence', 'statement'],
+  additionalProperties: false,
+} as const;
+
+const COMMITMENT_CONTENT_PRESENTATION = {
+  type: 'object',
+  properties: {
+    commitmentKey: { type: 'string', minLength: 1, maxLength: 200 },
+    statement: { type: 'string', minLength: 1, maxLength: 2000 },
+  },
+  required: ['commitmentKey', 'statement'],
+  additionalProperties: false,
+} as const;
+
+const OPEN_LOOP_CONTENT_PRESENTATION = {
+  type: 'object',
+  properties: {
+    subject: { type: 'string', minLength: 1, maxLength: 200 },
+    loopKind: {
+      type: 'string',
+      enum: ['pending_action', 'undecided_question', 'expected_event'],
+    },
+    detail: { type: 'string', minLength: 1, maxLength: 2000 },
+  },
+  required: ['subject', 'loopKind', 'detail'],
+  additionalProperties: false,
+} as const;
+
+const proposalInputPresentation = {
+  type: 'object',
+  properties: {
+    proposalKind: {
+      type: 'string',
+      enum: ['claim', 'commitment', 'open_loop'],
+      description:
+        "The kind of proposal to draft: 'claim', 'commitment', or 'open_loop'.",
+    },
+    content: { type: 'object' },
+  },
+  required: ['proposalKind', 'content'],
+  additionalProperties: false,
+  oneOf: [
+    {
+      type: 'object',
+      properties: { proposalKind: { const: 'claim' }, content: CLAIM_CONTENT_PRESENTATION },
+      required: ['proposalKind', 'content'],
+      additionalProperties: false,
+    },
+    {
+      type: 'object',
+      properties: {
+        proposalKind: { const: 'commitment' },
+        content: COMMITMENT_CONTENT_PRESENTATION,
+      },
+      required: ['proposalKind', 'content'],
+      additionalProperties: false,
+    },
+    {
+      type: 'object',
+      properties: { proposalKind: { const: 'open_loop' }, content: OPEN_LOOP_CONTENT_PRESENTATION },
+      required: ['proposalKind', 'content'],
+      additionalProperties: false,
+    },
+  ],
+} as const;
+
+const proposalOutputPresentation = {
+  type: 'object',
+  oneOf: [
+    {
+      type: 'object',
+      properties: {
+        accepted: { const: true },
+        proposalId: { type: 'string', maxLength: 128 },
+      },
+      required: ['accepted', 'proposalId'],
+      additionalProperties: false,
+    },
+    {
+      type: 'object',
+      properties: { accepted: { const: false }, code: { type: 'string', maxLength: 64 } },
+      required: ['accepted', 'code'],
+      additionalProperties: false,
+    },
+  ],
+} as const;
+
 /** Contract issues for the bridge fence: code + path ONLY, never values. */
 function issue(
   code: string,
@@ -164,6 +281,7 @@ export const proposalDraftInputContract: Contract<ProposalDraftInput> =
     revision: '1',
     expected:
       'closed object { proposalKind: claim|commitment|open_loop, content: kind-shaped bounded content }; correlation fields are server-derived and unknown',
+    descriptiveJsonSchema: proposalInputPresentation,
     parse(input: unknown) {
       if (Array.isArray(input) || input === null || typeof input !== 'object') {
         return { ok: false as const, issues: [issue('QLT_INPUT_NOT_OBJECT', '(root)')] };
@@ -208,6 +326,7 @@ export const proposalDraftOutputContract: Contract<ProposalDraftOutput> =
     revision: '1',
     expected:
       'closed union { accepted: true, proposalId } | { accepted: false, code } — the ONLY Shared World information that may reach the model',
+    descriptiveJsonSchema: proposalOutputPresentation,
     parse(input: unknown) {
       if (Array.isArray(input) || input === null || typeof input !== 'object') {
         return { ok: false as const, issues: [issue('QLT_OUTPUT_INVALID', '(root)')] };
@@ -272,6 +391,10 @@ export function createProposalDraftCapability(
     effect: QLT_PROPOSAL_CAPABILITY_DECLARED_EFFECT,
     input: proposalDraftInputContract,
     output: proposalDraftOutputContract,
+    // Bounded model-facing description (Execution-3 remediation §6):
+    // inert presentation metadata captured by the bridge at tool
+    // construction; it can never widen authority.
+    description: MODEL_DESCRIPTION,
     idempotency: 'keyed',
     async invoke(rawInput, context): Promise<ProposalDraftOutput> {
       // ---- second fence: re-parse through the SAME closed contract -------

@@ -235,10 +235,10 @@ describe('Q6 discretion identity (D-Q6-6; amendment §4)', () => {
     );
     expect(composition.activation.instructions.reference.revision).toBe('4');
     expect(composition.activation.profile.profile.id).toBe('agent.quellight.conversation');
-    expect(composition.activation.profile.profile.revision).toBe('5');
+    expect(composition.activation.profile.profile.revision).toBe('6');
     // The authority envelope is unchanged by the identity bump.
     expect(composition.activation.capabilities).toHaveLength(1);
-    expect(composition.activation.capabilities[0]?.revision).toBe('2');
+    expect(composition.activation.capabilities[0]?.revision).toBe('3');
   });
 });
 
