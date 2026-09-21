@@ -41,6 +41,11 @@
  *       next turn uses the new mode);
  *   the off-turn truthful evidence and quiet line state;
  *   axe + responsive viewports with the Memory surface OPEN.
+ * Q6 (Lane D) additions (frozen contract §9):
+ *   fresh-conversation continuity — a genuinely NEW conversation with
+ *       no transcript dependency receives the confirmed meaning through
+ *       its per-turn C1 snapshot (truthful quiet-line used state), while
+ *       the conversation flow stays uninterrupted.
  * (Freeze §14 items 8, 10, 13, 14 are proven at the node/structural level by
  * test/ceremony-authority.test.ts and scripts/verify-q3.mjs.)
  */
@@ -842,6 +847,64 @@ try {
   await tray.getByRole('button', { name: 'Save memory mode', exact: true }).click();
   await page.waitForTimeout(600);
   await tray.getByRole('button', { name: 'Close memory review' }).click();
+
+  // -----------------------------------------------------------------------
+  // Q6 (Lane D): fresh-conversation continuity — a genuinely NEW
+  // conversation with NO transcript dependency receives the confirmed
+  // meaning through its per-turn C1 snapshot, while the conversation
+  // flow stays uninterrupted (no modal, no focus theft, composer
+  // enabled, tray closed).
+  // -----------------------------------------------------------------------
+  await page.getByRole('button', { name: 'New thread' }).focus();
+  await page.keyboard.press('Enter');
+  await page.locator('.qlt-thread-heading').first().waitFor({ state: 'visible', timeout: 20_000 });
+  const freshComposer = page.locator('#qlt-composer');
+  await freshComposer.focus();
+  await freshComposer.fill('Hello');
+  const assistantBeforeFresh = await page.locator('.qlt-message--assistant').count();
+  await page.getByRole('button', { name: 'Send' }).focus();
+  await page.keyboard.press('Enter');
+  await page
+    .locator('.qlt-message--assistant')
+    .nth(assistantBeforeFresh)
+    .waitFor({ state: 'visible', timeout: 45_000 });
+  await page.waitForTimeout(1_200);
+  // The conversation stayed uninterrupted: composer enabled, tray closed,
+  // no modal appeared.
+  if (!(await freshComposer.isEnabled())) {
+    fail('Q6: the composer was disabled during the fresh-conversation turn (interrupted flow)');
+  }
+  if ((await page.locator('section[aria-label="Memory review"]').count()) !== 0) {
+    fail('Q6: the memory tray opened itself during the fresh-conversation turn');
+  }
+  const focusAfterFresh = await page.evaluate(
+    () => document.activeElement?.id ?? document.activeElement?.tagName,
+  );
+  if (/memory/i.test(String(focusAfterFresh))) {
+    fail(`Q6: focus was stolen by the memory surface (activeElement=${focusAfterFresh})`);
+  }
+  note(
+    'Q6: the fresh conversation turn completed with uninterrupted flow (no tray, no focus theft)',
+  );
+  // The fresh conversation received the confirmed meaning through its
+  // per-turn C1 snapshot: the quiet line truthfully reports memory used.
+  await openTray(page);
+  const freshAssemblyLine = (
+    (await tray.locator('.qlt-memory-assembly').textContent()) ?? ''
+  ).trim();
+  if (!freshAssemblyLine.startsWith('Your last reply here used')) {
+    fail(
+      `Q6: the fresh conversation did not receive the confirmed meaning through C1 (quiet line: "${freshAssemblyLine}")`,
+    );
+  } else {
+    note(
+      `Q6: the fresh conversation used the confirmed memory through C1 ("${freshAssemblyLine}")`,
+    );
+  }
+  await tray.getByRole('button', { name: 'Close memory review' }).click();
+  await page
+    .locator('section[aria-label="Memory review"]')
+    .waitFor({ state: 'detached', timeout: 20_000 });
 
   // ---------- 12: responsive + axe with the Memory surface OPEN ----------
   await openTray(page, 'pending');
