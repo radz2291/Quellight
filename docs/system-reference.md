@@ -10,9 +10,9 @@ Stage 07C Phase Q2: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (durab
 Stage 07C Phase Q3: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (governed confirmation ceremony and quiet memory inbox)
 Stage 07C Phase Q4: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (deterministic Shared World context assembly; H-1 remediated and independently re-verified closed)
 Stage 07C Phase Q5: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (Shared World inspection, user memory control, one durable global Memory Mode; independent audit NOT VERIFIED — B-1/H-1; Q5-B-1/Q5-H-1/Q5-M-1 remediated per the frozen remediation contract and independently re-verified closed; L-3 repaired; zero-warning dev-start gate)
-Stage 07C Phase Q6: IMPLEMENTED — AWAITING INDEPENDENT Q7 VERIFICATION (deterministic final verification; offline gates and the N-C25 aggregate green; the live proof executed twice on 2026-09-21 — each under its own owner authorization — and BOTH FAILED TRUTHFULLY (Execution 1 at 8d1273b…: HTTP 401 from an unresolved credential-environment reference — the credential itself verified valid; Execution 2 at a32bba5…: the provider turn succeeded but the model never invoked qlt.proposal.draft@2 — the frozen missing-proposal class); the bounded-memory-discretion amendment D-Q6-6 (commit 365259f…) then adopted rule-guided memory discretion, bumped the conversation instructions to revision 4 and the agent profile to revision 5, raised ONLY the live output ceiling to 512 tokens, replaced the single implicit-positive proof with a five-turn matrix — explicit positive, discretionary positive via an EXTERNAL private fixture (QUELLIGHT_Q6_NATURAL_FIXTURE_FILE; absolute, outside repository and .quellight-data, <= 12288 UTF-8 bytes, no NUL, never committed or echoed; only byte length + SHA-256 as evidence), discretionary negative, governed ceremony + restart, fresh-thread continuity, hypothetical conflict — and ordered a parent/worker live lifecycle so cleanup can no longer race Windows handle release (commit 6844bfe…; the worker runs every composition; the parent scans and disposes only after the worker exits; the adopted worker API has no deletion capability); Execution 3 is PREPARED — NOT EXECUTED (commit 67d5223…; the authoritative offline ladder ran green on the committed tree; verify:q6 grew to 107 checks; verify:quellight, verify:consumer, verify:stage7c, npm audit 0 vulnerabilities all green); a separate owner invocation is required to run Execution 3 exactly once; freeze commit ca82892…, ONE amendment; implementation commits cd70bc8…, d25d9c3…; harness fixes c0e5a93…, 6a81f66…; failure record: docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-LIVE-PROOF-FAILURE.md; preparation record: docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-EXECUTION-3-PREPARATION.md)
-Stage 07C Phase Q7: BLOCKED — NOT BEGUN (permitted only after the Q6 live proof has executed and passed; the live proof failed twice and Execution 3 is not yet run, so Q7 remains blocked)
-Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 closed; Q5 closed; M-1 CLOSED — stable 0.3.0 adopted; Q6 implemented — live proof failed twice, bounded-discretion amendment adopted, Execution 3 prepared but not run; Q7, 07D, 07E remaining)
+Stage 07C Phase Q6: IMPLEMENTED — AWAITING INDEPENDENT Q7 VERIFICATION (deterministic final verification; offline gates and the N-C25 aggregate green; the live proof has now executed THREE times on 2026-09-21 — each under its own owner authorization — and ALL THREE FAILED TRUTHFULLY (Execution 1 at 8d1273b…: HTTP 401 from an unresolved credential-environment reference — the credential itself verified valid; Execution 2 at a32bba5…: the provider turn succeeded but the model never invoked qlt.proposal.draft@2 — the frozen missing-proposal class; Execution 3 at e0f2797…, the prepared bounded-discretion five-turn matrix with the external private fixture: turn t1 completed in 18,567 ms but every capability attempt was rejected at the frozen proposal-row contract boundary — 0 invocations, 0 proposals — and the matrix then crashed at the fresh-thread boundary on a worker API defect, sharedWorld.restoreThread not being a function; 1 of 6 turns used; fixture byte-identical; credential scan complete and clean; the owned workspace was disposed after the worker exited — the parent/worker lifecycle correction held). The bounded-memory-discretion amendment D-Q6-6 (commit 365259f…) remains adopted: rule-guided memory discretion, instructions revision 4, profile revision 5, ONLY the live output ceiling raised 256 -> 512, the five-turn matrix, and the parent/worker live lifecycle (commit 6844bfe…). Q6 is NOT independently verified and NOT formally closed; NO FOURTH LIVE EXECUTION IS AUTHORIZED; a32bba5-family discipline retained: zero durable effects, zero retries, no fallback across all runs; freeze commit ca82892…, ONE amendment; implementation commits cd70bc8…, d25d9c3…; harness fixes c0e5a93…, 6a81f66…; records: docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-LIVE-PROOF-FAILURE.md, docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-LIVE-PROOF-EXECUTION-3.md, docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-EXECUTION-3-PREPARATION.md)
+Stage 07C Phase Q7: BLOCKED — NOT BEGUN (permitted only after the Q6 live proof has executed and passed; the live proof failed three times, so Q7 remains blocked)
+Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 closed; Q5 closed; M-1 CLOSED — stable 0.3.0 adopted; Q6 implemented — live proof failed three times: credential wiring, missing proposal, contract-shape rejections plus a worker API crash; bounded-discretion amendment adopted; Q7, 07D, 07E remaining)
 ```
 
 - **VICT-M-1 (2026-09-21): INDEPENDENTLY VERIFIED AND FORMALLY
@@ -184,9 +184,26 @@ Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed;
   the committed tree `67d5223…` (npm ci, verify:consumer,
   verify:quellight, verify:stage7c, npm audit 0 vulnerabilities, git
   diff --check). **Execution 3 is PREPARED — NOT EXECUTED**; it
-  requires a separate owner invocation after review. Record:
+  required a separate owner invocation after review. Record:
   `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-EXECUTION-3-PREPARATION.md`.
-  Q7 remains BLOCKED — NOT BEGUN.
+  Execution 3 was subsequently authorized and EXECUTED EXACTLY ONCE on
+  the same day (tree `e0f2797…`) and FAILED truthfully: turn t1
+  (explicit positive control) completed in 18,567 ms within every
+  frozen bound, but the model's capability attempts were each rejected
+  by the host tool-input validator at the frozen proposal-row contract
+  boundary (empty and single-field shapes) — 0 durable invocations, 0
+  proposals — and the matrix then crashed at the fresh-thread boundary
+  on a worker API defect (`sharedWorld.restoreThread` is not a
+  function), aborting before the restart, continuity, and conflict
+  controls could run. 1 of 6 turns used; the external fixture survived
+  byte-identical; the credential scan completed clean; the owned
+  workspace was disposed after the worker exited (the parent/worker
+  lifecycle correction held; the Windows dispose failure of
+  Executions 1–2 did not recur). NOT rerun; no correction implemented
+  in that task; no diagnostic provider call made. Record:
+  `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-LIVE-PROOF-EXECUTION-3.md`.
+  Q7 remains BLOCKED — NOT BEGUN; no fourth live execution is
+  authorized.
 
 - **Phase Q5 — Shared World inspection and user memory control The pinned capability advanced to
   `qlt.proposal.draft@2` with the truthful effect class `write` (the

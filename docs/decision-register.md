@@ -1110,3 +1110,46 @@ instructions` revision 3 → 4; agent profile
   commits `d11d9e9…`, `6844bfe…`, `67d5223…`. Records:
   `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-BOUNDED-DISCRETION-AMENDMENT.md`,
   `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-EXECUTION-3-PREPARATION.md`.
+
+## D-Q6-7 — Q6 live proof Execution 3: prepared bounded-discretion matrix executed exactly once and FAILED truthfully; no fourth execution authorized (owner-authorized execution; truthful-result decision)
+
+- **What ran**: the one owner-authorized live execution of the prepared
+  five-turn matrix on tree `e0f2797…` (verified `HEAD == origin/main`,
+  clean, linear; docs-only delta since the prepared tree `67d5223…`),
+  2026-09-21, ~65 s wall clock, model `ollama-cloud/glm-5.3-flash` at
+  `https://ollama.com/v1`. Credential resolved in memory from the
+  owner-designated store and exposed only as `OLLAMA_API_KEY`; never
+  printed, hashed, serialized, or persisted; process-scoped variables
+  cleared on exit. **True exit: 1.** Invoked EXACTLY ONCE; zero
+  retries; zero preliminary probes; no post-failure correction.
+- **Outcome**: turn t1 (explicit positive control) COMPLETED in
+  18,567 ms within every frozen bound, but the model's draft-capability
+  attempts were each rejected by the host tool-input validator at the
+  frozen proposal-row contract boundary (an empty-args attempt and
+  single-field attempts) — **0 durable invocations, 0 proposals, 0
+  canonical effects**. The matrix then CRASHED at the fresh-thread
+  boundary: the prepared worker called `sharedWorld.restoreThread`,
+  which the runtime binding does not expose — a harness defect
+  aborting the restart, continuity, and conflict controls. 1 of 6
+  turns used; one finding recorded; turns t2–t5 never reached.
+- **What held**: the parent/worker lifecycle correction worked — the
+  worker exited before the parent scanned and disposed; the external
+  fixture survived byte-identical (3,137 bytes, SHA-256
+  `9cc76c36…`) and never entered the repository; the credential scan
+  completed clean (credential absent from every persisted byte); the
+  owned workspace was removed and verified absent; the Windows dispose
+  failure of Executions 1–2 did NOT recur; `.quellight-data` was never
+  accessed (mtime unchanged); VICT untouched.
+- **Structural observations (owner-decision input only; nothing
+  changed in this task)**: (a) the live model cannot currently produce
+  argument objects satisfying the frozen `qlt.proposal.draft@2`
+  contract shape — the quiet-write policy correctly prevented any
+  partial effect; (b) the prepared worker references a nonexistent
+  shared-world API member. Both require owner decisions; any harness
+  or bounds change follows freeze §13.
+- **Status**: Q6 `IMPLEMENTED — AWAITING INDEPENDENT Q7 VERIFICATION`;
+  NOT independently verified; NOT formally closed. **PHASE Q7 REMAINS
+  BLOCKED — NOT BEGUN. NO FOURTH LIVE EXECUTION IS AUTHORIZED. Stage 07
+  remains In Progress.**
+- **Date**: 2026-09-21. Record:
+  `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-LIVE-PROOF-EXECUTION-3.md`.
