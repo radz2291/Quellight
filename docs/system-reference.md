@@ -1,9 +1,9 @@
 # Quellight system reference — Stage 07B/07C
 
-## Status (current, 2026-09-21 — VICT-M-1 REMEDIATED — AWAITING INDEPENDENT VERIFICATION; adopted candidate `@victframework/*@0.3.0-rc.1`)
+## Status (current, 2026-09-21 — VICT-M-1 INDEPENDENTLY VERIFIED AND FORMALLY CLOSED; adopted stable set `@victframework/*@0.3.0`)
 
 ```text
-VICT-M-1: REMEDIATED — AWAITING INDEPENDENT VERIFICATION (qlt.proposal.draft@2/write; exact host quiet-write policy; adopted verification candidate @victframework/*@0.3.0-rc.1 = vict-release-set@1/0.3.0-rc.1; latest remains 0.2.0; stable 0.3.0 not yet published)
+VICT-M-1: INDEPENDENTLY VERIFIED AND FORMALLY CLOSED (qlt.proposal.draft@2/write; exact host quiet-write policy qlt.host-policy.quiet-write@1; adopted STABLE set @victframework/*@0.3.0 = vict-release-set@1/0.3.0, contentId v1_5f3a074a…; latest = 0.3.0; the 0.3.0-rc.1 candidate and its recovered evidence chain remain immutable historical record)
 Stage 07B: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
 Stage 07C Phase Q1: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED
 Stage 07C Phase Q2: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (durable Shared World schema)
@@ -11,11 +11,35 @@ Stage 07C Phase Q3: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (gover
 Stage 07C Phase Q4: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (deterministic Shared World context assembly; H-1 remediated and independently re-verified closed)
 Stage 07C Phase Q5: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (Shared World inspection, user memory control, one durable global Memory Mode; independent audit NOT VERIFIED — B-1/H-1; Q5-B-1/Q5-H-1/Q5-M-1 remediated per the frozen remediation contract and independently re-verified closed; L-3 repaired; zero-warning dev-start gate)
 Stage 07C Phases Q6–Q7: NOT BEGUN (live-provider injection-resistance proof is Q6; contract and implementation planning is permitted — not begun)
-Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 closed; Q5 closed; M-1 remediated; Q6–Q7, 07D, 07E remaining)
+Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 closed; Q5 closed; M-1 CLOSED — stable 0.3.0 adopted; Q6–Q7, 07D, 07E remaining)
 ```
 
-- **VICT-M-1 remediation (2026-09-21): REMEDIATED — AWAITING
-  INDEPENDENT VERIFICATION.** The pinned capability advanced to
+- **VICT-M-1 (2026-09-21): INDEPENDENTLY VERIFIED AND FORMALLY
+  CLOSED.** The fresh independent re-verification
+  (`CLEARED — CONDITIONAL STABLE RELEASE PERMITTED`, 0 Blocking / 0
+  High / 0 Medium) closed Blocking finding B-1 (the recovered evidence
+  chain is intact: original publication run `35530894104` truthfully
+  terminal-`failure`, successor read-only evidence run `35558851493`
+  terminal-`success`), executed the full deferred audit scope (old-tree
+  negative controls; 10 independent registry-package semantic probes;
+  Linux rebuild 13/13 byte-identical; registry-only consumer proofs
+  with fail-closed negative controls; both authoritative ladders green
+  exactly once), and permitted the stable release. VICT published the
+  STABLE set `vict-release-set@1/0.3.0` (contentId `v1_5f3a074a…`,
+  release source `c7a413a…`, trusted-OIDC workflow run `35564490763`,
+  attempt 1, terminal-`success`, zero npm credentials), and Quellight
+  repinned EXACTLY to it at `1c7d3e6…` (mechanical only:
+  `qlt.proposal.draft@2`/`write` and the exact host quiet-write policy
+  unchanged; no product or Q6 behavior change). The stable-pinned
+  authoritative ladder ran exactly once, first-run green. Quellight
+  record: `docs/report/QUELLIGHT-STAGE-07C-M-1-STABLE-REPIN.md`;
+  VICT closure record:
+  `docs/report/VICT-M-1-STABLE-RELEASE-AND-FORMAL-CLOSURE.md`;
+  re-verification record:
+  `docs/report/VICT-M-1-INDEPENDENT-RE-VERIFICATION.md` (VICT);
+  decision register D-Q-M1-1/D-Q-M1-2. Phase Q6 has not begun.
+
+- **Phase Q5 — Shared World inspection and user memory control The pinned capability advanced to
   `qlt.proposal.draft@2` with the truthful effect class `write` (the
   durable, epistemically inert proposal-row creation); the composition
   supplies the EXACT host-owned quiet-write approval policy

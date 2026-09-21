@@ -747,3 +747,41 @@ and 07E have not begun. This entry is documentation-only.
 - **Date**: 2026-09-18 (decision executed by co-founder agent; no owner
   input required — no binding principle touched, trade-off already
   charted and browser-verified by Stage 07B).
+
+## D-Q-M1-2 — VICT-M-1 formally closed; Quellight exact-pinned to the stable vict-release-set@1/0.3.0 (closure decision)
+
+- **Decision**: upon the fresh independent re-verification of VICT-M-1
+  (`VERDICT: CLEARED — CONDITIONAL STABLE RELEASE PERMITTED`,
+  `0 Blocking · 0 High · 0 Medium · 2 Low · 3 Observations` —
+  `docs/report/VICT-M-1-INDEPENDENT-RE-VERIFICATION.md` on the VICT side,
+  committed at `4912d24…`), VICT published the STABLE coordinated set
+  `vict-release-set@1/0.3.0` (contentId
+  `v1_5f3a074a50ab5623acbf933d52a24e6d383ded2ccd02bbaa78a28c3be3915580`)
+  from release source `c7a413a…` through the unchanged trusted-OIDC
+  workflow (run `35564490763`, attempt 1, terminal-`success`; zero npm
+  tokens/logins/OTPs/local publishes), and Quellight repinned EXACTLY to
+  it (`1c7d3e6…`).
+- **Scope of the Quellight change**: MECHANICAL ONLY — every
+  `@victframework/*` dependency `0.3.0-rc.1` → exact `0.3.0` (lockfile
+  regenerated through real public-registry installation; 11/11 entries
+  at `0.3.0`); the release-set gate constants updated to the stable
+  identity; stale invariant/doc text corrected (audit L-1/L-2; the
+  historically-framed Q4 deferral docblock preserved). NO product or Q6
+  behavior change; `qlt.proposal.draft@2` (`write`),
+  `qlt.host-policy.quiet-write@1`, the proposal-only agent envelope,
+  and every Q2–Q5 closure remain unchanged.
+- **Verification**: the stable-pinned authoritative ladder ran EXACTLY
+  ONCE on the pushed tree (`npm ci`; `verify:consumer` incl. N-2
+  negative control; `verify:quellight` incl. the real offline
+  conversation/ceremony path, the M-1 truthful-evidence suite,
+  dev-start zero-warning gate, real-browser checks, artifact scan;
+  `npm audit --omit=dev` clean; `git diff --check`) — first-run green.
+- **Standing**: **VICT-M-1: INDEPENDENTLY VERIFIED AND FORMALLY
+  CLOSED.** The candidate `0.3.0-rc.1` and its recovered evidence chain
+  (original run `35530894104` truthfully terminal-`failure`; successor
+  evidence run `35558851493` terminal-`success`) remain immutable
+  historical record. **Q5 REMAINS VERIFIED WITH NON-BLOCKING ISSUES —
+  FORMALLY CLOSED.** **PHASE Q6 CONTRACT AND IMPLEMENTATION PLANNING IS
+  PERMITTED — NOT BEGUN.** Stage 07 remains In Progress.
+- **Date**: 2026-09-21. Quellight record:
+  `docs/report/QUELLIGHT-STAGE-07C-M-1-STABLE-REPIN.md`.
