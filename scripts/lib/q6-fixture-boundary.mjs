@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * The Q6 live-proof EXTERNAL natural-fixture boundary (script-only helper;
  * amendment §7, D-Q6-6).

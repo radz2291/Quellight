@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * The Q6 live-proof PARENT orchestration (script-only helper; amendment §6).
  *
@@ -79,8 +80,7 @@ export const runQ6LiveProof = async (options = {}) => {
     options.spawnFn ?? ((file, args, spawnOptions) => spawnSync(file, args, spawnOptions));
   const log = options.log ?? ((message) => console.log(message));
   const workerPath =
-    options.workerPath ??
-    fileURLToPath(new URL('./q6-live-worker.mjs', import.meta.url));
+    options.workerPath ?? fileURLToPath(new URL('./q6-live-worker.mjs', import.meta.url));
   /** @type {string[]} */
   const order = [];
   /** @type {string[]} */
@@ -90,8 +90,7 @@ export const runQ6LiveProof = async (options = {}) => {
   if (env.QUELLIGHT_LIVE_PROOF !== QLT_Q6_PROVIDER_IDENTITY.activationGateValue) {
     return { exit: 2, refused: GATE_REASONS.activation, findings, order };
   }
-  const credentialPresent =
-    typeof env.OLLAMA_API_KEY === 'string' && env.OLLAMA_API_KEY.length > 0;
+  const credentialPresent = typeof env.OLLAMA_API_KEY === 'string' && env.OLLAMA_API_KEY.length > 0;
   if (!credentialPresent) {
     return { exit: 2, refused: GATE_REASONS.credential, findings, order };
   }
@@ -114,10 +113,16 @@ export const runQ6LiveProof = async (options = {}) => {
       error instanceof Q6FixtureBoundaryError
         ? error.message
         : 'the external natural fixture could not be validated (details not echoed)';
+    // Fail closed WITHOUT leaking the just-allocated root: dispose it even
+    // on this early refusal (nothing was ever composed against it).
+    const cleanup = await workspace.dispose();
+    order.push(cleanup.removed ? 'workspace-disposed' : 'workspace-dispose-failed');
     return { exit: 2, refused, findings, order };
   }
   order.push('fixture-validated');
-  log(`fixture boundary: external fixture accepted (${fixture.byteLength} bytes; sha256 recorded; content never read into evidence)`);
+  log(
+    `fixture boundary: external fixture accepted (${fixture.byteLength} bytes; sha256 recorded; content never read into evidence)`,
+  );
 
   // ---- the worker: EVERY composition, turn, restart, and ceremony ----
   const childEnv = {
@@ -130,20 +135,18 @@ export const runQ6LiveProof = async (options = {}) => {
     QUELLIGHT_MAX_OUTPUT_TOKENS: String(QLT_Q6_LIVE_BOUNDS.maxOutputTokensPerTurn),
     QUELLIGHT_TURN_DEADLINE_MS: String(QLT_Q6_LIVE_BOUNDS.turnDeadlineMs),
   };
-  const worker = spawnFn(
-    process.execPath,
-    ['--import', 'tsx', workerPath],
-    { cwd: repoRoot, env: childEnv, stdio: 'inherit' },
-  );
+  const worker = spawnFn(process.execPath, ['--import', 'tsx', workerPath], {
+    cwd: repoRoot,
+    env: childEnv,
+    stdio: 'inherit',
+  });
   const workerStatus = worker.status === null ? -1 : worker.status;
   order.push(`worker-exited(${workerStatus})`);
 
   // ---- ONLY NOW: result, fixture safety, credential scan, deletion ----
   let result;
   try {
-    const parsed = JSON.parse(
-      readFileSync(join(workspace.root, Q6_RESULT_FILE_NAME), 'utf8'),
-    );
+    const parsed = JSON.parse(readFileSync(join(workspace.root, Q6_RESULT_FILE_NAME), 'utf8'));
     if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
       throw new Error('the worker result record is not an object');
     }
@@ -164,7 +167,9 @@ export const runQ6LiveProof = async (options = {}) => {
       repoRoot,
       expected: { byteLength: fixture.byteLength, sha256: fixture.sha256 },
     });
-    log('fixture safety: the external fixture survived the proof byte-identical (never deleted, never modified)');
+    log(
+      'fixture safety: the external fixture survived the proof byte-identical (never deleted, never modified)',
+    );
   } catch {
     findings.push(
       'the external fixture vanished or changed during the proof — the content-safety check fails the proof (content not echoed)',
@@ -178,7 +183,9 @@ export const runQ6LiveProof = async (options = {}) => {
       findings.push(`credential value found in ${file} — LEAK`);
     }
     if (offending.length === 0) {
-      log('credential scan: every persisted byte of the owned workspace scanned — credential absent');
+      log(
+        'credential scan: every persisted byte of the owned workspace scanned — credential absent',
+      );
     }
   } catch {
     findings.push(

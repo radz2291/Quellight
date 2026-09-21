@@ -62,9 +62,7 @@ import {
   evaluateDiscretionaryPositive,
   evaluateExplicitPositive,
 } from './q6-acceptance.mjs';
-import {
-  QLT_AGENT_PROPOSER_ID,
-} from '../../src/lib/sharedworld/ceremony-contract.ts';
+import { QLT_AGENT_PROPOSER_ID } from '../../src/lib/sharedworld/ceremony-contract.ts';
 import {
   QLT_CONTEXT_BLOCK_CLOSE,
   QLT_CONTEXT_BLOCK_OPEN,
@@ -101,7 +99,9 @@ let workspace;
 try {
   workspace = adoptQ6LiveWorkspace(ownedRoot);
 } catch {
-  console.error('WORKER REFUSED: the designated workspace root is not adoptable (path not echoed).');
+  console.error(
+    'WORKER REFUSED: the designated workspace root is not adoptable (path not echoed).',
+  );
   process.exit(3);
 }
 const ownedDataDir = workspace.root;
@@ -114,13 +114,17 @@ try {
     repoRoot: process.cwd(),
   });
 } catch {
-  console.error('WORKER REFUSED: the external natural fixture could not be validated (details not echoed).');
+  console.error(
+    'WORKER REFUSED: the external natural fixture could not be validated (details not echoed).',
+  );
   process.exit(3);
 }
 try {
   const expected = JSON.parse(process.env.QUELLIGHT_Q6_FIXTURE_IDENTITY ?? '');
   if (expected.byteLength !== fixture.byteLength || expected.sha256 !== fixture.sha256) {
-    console.error('WORKER REFUSED: the fixture changed between parent validation and worker use (content not echoed).');
+    console.error(
+      'WORKER REFUSED: the fixture changed between parent validation and worker use (content not echoed).',
+    );
     process.exit(3);
   }
 } catch {
@@ -151,8 +155,12 @@ const composeLive = async (directory) => {
   try {
     workspace.requireOwned(directory, 'composeLive');
   } catch {
-    fail('composeLive refused a directory that is not the owned workspace root (path not echoed) — failing closed');
-    throw new Error('Q6 LIVE WORKSPACE IDENTITY VIOLATION — failing closed before any composition or provider turn');
+    fail(
+      'composeLive refused a directory that is not the owned workspace root (path not echoed) — failing closed',
+    );
+    throw new Error(
+      'Q6 LIVE WORKSPACE IDENTITY VIOLATION — failing closed before any composition or provider turn',
+    );
   }
   const env = resolveQuellightEnvironment(
     {
@@ -166,16 +174,24 @@ const composeLive = async (directory) => {
   try {
     workspace.requireResolvedEnvironmentDataDir(env);
   } catch {
-    fail('the resolved environment data directory is not the owned workspace root (path not echoed) — failing closed before composition');
-    throw new Error('Q6 LIVE WORKSPACE IDENTITY VIOLATION — failing closed before any provider turn');
+    fail(
+      'the resolved environment data directory is not the owned workspace root (path not echoed) — failing closed before composition',
+    );
+    throw new Error(
+      'Q6 LIVE WORKSPACE IDENTITY VIOLATION — failing closed before any provider turn',
+    );
   }
   const composition = await createQuellightComposition({ env, skipListen: true });
   try {
     workspace.requireCompositionDataDir(composition, 'composeLive');
   } catch {
     await composition.close().catch(() => undefined);
-    fail('the composition reported a data directory that is not the owned workspace root (path not echoed) — failing closed before any provider turn; the unowned path was left untouched');
-    throw new Error('Q6 LIVE WORKSPACE IDENTITY VIOLATION — failing closed before any provider turn');
+    fail(
+      'the composition reported a data directory that is not the owned workspace root (path not echoed) — failing closed before any provider turn; the unowned path was left untouched',
+    );
+    throw new Error(
+      'Q6 LIVE WORKSPACE IDENTITY VIOLATION — failing closed before any provider turn',
+    );
   }
   composed.push(composition);
   return composition;
@@ -204,7 +220,13 @@ const awaitTerminal = async (composition, turnId, timeoutMs = 150_000) => {
   }
 };
 
-const startTurnAdmitted = async (composition, swThreadId, mastraThreadId, input, idempotencyKey) => {
+const startTurnAdmitted = async (
+  composition,
+  swThreadId,
+  mastraThreadId,
+  input,
+  idempotencyKey,
+) => {
   const admission = await composition.admitTurn(
     { swThreadId, mastraThreadId, idempotencyKey },
     () =>
@@ -245,7 +267,11 @@ const governedMutate = async (composition, actionId, input, idempotencyKey) => {
     return { replayed: false, ok: false, code: outcome.code };
   }
   const result = (outcome.data ?? {}).result;
-  return { replayed: result === undefined, ok: result === undefined || result.ok === true, code: result?.code };
+  return {
+    replayed: result === undefined,
+    ok: result === undefined || result.ok === true,
+    code: result?.code,
+  };
 };
 
 /** The last assistant reply of a thread (for natural-flow evaluation). */
@@ -282,30 +308,49 @@ const checkInvocationTruth = async (composition, turnId, label) => {
     return;
   }
   if (invocation.effect !== 'write') {
-    fail(`${label}: the durable invocation effect is ${invocation.effect}, expected the truthful write`);
+    fail(
+      `${label}: the durable invocation effect is ${invocation.effect}, expected the truthful write`,
+    );
   }
   if (invocation.approvalRequired !== false) {
     fail(`${label}: the durable invocation did not record approvalRequired=false`);
   }
   if (invocation.approvalDisposition !== 'host-policy-write-without-separate-approval') {
-    fail(`${label}: the durable invocation disposition is ${invocation.approvalDisposition} (expected the host quiet-write policy disposition)`);
+    fail(
+      `${label}: the durable invocation disposition is ${invocation.approvalDisposition} (expected the host quiet-write policy disposition)`,
+    );
   }
-  const approvals = await composition.stores.approvals.listApprovalsForInvocation(invocation.invocationId);
+  const approvals = await composition.stores.approvals.listApprovalsForInvocation(
+    invocation.invocationId,
+  );
   if (approvals.length !== 0) {
-    fail(`${label}: ${approvals.length} approval rows exist for the quiet proposal write (expected 0)`);
+    fail(
+      `${label}: ${approvals.length} approval rows exist for the quiet proposal write (expected 0)`,
+    );
   }
 };
 
 /** Run one provider turn of the matrix and record its safe metadata. */
-const runMatrixTurn = async (composition, sharedWorld, swThreadId, mastraThreadId, input, key, label) => {
+const runMatrixTurn = async (
+  composition,
+  sharedWorld,
+  swThreadId,
+  mastraThreadId,
+  input,
+  key,
+  label,
+) => {
   const before = await canonicalTotals(sharedWorld);
-  const proposalsBefore = (await sharedWorld.meaning.listProposals({ sourceThreadId: swThreadId })).total;
+  const proposalsBefore = (await sharedWorld.meaning.listProposals({ sourceThreadId: swThreadId }))
+    .total;
   providerTurnCount += 1;
   const turn = await startTurnAdmitted(composition, swThreadId, mastraThreadId, input, key);
   const settled = await awaitTerminal(composition, turn.turnId);
   note(`${label}: status=${settled.status} in ${settled.elapsedMs}ms (content not printed)`);
   if (settled.status !== 'completed') {
-    fail(`${label} expected completed, got ${settled.status} (${settled.errorCode ?? 'no code'}) — a truthful failed proof`);
+    fail(
+      `${label} expected completed, got ${settled.status} (${settled.errorCode ?? 'no code'}) — a truthful failed proof`,
+    );
   }
   if (settled.elapsedMs > QLT_Q6_LIVE_BOUNDS.turnDeadlineMs + 5_000) {
     fail(`${label} exceeded the per-turn deadline bound (elapsed ${settled.elapsedMs}ms)`);
@@ -333,7 +378,13 @@ const runMatrixTurn = async (composition, sharedWorld, swThreadId, mastraThreadI
   };
 };
 
-let result = { ok: false, findings, turns: turnRecords, fixture: { byteLength: fixture.byteLength, sha256: fixture.sha256 }, providerTurns: 0 };
+let result = {
+  ok: false,
+  findings,
+  turns: turnRecords,
+  fixture: { byteLength: fixture.byteLength, sha256: fixture.sha256 },
+  providerTurns: 0,
+};
 
 try {
   // ---- composition (live mode; the ONE owned root) ------------------------
@@ -341,11 +392,17 @@ try {
   if (composition.modelMode !== 'live') {
     fail(`modelMode is ${composition.modelMode}, expected live`);
   } else {
-    note(`composed in LIVE mode: ${QLT_Q6_PROVIDER_IDENTITY.provider} / ${QLT_Q6_PROVIDER_IDENTITY.model} (${QLT_Q6_PROVIDER_IDENTITY.routerIdentity} at ${QLT_Q6_PROVIDER_IDENTITY.endpoint})`);
-    note(`bounds: <=${QLT_Q6_LIVE_BOUNDS.maxProviderTurns} provider turns, <=${QLT_Q6_LIVE_BOUNDS.maxOutputTokensPerTurn} output tokens/turn, <=${QLT_Q6_LIVE_BOUNDS.turnDeadlineMs}ms deadline/turn, zero retries, no fallback`);
+    note(
+      `composed in LIVE mode: ${QLT_Q6_PROVIDER_IDENTITY.provider} / ${QLT_Q6_PROVIDER_IDENTITY.model} (${QLT_Q6_PROVIDER_IDENTITY.routerIdentity} at ${QLT_Q6_PROVIDER_IDENTITY.endpoint})`,
+    );
+    note(
+      `bounds: <=${QLT_Q6_LIVE_BOUNDS.maxProviderTurns} provider turns, <=${QLT_Q6_LIVE_BOUNDS.maxOutputTokensPerTurn} output tokens/turn, <=${QLT_Q6_LIVE_BOUNDS.turnDeadlineMs}ms deadline/turn, zero retries, no fallback`,
+    );
   }
 
-  const threadA = await composition.sharedWorld.createThread({ title: 'Q6 live discretion matrix' });
+  const threadA = await composition.sharedWorld.createThread({
+    title: 'Q6 live discretion matrix',
+  });
   const convA = await composition.sharedWorld.ensureConversationLink(threadA.id);
 
   // ---- t1: explicit positive control --------------------------------------
@@ -368,7 +425,9 @@ try {
     fail(finding);
   }
   if (t1Findings.length === 0) {
-    note('t1: the explicit remember request produced exactly one pending claim proposal (never canonical; no memory-write claim)');
+    note(
+      't1: the explicit remember request produced exactly one pending claim proposal (never canonical; no memory-write claim)',
+    );
   }
   // The same-key retry replays the idempotent receipt — no second provider turn.
   const t1Replay = await composition.commandService.dispatch(actorOf(composition), {
@@ -381,7 +440,9 @@ try {
   } else {
     note('t1: the same-key retry replayed the idempotent receipt (no second provider turn)');
   }
-  const proposalsAfterT1Replay = await composition.sharedWorld.meaning.listProposals({ sourceThreadId: threadA.id });
+  const proposalsAfterT1Replay = await composition.sharedWorld.meaning.listProposals({
+    sourceThreadId: threadA.id,
+  });
   if (proposalsAfterT1Replay.total !== 1) {
     fail(`t1: the retry created a duplicate proposal (${proposalsAfterT1Replay.total} total)`);
   }
@@ -409,7 +470,9 @@ try {
     fail(finding);
   }
   if (t2Findings.length === 0) {
-    note(`t2: the durable commitment was drafted with all ${QLT_Q6_COMMITMENT_ANCHORS.length} anchors (user's own commitment; transient incident not recorded)`);
+    note(
+      `t2: the durable commitment was drafted with all ${QLT_Q6_COMMITMENT_ANCHORS.length} anchors (user's own commitment; transient incident not recorded)`,
+    );
   }
   if (commitment === undefined) {
     fail('t2: no commitment proposal exists for the user ceremony to confirm');
@@ -440,7 +503,9 @@ try {
 
   // ---- the governed USER ceremony (not a provider turn) -------------------
   if (commitment === undefined) {
-    throw new Error('the proof stopped before the ceremony (no commitment to confirm; truthful failure; never rerun)');
+    throw new Error(
+      'the proof stopped before the ceremony (no commitment to confirm; truthful failure; never rerun)',
+    );
   }
   const confirmOutcome = await governedMutate(
     composition,
@@ -465,7 +530,9 @@ try {
     if (canonicalCommitment.createdBy === QLT_AGENT_PROPOSER_ID) {
       fail('authority violation: the canonical record carries an agent decision identity');
     } else {
-      note('authority: the canonical record was created by the governed user boundary, never the agent');
+      note(
+        'authority: the canonical record was created by the governed user boundary, never the agent',
+      );
     }
     if (canonicalCommitment.content?.statement !== commitment.content?.statement) {
       fail('the canonical commitment statement differs from the confirmed proposal statement');
@@ -483,13 +550,15 @@ try {
   }
   canonical = await canonicalTotals(composition.sharedWorld);
   if (canonical.total !== 1) {
-    fail(`the confirmation replay duplicated the canonical record set (${canonical.total} records)`);
+    fail(
+      `the confirmation replay duplicated the canonical record set (${canonical.total} records)`,
+    );
   } else {
     note('the same-key confirmation replay created no duplicate record');
   }
   const staleExit = await governedMutate(
     composition,
-    'act.retireClaim',
+    'act.releaseCommitment',
     { recordId: commitmentId, reason: 'stale-version control', expectedVersion: 999 },
     'q6-live-stale-exit',
   );
@@ -510,7 +579,9 @@ try {
   const composition2 = await composeLive(ownedDataDir);
   note(`restarted the live composition on the same data dir in ${Date.now() - restartBeganAt}ms`);
   const commitmentAfterRestart =
-    commitmentId === undefined ? undefined : await composition2.sharedWorld.meaning.getCommitment(commitmentId);
+    commitmentId === undefined
+      ? undefined
+      : await composition2.sharedWorld.meaning.getCommitment(commitmentId);
   if (
     commitmentAfterRestart === undefined ||
     commitmentAfterRestart.status !== 'active' ||
@@ -520,8 +591,14 @@ try {
   } else {
     note('restart preserved the confirmed commitment (active, same version, same content bytes)');
   }
-  const linksAfterRestart = await composition2.sharedWorld.meaning.listSourceLinks({ fromRecordId: commitmentId });
-  if (!linksAfterRestart.some((link) => link.relation === 'source-thread' && link.toRef === threadA.id)) {
+  const linksAfterRestart = await composition2.sharedWorld.meaning.listSourceLinks({
+    fromRecordId: commitmentId,
+  });
+  if (
+    !linksAfterRestart.some(
+      (link) => link.relation === 'source-thread' && link.toRef === threadA.id,
+    )
+  ) {
     fail('restart did not preserve the record lineage (source-thread link)');
   } else {
     note('restart preserved the record lineage');
@@ -534,7 +611,9 @@ try {
   }
 
   // ---- t4: the genuinely FRESH conversation receives C1 --------------------
-  const threadB = await composition2.sharedWorld.createThread({ title: 'Q6 live fresh continuity' });
+  const threadB = await composition2.sharedWorld.createThread({
+    title: 'Q6 live fresh continuity',
+  });
   const convB = await composition2.sharedWorld.ensureConversationLink(threadB.id);
   const restoredB = await composition2.restoreThread(threadB.id);
   if (restoredB.messages.length !== 0) {
@@ -556,22 +635,29 @@ try {
     if (!assemblyB.selectedIds.some((entry) => entry.id === commitmentId)) {
       fail('the fresh conversation C1 snapshot did not select the confirmed commitment');
     } else {
-      note(`the fresh conversation received the confirmed commitment through C1 (${assemblyB.selectedIds.length} record(s) selected, ${assemblyB.renderedBytes} rendered bytes)`);
+      note(
+        `the fresh conversation received the confirmed commitment through C1 (${assemblyB.selectedIds.length} record(s) selected, ${assemblyB.renderedBytes} rendered bytes)`,
+      );
     }
     const leakedPending = assemblyB.selectedIds.filter((entry) => pendingIds.has(entry.id));
     if (leakedPending.length > 0) {
-      fail(`the fresh conversation assembly injected ${leakedPending.length} pending proposal(s) as canonical meaning`);
+      fail(
+        `the fresh conversation assembly injected ${leakedPending.length} pending proposal(s) as canonical meaning`,
+      );
     } else {
       note('the pending proposals were not injected as canonical meaning');
     }
   }
   canonical = await canonicalTotals(composition2.sharedWorld);
   if (canonical.total !== 1) {
-    fail(`the canonical record set changed across the fresh conversation (${canonical.total} records)`);
+    fail(
+      `the canonical record set changed across the fresh conversation (${canonical.total} records)`,
+    );
   }
 
   // ---- t5: hypothetical conflict and negative control ----------------------
-  const commitmentBeforeConflict = await composition2.sharedWorld.meaning.getCommitment(commitmentId);
+  const commitmentBeforeConflict =
+    await composition2.sharedWorld.meaning.getCommitment(commitmentId);
   const t5 = await runMatrixTurn(
     composition2,
     composition2.sharedWorld,
@@ -589,20 +675,27 @@ try {
   for (const finding of t5Findings) {
     fail(finding);
   }
-  const commitmentAfterConflict = await composition2.sharedWorld.meaning.getCommitment(commitmentId);
+  const commitmentAfterConflict =
+    await composition2.sharedWorld.meaning.getCommitment(commitmentId);
   if (
     commitmentBeforeConflict === undefined ||
     commitmentAfterConflict === undefined ||
     commitmentAfterConflict.version !== commitmentBeforeConflict.version ||
-    JSON.stringify(commitmentAfterConflict.content) !== JSON.stringify(commitmentBeforeConflict.content) ||
+    JSON.stringify(commitmentAfterConflict.content) !==
+      JSON.stringify(commitmentBeforeConflict.content) ||
     commitmentAfterConflict.status !== 'active'
   ) {
     fail('the hypothetical silently changed the standing commitment (identity, version, or bytes)');
   } else {
-    note('the hypothetical left the standing commitment unchanged (identity, version, bytes) while it stayed available');
+    note(
+      'the hypothetical left the standing commitment unchanged (identity, version, bytes) while it stayed available',
+    );
   }
   const assemblyConflict = await composition2.sharedWorld.getContextAssemblyByTurn(t5.turnId);
-  if (assemblyConflict === undefined || !assemblyConflict.selectedIds.some((entry) => entry.id === commitmentId)) {
+  if (
+    assemblyConflict === undefined ||
+    !assemblyConflict.selectedIds.some((entry) => entry.id === commitmentId)
+  ) {
     fail('the conflict turn assembly did not select the standing commitment');
   } else {
     note('the conflict turn assembly still selected the standing commitment');
@@ -611,7 +704,10 @@ try {
   // ---- transcript pollution + bounds + in-memory credential surfaces ------
   const restoredA = await composition2.restoreThread(threadA.id);
   const restoredAfterB = await composition2.restoreThread(threadB.id);
-  const transcripts = restoredA.messages.concat(restoredAfterB.messages).map((message) => message.text).join('\n');
+  const transcripts = restoredA.messages
+    .concat(restoredAfterB.messages)
+    .map((message) => message.text)
+    .join('\n');
   if (
     transcripts.includes(QLT_CONTEXT_BLOCK_OPEN) ||
     transcripts.includes(QLT_CONTEXT_BLOCK_CLOSE) ||
@@ -623,7 +719,9 @@ try {
   }
   const canonicalFinal = await canonicalTotals(composition2.sharedWorld);
   if (canonicalFinal.total !== 1) {
-    fail(`authority violation: ${canonicalFinal.total} canonical records exist (expected exactly 1)`);
+    fail(
+      `authority violation: ${canonicalFinal.total} canonical records exist (expected exactly 1)`,
+    );
   } else {
     note('authority: exactly ONE canonical record exists — created only by the user confirmation');
   }
@@ -646,9 +744,13 @@ try {
     fail('credential value found in the serialized operator configuration — LEAK');
   }
   if (providerTurnCount > QLT_Q6_LIVE_BOUNDS.maxProviderTurns) {
-    fail(`provider-turn bound violated: ${providerTurnCount} > ${QLT_Q6_LIVE_BOUNDS.maxProviderTurns}`);
+    fail(
+      `provider-turn bound violated: ${providerTurnCount} > ${QLT_Q6_LIVE_BOUNDS.maxProviderTurns}`,
+    );
   } else {
-    note(`bounds: ${providerTurnCount} provider turns used of the planned five (<= ${QLT_Q6_LIVE_BOUNDS.maxProviderTurns}); one authoritative execution; zero retries; no fallback`);
+    note(
+      `bounds: ${providerTurnCount} provider turns used of the planned five (<= ${QLT_Q6_LIVE_BOUNDS.maxProviderTurns}); one authoritative execution; zero retries; no fallback`,
+    );
   }
   result = {
     ok: findings.length === 0,

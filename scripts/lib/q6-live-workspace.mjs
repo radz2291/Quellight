@@ -52,6 +52,26 @@ import { join, resolve, sep } from 'node:path';
 /** The temp-directory prefix owned by the Q6 live proof. */
 export const Q6_LIVE_WORKSPACE_PREFIX = 'qlt-q6-live-';
 
+/**
+ * The single-root disposable workspace owner API.
+ *
+ * @typedef {Object} Q6LiveWorkspace
+ * @property {string} root The single owned disposable root (resolved absolute).
+ * @property {(directory: string, label: string) => void} requireOwned
+ *   Refuse anything that is not the exact owned root.
+ * @property {(composition: { dataDir?: unknown }, label: string) => string} requireCompositionDataDir
+ *   Fail closed unless the composition's resolved data directory IS the root.
+ * @property {(environment: { dataDir?: unknown }) => string} requireResolvedEnvironmentDataDir
+ *   Fail closed unless the RESOLVED environment's data directory IS the root.
+ * @property {(directory: string) => { QUELLIGHT_DATA_DIR_ABSOLUTE: string }} dataEnv
+ *   The data-directory env payload — only ever for the owned root.
+ * @property {(secretValue: string) => string[]} scanForCredential
+ *   Scan every file under the root; return offending relative paths.
+ * @property {(options?: { retries?: number }) => Promise<{ removed: boolean; error?: unknown }>} dispose
+ *   Remove the root with bounded retries; never throws. Present on the
+ *   ALLOCATING (parent) API only; the adopted (worker) API omits it.
+ */
+
 /** The operator data directory name that must never be accessed. */
 export const OPERATOR_DATA_DIR_NAME = '.quellight-data';
 
@@ -106,7 +126,7 @@ const forbiddenReasonFor = (directory, context) => {
  * @param {string} root The verified owned root (resolved absolute).
  * @param {{ remove: ((directory: string, options?: { recursive?: boolean; force?: boolean }) => void) | undefined }} removal
  *   The removal capability. `undefined` (adoption) omits `dispose` entirely.
- * @returns {Q6LiveWorkspace}
+ * @returns {Q6LiveWorkspace | Omit<Q6LiveWorkspace, 'dispose'>}
  */
 const workspaceApiFor = (root, { remove }) => {
   const repoRoot = repositoryRoot();
@@ -278,9 +298,11 @@ const workspaceApiFor = (root, { remove }) => {
 export const createQ6LiveWorkspace = (options = {}) => {
   // EXACTLY ONE allocation happens here — nowhere else in the live proof.
   const root = resolve(mkdtempSync(join(tmpdir(), Q6_LIVE_WORKSPACE_PREFIX)));
-  return workspaceApiFor(root, {
-    remove: options.removeFn ?? ((directory, opts) => rmSync(directory, opts)),
-  });
+  return /** @type {Q6LiveWorkspace} */ (
+    workspaceApiFor(root, {
+      remove: options.removeFn ?? ((directory, opts) => rmSync(directory, opts)),
+    })
+  );
 };
 
 /**
@@ -294,11 +316,14 @@ export const createQ6LiveWorkspace = (options = {}) => {
  * capability at all, and no second `mkdtempSync` exists anywhere.
  *
  * @param {string} directory The root the parent allocated (resolved absolute).
- * @returns {Q6LiveWorkspace} The owner API without `dispose`.
+ * @returns {Omit<Q6LiveWorkspace, 'dispose'>} The owner API without `dispose`.
  */
 export const adoptQ6LiveWorkspace = (directory) => {
   const root = resolve(directory);
-  const reason = forbiddenReasonFor(root, { repoRoot: repositoryRoot(), tempRoot: resolve(tmpdir()) });
+  const reason = forbiddenReasonFor(root, {
+    repoRoot: repositoryRoot(),
+    tempRoot: resolve(tmpdir()),
+  });
   if (reason !== null) {
     throw new Error(`adoptQ6LiveWorkspace: ${reason}`);
   }
@@ -313,5 +338,7 @@ export const adoptQ6LiveWorkspace = (directory) => {
   if (!stats.isDirectory()) {
     throw new Error('adoptQ6LiveWorkspace: the owned workspace root is not a directory');
   }
-  return workspaceApiFor(root, { remove: undefined });
+  return /** @type {Omit<Q6LiveWorkspace, 'dispose'>} */ (
+    workspaceApiFor(root, { remove: undefined })
+  );
 };

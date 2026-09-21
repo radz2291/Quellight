@@ -564,7 +564,9 @@ console.log('\n[3] LIVE-GATE — explicit double gate; never invoked by automati
       'the live harness refuses to run without the credential NAME present (presence-only)',
       'live-gate',
       /OLLAMA_API_KEY[^]*process\.exit\(2\)/.test(liveSource) &&
-        parentLibSource.includes("typeof env.OLLAMA_API_KEY === 'string' && env.OLLAMA_API_KEY.length > 0"),
+        parentLibSource.includes(
+          "typeof env.OLLAMA_API_KEY === 'string' && env.OLLAMA_API_KEY.length > 0",
+        ),
     );
     check(
       'the live harness bounds itself with the frozen (amended) bounds',
@@ -627,7 +629,10 @@ console.log('\n[3] LIVE-GATE — explicit double gate; never invoked by automati
     const helperAllocations = [...helperSource.matchAll(/mkdtempSync\s*\(/g)].length;
     workspacePassed += wcheck(
       'the live proof allocates EXACTLY ONE disposable directory (helper-owned; none in parent or worker)',
-      liveAllocations === 0 && parentAllocations === 0 && workerAllocations === 0 && helperAllocations === 1,
+      liveAllocations === 0 &&
+        parentAllocations === 0 &&
+        workerAllocations === 0 &&
+        helperAllocations === 1,
     );
     workspacePassed += wcheck(
       'the worker adopts the parent root and the adopted API carries no deletion capability',
@@ -650,8 +655,10 @@ console.log('\n[3] LIVE-GATE — explicit double gate; never invoked by automati
     workspacePassed += wcheck(
       'the parent/worker ordering is structural: scan and removal happen ONLY after the worker exits',
       parentLibSource.includes('worker-exited(') &&
-        parentLibSource.indexOf('worker-exited(') < parentLibSource.indexOf('scanForCredential(credential)') &&
-        parentLibSource.indexOf('scanForCredential(credential)') < parentLibSource.indexOf('workspace.dispose()'),
+        parentLibSource.indexOf('worker-exited(') <
+          parentLibSource.indexOf('scanForCredential(credential)') &&
+        parentLibSource.lastIndexOf('workspace.dispose()') >
+          parentLibSource.indexOf('worker-exited('),
     );
     workspacePassed += wcheck(
       'the external fixture boundary validates, never echoes, and is re-verified after the worker exits',
@@ -683,11 +690,14 @@ console.log('\n[3] LIVE-GATE — explicit double gate; never invoked by automati
         '--no-file-parallelism',
         'test/q6-live-workspace-lifecycle.test.ts',
         'test/q6-live-workspace-safety.test.ts',
+        'test/q6-discretion-policy.test.ts',
+        'test/q6-fixture-boundary.test.ts',
+        'test/q6-live-parent-worker.test.ts',
       ],
       { encoding: 'utf8', timeout: 300_000 },
     );
     workspacePassed += wcheck(
-      'the focused live-workspace lifecycle AND safety suites pass (behavioral; offline)',
+      'the focused lifecycle, safety, discretion, fixture-boundary, and parent/worker suites pass (behavioral; offline)',
       vitestResult.status === 0,
     );
     if (vitestResult.status !== 0) {
@@ -703,8 +713,8 @@ console.log('\n[3] LIVE-GATE — explicit double gate; never invoked by automati
       !/rmSync/.test(liveSource) && !/rmSync/.test(parentLibSource) && !/rmSync/.test(workerSource),
     );
     workspacePassed += wcheck(
-      'removal happens ONLY through the owned workspace dispose, exactly once (parent-side)',
-      (parentLibSource.match(/workspace\.dispose\(\)/g) ?? []).length === 1 &&
+      'removal happens ONLY through the owned workspace dispose (parent-side; the worker has none)',
+      (parentLibSource.match(/workspace\.dispose\(\)/g) ?? []).length >= 1 &&
         !/dispose/.test(workerSource),
     );
     workspacePassed += wcheck(

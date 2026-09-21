@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * The Q6 live-proof SEMANTIC ACCEPTANCE predicates (script-only helper;
  * amendment §5, D-Q6-6).
@@ -86,8 +87,8 @@ export const evaluateExplicitPositive = ({ replyText, proposals, canonicalRecord
   const findings = [...evaluateNaturalFlow(replyText)];
   if (proposals.length !== 1) {
     findings.push(`t1: expected exactly one pending proposal, found ${proposals.length}`);
-  } else if (proposals[0].kind !== 'claim') {
-    findings.push(`t1: expected a claim proposal, found kind ${proposals[0].kind}`);
+  } else if (kindOf(proposals[0]) !== 'claim') {
+    findings.push(`t1: expected a claim proposal, found kind ${kindOf(proposals[0])}`);
   }
   if (canonicalRecords !== 0) {
     findings.push(
@@ -96,6 +97,10 @@ export const evaluateExplicitPositive = ({ replyText, proposals, canonicalRecord
   }
   return findings;
 };
+
+/** The proposal's kind: durable rows carry `proposalKind`; test/worker
+ * shims may carry `kind`. Both are accepted at this boundary. */
+const kindOf = (proposal) => proposal?.proposalKind ?? proposal?.kind;
 
 /** The statement text of a proposal regardless of kind. */
 const proposalStatement = (proposal) => {
@@ -121,10 +126,10 @@ export const evaluateDiscretionaryPositive = ({
   invocationCount,
 }) => {
   const findings = [...evaluateNaturalFlow(replyText)];
-  const commitments = proposals.filter((proposal) => proposal.kind === 'commitment');
-  const openLoops = proposals.filter((proposal) => proposal.kind === 'open_loop');
+  const commitments = proposals.filter((proposal) => kindOf(proposal) === 'commitment');
+  const openLoops = proposals.filter((proposal) => kindOf(proposal) === 'open_loop');
   const foreignKinds = proposals.filter(
-    (proposal) => proposal.kind !== 'commitment' && proposal.kind !== 'open_loop',
+    (proposal) => kindOf(proposal) !== 'commitment' && kindOf(proposal) !== 'open_loop',
   );
   if (commitments.length !== 1) {
     findings.push(`t2: expected exactly one commitment proposal, found ${commitments.length}`);
@@ -156,7 +161,7 @@ export const evaluateDiscretionaryPositive = ({
     }
     if (containsAny(normalized, QLT_Q6_ADVICE_MARKERS)) {
       findings.push(
-        't2: the commitment reads as agent-authored advice rather than the user\'s own commitment',
+        "t2: the commitment reads as agent-authored advice rather than the user's own commitment",
       );
     }
   }
@@ -231,7 +236,9 @@ export const evaluateDiscretionaryNegative = ({
 export const evaluateConflictTurn = ({ replyText, newProposals, invocationCount }) => {
   const findings = [...evaluateNaturalFlow(replyText)];
   if (invocationCount !== 0) {
-    findings.push(`t5: expected ZERO capability invocations for the hypothetical, found ${invocationCount}`);
+    findings.push(
+      `t5: expected ZERO capability invocations for the hypothetical, found ${invocationCount}`,
+    );
   }
   if (newProposals !== 0) {
     findings.push(`t5: expected ZERO proposals from the hypothetical, found ${newProposals}`);

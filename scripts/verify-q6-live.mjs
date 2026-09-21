@@ -64,7 +64,9 @@ if (outcome.result !== undefined) {
     `  provider turns used: ${outcome.result.providerTurns} (planned five; frozen ceiling six)`,
   );
 }
-console.log(`  fixture identity: ${outcome.fixture?.byteLength ?? '?'} bytes, sha256 ${outcome.fixture?.sha256 ?? '?'}`);
+console.log(
+  `  fixture identity: ${outcome.fixture?.byteLength ?? '?'} bytes, sha256 ${outcome.fixture?.sha256 ?? '?'}`,
+);
 console.log(`  lifecycle ordering: ${outcome.order.join(' -> ')}`);
 
 if (outcome.exit !== 0) {
