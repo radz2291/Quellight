@@ -542,23 +542,37 @@ console.log('\n[3] LIVE-GATE — explicit double gate; never invoked by automati
     }
   })();
   if (liveScriptExists) {
+    // The parent/worker lifecycle (amendment §6) splits the live proof across
+    // the parent shell, the parent library, and the child worker; every
+    // structural property below is asserted against the file that now owns it.
     const liveSource = readFileSync(join(process.cwd(), QLT_Q6_LIVE_GATE_SCRIPT), 'utf8');
+    const parentLibSource = readFileSync(
+      join(process.cwd(), 'scripts', 'lib', 'q6-live-parent.mjs'),
+      'utf8',
+    );
+    const workerSource = readFileSync(
+      join(process.cwd(), 'scripts', 'lib', 'q6-live-worker.mjs'),
+      'utf8',
+    );
     check(
       'the live harness refuses to run without QUELLIGHT_LIVE_PROOF=1',
       'live-gate',
-      /QUELLIGHT_LIVE_PROOF[^]*process\.exit\(2\)/.test(liveSource),
+      /QUELLIGHT_LIVE_PROOF[^]*process\.exit\(2\)/.test(liveSource) &&
+        /QUELLIGHT_LIVE_PROOF[^]*exit: 2/.test(parentLibSource),
     );
     check(
       'the live harness refuses to run without the credential NAME present (presence-only)',
       'live-gate',
-      /OLLAMA_API_KEY[^]*process\.exit\(2\)/.test(liveSource),
+      /OLLAMA_API_KEY[^]*process\.exit\(2\)/.test(liveSource) &&
+        parentLibSource.includes("typeof env.OLLAMA_API_KEY === 'string' && env.OLLAMA_API_KEY.length > 0"),
     );
     check(
-      'the live harness bounds itself with the frozen bounds',
+      'the live harness bounds itself with the frozen (amended) bounds',
       'live-gate',
-      liveSource.includes('QLT_Q6_LIVE_BOUNDS') ||
-        liveSource.includes('120_000') ||
-        liveSource.includes('120000'),
+      parentLibSource.includes('QLT_Q6_LIVE_BOUNDS.maxOutputTokensPerTurn') &&
+        parentLibSource.includes('QLT_Q6_LIVE_BOUNDS.turnDeadlineMs') &&
+        workerSource.includes('QLT_Q6_LIVE_BOUNDS.maxOutputTokensPerTurn') &&
+        workerSource.includes('QLT_Q6_LIVE_BOUNDS.turnDeadlineMs'),
     );
     check(
       'package.json maps verify:q6:live to the live harness',
@@ -569,9 +583,10 @@ console.log('\n[3] LIVE-GATE — explicit double gate; never invoked by automati
     // The live harness never prints or hashes the credential VALUE: no
     // hashing/console emission of the value; the leak scan compares bytes.
     check(
-      'the live harness scans persisted bytes for the credential value (leak scan present)',
+      'the live harness scans persisted bytes for the credential value (leak scan present, parent-side after the worker exits)',
       'live-gate',
-      /includes\(CREDENTIAL\)/.test(liveSource) || /includes\(credentialValue\)/.test(liveSource),
+      parentLibSource.includes('scanForCredential(credential)') &&
+        workerSource.includes('includes(credential)'),
     );
     console.log('  live-gate: live harness present and fully enforced');
   } else {
@@ -595,27 +610,58 @@ console.log('\n[3] LIVE-GATE — explicit double gate; never invoked by automati
     };
     const workspaceHelper = 'scripts/lib/q6-live-workspace.mjs';
     const liveSource = readFileSync(join(process.cwd(), QLT_Q6_LIVE_GATE_SCRIPT), 'utf8');
+    const parentLibSource = readFileSync(
+      join(process.cwd(), 'scripts', 'lib', 'q6-live-parent.mjs'),
+      'utf8',
+    );
+    const workerSource = readFileSync(
+      join(process.cwd(), 'scripts', 'lib', 'q6-live-worker.mjs'),
+      'utf8',
+    );
     const helperSource = readFileSync(join(process.cwd(), workspaceHelper), 'utf8');
     // EXACTLY ONE allocation exists in the whole live proof: the helper's.
+    // The parent allocates; the worker ADOPTS (no allocation, no deletion).
     const liveAllocations = [...liveSource.matchAll(/mkdtempSync\s*\(/g)].length;
+    const parentAllocations = [...parentLibSource.matchAll(/mkdtempSync\s*\(/g)].length;
+    const workerAllocations = [...workerSource.matchAll(/mkdtempSync\s*\(/g)].length;
     const helperAllocations = [...helperSource.matchAll(/mkdtempSync\s*\(/g)].length;
     workspacePassed += wcheck(
-      'the live proof allocates EXACTLY ONE disposable directory (helper-owned; none in the script)',
-      liveAllocations === 0 && helperAllocations === 1,
+      'the live proof allocates EXACTLY ONE disposable directory (helper-owned; none in parent or worker)',
+      liveAllocations === 0 && parentAllocations === 0 && workerAllocations === 0 && helperAllocations === 1,
+    );
+    workspacePassed += wcheck(
+      'the worker adopts the parent root and the adopted API carries no deletion capability',
+      workerSource.includes('adoptQ6LiveWorkspace') && !/dispose/.test(workerSource),
     );
     workspacePassed += wcheck(
       'the retired reuseDataDir boolean and unused restartDataDir assignment are gone',
-      !/reuseDataDir/.test(liveSource) && !/const\s+restartDataDir\s*=/.test(liveSource),
+      !/reuseDataDir/.test(liveSource) &&
+        !/const\s+restartDataDir\s*=/.test(liveSource) &&
+        !/reuseDataDir/.test(workerSource) &&
+        !/const\s+restartDataDir\s*=/.test(workerSource),
     );
     workspacePassed += wcheck(
-      'every composition is handed the owned root explicitly and identity-asserted pre-turn',
-      liveSource.includes('createQ6LiveWorkspace') &&
-        (liveSource.match(/composeLive\(ownedDataDir\)/g) ?? []).length === 2 &&
-        liveSource.includes('requireCompositionDataDir'),
+      'every composition is handed the owned root explicitly and identity-asserted pre-turn (worker-side)',
+      workerSource.includes('adoptQ6LiveWorkspace') &&
+        (workerSource.match(/composeLive\(ownedDataDir\)/g) ?? []).length === 2 &&
+        workerSource.includes('requireCompositionDataDir') &&
+        workerSource.includes('requireResolvedEnvironmentDataDir'),
+    );
+    workspacePassed += wcheck(
+      'the parent/worker ordering is structural: scan and removal happen ONLY after the worker exits',
+      parentLibSource.includes('worker-exited(') &&
+        parentLibSource.indexOf('worker-exited(') < parentLibSource.indexOf('scanForCredential(credential)') &&
+        parentLibSource.indexOf('scanForCredential(credential)') < parentLibSource.indexOf('workspace.dispose()'),
+    );
+    workspacePassed += wcheck(
+      'the external fixture boundary validates, never echoes, and is re-verified after the worker exits',
+      parentLibSource.includes('resolveNaturalFixture') &&
+        parentLibSource.includes('reverifyFixtureIdentity') &&
+        workerSource.includes('resolveNaturalFixture'),
     );
     workspacePassed += wcheck(
       'cleanup failure FAILS the proof (never a note)',
-      /could NOT be removed[\s\S]{0,80}fails closed/.test(liveSource),
+      /could NOT be removed[\s\S]{0,80}fails closed/.test(parentLibSource),
     );
     const helperImports = [...helperSource.matchAll(/from\s+['"]([^'"]+)['"]/g)].map(
       (match) => match[1],
@@ -649,27 +695,28 @@ console.log('\n[3] LIVE-GATE — explicit double gate; never invoked by automati
         (vitestResult.stdout ?? '') + (vitestResult.stderr ?? 'vitest produced no output'),
       );
     }
-    // S-1 ownership hardening: the harness must never recursively delete
-    // any composition-reported (or any other unowned) path — only the
-    // owned workspace root, through the workspace's own dispose.
+    // S-1 ownership hardening: no live-proof file may ever recursively
+    // delete any composition-reported (or any other unowned) path — only
+    // the owned workspace root, through the parent's single dispose.
     workspacePassed += wcheck(
-      'the live harness performs NO recursive deletion of an unowned path (no rmSync, no fs import)',
-      !/rmSync/.test(liveSource) && !/from\s+['"]node:fs['"]/.test(liveSource),
+      'the live proof performs NO recursive deletion of an unowned path (no rmSync in parent or worker)',
+      !/rmSync/.test(liveSource) && !/rmSync/.test(parentLibSource) && !/rmSync/.test(workerSource),
     );
     workspacePassed += wcheck(
-      'removal happens ONLY through the owned workspace dispose, exactly once',
-      (liveSource.match(/workspace\.dispose\(\)/g) ?? []).length === 1,
+      'removal happens ONLY through the owned workspace dispose, exactly once (parent-side)',
+      (parentLibSource.match(/workspace\.dispose\(\)/g) ?? []).length === 1 &&
+        !/dispose/.test(workerSource),
     );
     workspacePassed += wcheck(
-      'identity failures are stable and non-echoing, with environment pre-validation before composition',
-      (liveSource.match(/path not echoed/g) ?? []).length >= 3 &&
-        liveSource.includes('requireResolvedEnvironmentDataDir'),
+      'identity failures are stable and non-echoing, with environment pre-validation before composition (worker-side)',
+      (workerSource.match(/path not echoed/g) ?? []).length >= 3 &&
+        workerSource.includes('requireResolvedEnvironmentDataDir'),
     );
     // S-2 scan hardening: an incomplete scan is never credential-clean.
     workspacePassed += wcheck(
       'the final scan failure is converted to a proof failure (never swallowed)',
-      liveSource.includes('never treated as credential-clean') &&
-        !liveSource.includes('nothing left to scan'),
+      parentLibSource.includes('never treated as credential-clean') &&
+        !parentLibSource.includes('nothing left to scan'),
     );
     workspacePassed += wcheck(
       'the helper fails closed on an absent root and on incomplete traversal (never a clean scan)',

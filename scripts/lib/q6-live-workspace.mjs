@@ -11,16 +11,21 @@
  *
  *   - `createQ6LiveWorkspace()` allocates EXACTLY ONE disposable root
  *     (one `mkdtempSync`, always inside the OS temporary directory).
+ *   - `adoptQ6LiveWorkspace(root)` ADOPTS the parent-allocated root in
+ *     the worker process with the SAME refusal/validation/scanning
+ *     semantics and NO `dispose`: the worker has no deletion capability
+ *     at all (parent/worker lifecycle; amendment §6). Adoption performs
+ *     no allocation — there is still exactly ONE `mkdtempSync` anywhere.
  *   - `requireOwned(directory)` / `dataEnv(directory)` refuse every path
  *     that is not that exact root — including repository paths and the
  *     operator `.quellight-data` directory (fail closed).
  *   - `requireCompositionDataDir(composition)` fails closed unless the
  *     composition's resolved `dataDir` IS the owned root; the live
- *     harness calls it BEFORE any provider turn. A REJECTED path is
+ *     worker calls it BEFORE any provider turn. A REJECTED path is
  *     never touched: only `workspace.root` may ever be removed.
  *   - `requireResolvedEnvironmentDataDir(environment)` fails closed
  *     unless the RESOLVED Quellight environment's data directory IS the
- *     owned root; the live harness calls it BEFORE constructing the
+ *     owned root; the live worker calls it BEFORE constructing the
  *     composition (in addition to checking `composition.dataDir`
  *     afterward).
  *   - `scanForCredential(secret)` walks EVERY file under the root
@@ -30,9 +35,10 @@
  *     COMPLETES: an unexpectedly absent root, a non-directory root, an
  *     unreadable entry, or any traversal error is never treated as a
  *     clean scan.
- *   - `dispose()` removes the root with bounded retries and reports
- *     `{ removed }`; it NEVER throws — the caller (the live harness)
- *     maps `removed: false` to a proof FAILURE, not a note.
+ *   - `dispose()` (allocation side ONLY) removes the root with bounded
+ *     retries and reports `{ removed }`; it NEVER throws — the caller
+ *     (the live parent) maps `removed: false` to a proof FAILURE, not a
+ *     note. The adopted (worker) API has no `dispose` whatsoever.
  *
  * The helper imports only node builtins and performs no I/O outside the
  * owned root. It is deliberately NOT generalized temporary-directory
@@ -48,25 +54,6 @@ export const Q6_LIVE_WORKSPACE_PREFIX = 'qlt-q6-live-';
 
 /** The operator data directory name that must never be accessed. */
 export const OPERATOR_DATA_DIR_NAME = '.quellight-data';
-
-/**
- * The single-root disposable workspace owner API.
- *
- * @typedef {Object} Q6LiveWorkspace
- * @property {string} root The single owned disposable root (resolved absolute).
- * @property {(directory: string, label: string) => void} requireOwned
- *   Refuse anything that is not the exact owned root.
- * @property {(composition: { dataDir?: unknown }, label: string) => string} requireCompositionDataDir
- *   Fail closed unless the composition's resolved data directory IS the root.
- * @property {(environment: { dataDir?: unknown }) => string} requireResolvedEnvironmentDataDir
- *   Fail closed unless the RESOLVED environment's data directory IS the root.
- * @property {(directory: string) => { QUELLIGHT_DATA_DIR_ABSOLUTE: string }} dataEnv
- *   The data-directory env payload — only ever for the owned root.
- * @property {(secretValue: string) => string[]} scanForCredential
- *   Scan every file under the root; return offending relative paths.
- * @property {(options?: { retries?: number }) => Promise<{ removed: boolean; error?: unknown }>} dispose
- *   Remove the root with bounded retries; never throws.
- */
 
 /** The nearest repository root for the current working directory (or null). */
 const repositoryRoot = () => {
@@ -87,41 +74,45 @@ const repositoryRoot = () => {
 };
 
 /**
- * Allocate the ONE disposable workspace root and return its owner API.
- * `removeFn` is an internal test seam only (defaults to `rmSync`); it
- * never changes ownership, scanning, or refusal semantics.
+ * A specific refusal reason for paths that must never be touched by
+ * the live proof (operator data, repository paths, non-temp paths).
  *
- * @param {{ removeFn?: (directory: string, options?: { recursive?: boolean; force?: boolean }) => void }} [options]
+ * @param {string} directory
+ * @param {{ repoRoot: string | null; tempRoot: string }} context
+ * @returns {string | null}
+ */
+const forbiddenReasonFor = (directory, context) => {
+  const candidate = resolve(directory);
+  if (candidate.split(sep).includes(OPERATOR_DATA_DIR_NAME)) {
+    return `the operator data directory (${OPERATOR_DATA_DIR_NAME}) is never accessed by the live proof`;
+  }
+  if (
+    context.repoRoot !== null &&
+    (candidate === context.repoRoot || candidate.startsWith(context.repoRoot + sep))
+  ) {
+    return 'paths inside the repository are never used as proof data directories';
+  }
+  if (candidate !== context.tempRoot && !candidate.startsWith(context.tempRoot + sep)) {
+    return 'proof data directories must live inside the OS temporary directory';
+  }
+  return null;
+};
+
+/**
+ * Build the owner API for one verified root. Shared by the allocating
+ * and adopting constructors so refusal, validation, and scanning
+ * semantics are IDENTICAL for both sides of the parent/worker lifecycle.
+ *
+ * @param {string} root The verified owned root (resolved absolute).
+ * @param {{ remove: ((directory: string, options?: { recursive?: boolean; force?: boolean }) => void) | undefined }} removal
+ *   The removal capability. `undefined` (adoption) omits `dispose` entirely.
  * @returns {Q6LiveWorkspace}
  */
-export const createQ6LiveWorkspace = ({ removeFn } = {}) => {
-  // EXACTLY ONE allocation happens here — nowhere else in the live proof.
-  const root = resolve(mkdtempSync(join(tmpdir(), Q6_LIVE_WORKSPACE_PREFIX)));
-  /** @type {(directory: string, options?: { recursive?: boolean; force?: boolean }) => void} */
-  const remove = removeFn ?? ((directory, options) => rmSync(directory, options));
+const workspaceApiFor = (root, { remove }) => {
   const repoRoot = repositoryRoot();
   const tempRoot = resolve(tmpdir());
-
-  /**
-   * A specific refusal reason for paths that must never be touched by
-   * the live proof (operator data, repository paths, non-temp paths).
-   *
-   * @param {string} directory
-   * @returns {string | null}
-   */
-  const forbiddenReason = (directory) => {
-    const candidate = resolve(directory);
-    if (candidate.split(sep).includes(OPERATOR_DATA_DIR_NAME)) {
-      return `the operator data directory (${OPERATOR_DATA_DIR_NAME}) is never accessed by the live proof`;
-    }
-    if (repoRoot !== null && (candidate === repoRoot || candidate.startsWith(repoRoot + sep))) {
-      return 'paths inside the repository are never used as proof data directories';
-    }
-    if (candidate !== tempRoot && !candidate.startsWith(tempRoot + sep)) {
-      return 'proof data directories must live inside the OS temporary directory';
-    }
-    return null;
-  };
+  /** @param {string} directory */
+  const forbiddenReason = (directory) => forbiddenReasonFor(directory, { repoRoot, tempRoot });
 
   const workspace = {
     /** The single owned disposable root (resolved absolute path). */
@@ -147,10 +138,10 @@ export const createQ6LiveWorkspace = ({ removeFn } = {}) => {
 
     /**
      * Fail closed unless the composition's resolved data directory IS
-     * the owned root. The live harness calls this BEFORE any provider
+     * the owned root. The live worker calls this BEFORE any provider
      * turn so an identity mismatch can never reach the provider. A
      * rejected path is never touched — only `workspace.root` may ever
-     * be removed.
+     * be removed (by the parent, through dispose).
      *
      * @param {{ dataDir?: unknown }} composition
      * @param {string} label
@@ -177,7 +168,7 @@ export const createQ6LiveWorkspace = ({ removeFn } = {}) => {
 
     /**
      * Fail closed unless the RESOLVED Quellight environment's data
-     * directory IS the owned root. The live harness calls this BEFORE
+     * directory IS the owned root. The live worker calls this BEFORE
      * constructing the composition, in addition to checking
      * `composition.dataDir` afterward.
      *
@@ -243,29 +234,84 @@ export const createQ6LiveWorkspace = ({ removeFn } = {}) => {
       return offending;
     },
 
-    /**
-     * Remove the owned root with bounded retries. NEVER throws: the
-     * caller maps `removed: false` to a proof failure.
-     */
-    async dispose({ retries = 5 } = {}) {
-      let lastError;
-      for (let attempt = 0; attempt <= retries; attempt += 1) {
-        try {
-          remove(root, { recursive: true, force: true });
-          statSync(root);
-          lastError = new Error('the workspace root still exists after removal');
-        } catch (error) {
-          if (/** @type {{ code?: string }} */ (error)?.code === 'ENOENT') {
-            return { removed: true };
-          }
-          lastError = error;
-        }
-        if (attempt < retries) {
-          await new Promise((resolvePromise) => setTimeout(resolvePromise, 500));
-        }
-      }
-      return { removed: false, error: lastError };
-    },
+    ...(remove === undefined
+      ? {}
+      : {
+          /**
+           * Remove the owned root with bounded retries. NEVER throws: the
+           * caller maps `removed: false` to a proof failure. Available on
+           * the ALLOCATING (parent) API only — the adopted (worker) API
+           * carries no deletion capability at all.
+           */
+          async dispose({ retries = 5 } = {}) {
+            let lastError;
+            for (let attempt = 0; attempt <= retries; attempt += 1) {
+              try {
+                remove(root, { recursive: true, force: true });
+                statSync(root);
+                lastError = new Error('the workspace root still exists after removal');
+              } catch (error) {
+                if (/** @type {{ code?: string }} */ (error)?.code === 'ENOENT') {
+                  return { removed: true };
+                }
+                lastError = error;
+              }
+              if (attempt < retries) {
+                await new Promise((resolvePromise) => setTimeout(resolvePromise, 500));
+              }
+            }
+            return { removed: false, error: lastError };
+          },
+        }),
   };
   return workspace;
+};
+
+/**
+ * Allocate the ONE disposable workspace root and return its owner API.
+ * `removeFn` is an internal test seam only (defaults to `rmSync`); it
+ * never changes ownership, scanning, or refusal semantics.
+ *
+ * @param {{ removeFn?: (directory: string, options?: { recursive?: boolean; force?: boolean }) => void }} [options]
+ * @returns {Q6LiveWorkspace}
+ */
+export const createQ6LiveWorkspace = (options = {}) => {
+  // EXACTLY ONE allocation happens here — nowhere else in the live proof.
+  const root = resolve(mkdtempSync(join(tmpdir(), Q6_LIVE_WORKSPACE_PREFIX)));
+  return workspaceApiFor(root, {
+    remove: options.removeFn ?? ((directory, opts) => rmSync(directory, opts)),
+  });
+};
+
+/**
+ * ADOPT an existing owned workspace root WITHOUT allocating or deleting.
+ *
+ * The parent/worker lifecycle (amendment §6) splits the live proof: the
+ * PARENT allocates the single root and, only after the WORKER has exited,
+ * scans and disposes it. The worker adopts the parent's root with this
+ * constructor: the returned API carries every ownership, validation, and
+ * scanning capability but NO `dispose` — the worker has no deletion
+ * capability at all, and no second `mkdtempSync` exists anywhere.
+ *
+ * @param {string} directory The root the parent allocated (resolved absolute).
+ * @returns {Q6LiveWorkspace} The owner API without `dispose`.
+ */
+export const adoptQ6LiveWorkspace = (directory) => {
+  const root = resolve(directory);
+  const reason = forbiddenReasonFor(root, { repoRoot: repositoryRoot(), tempRoot: resolve(tmpdir()) });
+  if (reason !== null) {
+    throw new Error(`adoptQ6LiveWorkspace: ${reason}`);
+  }
+  let stats;
+  try {
+    stats = statSync(root);
+  } catch {
+    throw new Error(
+      'adoptQ6LiveWorkspace: the owned workspace root is unexpectedly absent — refusing to adopt',
+    );
+  }
+  if (!stats.isDirectory()) {
+    throw new Error('adoptQ6LiveWorkspace: the owned workspace root is not a directory');
+  }
+  return workspaceApiFor(root, { remove: undefined });
 };

@@ -14,20 +14,12 @@
  * Every fixture here is disposable and task-owned (OS temp only).
  */
 import { describe, expect, it } from 'vitest';
-import {
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  statSync,
-  symlinkSync,
-  writeFileSync,
-} from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { basename, join, resolve, sep } from 'node:path';
 import {
+  adoptQ6LiveWorkspace,
   createQ6LiveWorkspace,
   OPERATOR_DATA_DIR_NAME,
   Q6_LIVE_WORKSPACE_PREFIX,
@@ -104,21 +96,37 @@ describe('S-1 ownership: rejected paths are never touched', () => {
 });
 
 describe('S-1 ownership: the only removal target is the owned root', () => {
-  it('the live harness contains no recursive deletion of a composition-reported path', () => {
-    const liveSource = readFileSync('scripts/verify-q6-live.mjs', 'utf8');
-    // No rmSync anywhere: the harness cannot recursively delete anything.
-    expect(liveSource).not.toMatch(/rmSync/);
-    // Not even a filesystem import remains: removal happens ONLY through
-    // the owned workspace's dispose.
-    expect(liveSource).not.toMatch(/from\s+['"]node:fs['"]/);
-    // The identity failures are stable and non-echoing.
-    expect(liveSource).toMatch(/path not echoed/);
-    expect(liveSource).toMatch(/requireResolvedEnvironmentDataDir/);
+  it('the parent/worker live harness contains no recursive deletion of a composition-reported path', () => {
+    // The parent/worker lifecycle (amendment §6) splits the live proof:
+    // the PARENT (verify-q6-live.mjs + lib/q6-live-parent.mjs) never deletes
+    // anything except through the owned workspace's dispose, and the WORKER
+    // (lib/q6-live-worker.mjs) has NO deletion capability at all. The old
+    // S-1 property is preserved across BOTH files, at equal or greater
+    // strength.
+    const parentSource = readFileSync('scripts/verify-q6-live.mjs', 'utf8');
+    const parentLibSource = readFileSync('scripts/lib/q6-live-parent.mjs', 'utf8');
+    const workerSource = readFileSync('scripts/lib/q6-live-worker.mjs', 'utf8');
+    // No rmSync anywhere in any live-proof file.
+    for (const source of [parentSource, parentLibSource, workerSource]) {
+      expect(source).not.toMatch(/rmSync/);
+    }
+    // The worker has no deletion capability at all: no dispose reaches it.
+    expect(workerSource).not.toMatch(/dispose/);
+    // The parent performs removal EXACTLY once, through the owned dispose.
+    expect((parentLibSource.match(/workspace\.dispose\(\)/g) ?? []).length).toBe(1);
+    // The identity failures are stable and non-echoing (worker), and the
+    // resolved environment is pre-validated before composition.
+    expect(workerSource).toMatch(/path not echoed/);
+    expect(workerSource).toMatch(/requireResolvedEnvironmentDataDir/);
   });
 
-  it('the only permitted removal target is the owned workspace root (dispose-only, scoped)', async () => {
-    const liveSource = readFileSync('scripts/verify-q6-live.mjs', 'utf8');
-    expect((liveSource.match(/workspace\.dispose\(\)/g) ?? []).length).toBe(1);
+  it('the only permitted removal target is the owned workspace root (dispose-only, parent-side, scoped)', async () => {
+    const parentLibSource = readFileSync('scripts/lib/q6-live-parent.mjs', 'utf8');
+    expect((parentLibSource.match(/workspace\.dispose\(\)/g) ?? []).length).toBe(1);
+    // The adopted (worker) API carries NO dispose whatsoever.
+    const adopted = adoptQ6LiveWorkspace(mkdtempSync(join(tmpdir(), Q6_LIVE_WORKSPACE_PREFIX)));
+    expect((adopted as unknown as { dispose?: unknown }).dispose).toBeUndefined();
+    rmSync(adopted.root, { recursive: true, force: true });
     const workspace = createQ6LiveWorkspace();
     // A sibling OUTSIDE the owned root must never be touched.
     const sibling = join(
