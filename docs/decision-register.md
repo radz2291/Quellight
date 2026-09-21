@@ -839,3 +839,47 @@ and 07E have not begun. This entry is documentation-only.
 - **Date**: 2026-09-22. This entry is documentation-only (no new
   architectural decision; the phase followed the frozen contract and the
   ratified OQ6 authority model without owner-level amendment).
+
+## D-Q6-2 — Q6 live-proof data-isolation remediation (implementation-conformance correction; contract unchanged)
+
+- **Defect**: the bounded live harness (`verify:q6:live`, N-C24)
+  allocated one temporary directory for ownership (leak scan, cleanup)
+  but let `composeLive(reuseDataDir)` silently compose against a SECOND
+  temporary directory; an assigned-but-unused `restartDataDir` masked
+  the mismatch. Had the credential-backed proof run, the restart would
+  have recomposed against the WRONG store, the actual store could have
+  escaped credential scanning, and it could have survived cleanup. No
+  live execution ever occurred (the credential was absent), so no
+  evidence was produced from a wrong store and the frozen
+  one-execution allowance remains unused.
+- **Correction** (commit `c0e5a93…`; record
+  `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-LIVE-DATA-ISOLATION-REMEDIATION.md`):
+  the script-only helper `scripts/lib/q6-live-workspace.mjs` allocates
+  EXACTLY ONE disposable root; every composition receives that exact
+  resolved path explicitly (`composeLive(ownedDataDir)`, no boolean
+  flag) and its resolved `dataDir` is asserted against the root BEFORE
+  any provider turn (fail closed; a mismatching foreign directory is
+  closed and removed before the failure); repository paths and
+  `.quellight-data` are refused by name/segment; credential scans cover
+  every nested byte of the root; verified cleanup removes the complete
+  root on success and every failure path, and removal failure FAILS the
+  proof (never a note). The frozen Q6 contract, its bounds, the
+  provider identity, the ceremony behavior, the authority assertions,
+  the zero-retry rule, and output redaction are unchanged.
+- **Regression proof**: a non-vacuous offline negative control against
+  the starting SHA `6cdbf075…` (disposable worktree; no provider, no
+  credential) demonstrated all four old-flow consequences; 11 permanent
+  offline lifecycle suites and a 6-check `live-workspace` section in
+  `verify:q6` (including behavioral execution of those suites) pin the
+  single-root discipline. Bounded FastGate set green: format:check,
+  typecheck, lifecycle suites, verify:q6 (95 checks), verify:stage7c,
+  git diff --check. Package and lock files byte-unchanged; VICT
+  identity `vict-release-set@1/0.3.0` re-derived unchanged; no product
+  source or durable schema changed.
+- **Status**: Q6 remains
+  `IMPLEMENTED — AWAITING INDEPENDENT Q7 VERIFICATION` with the live
+  proof NOT executed. **The authoritative live-provider execution count
+  remains ZERO** (no credential was present or accessed at any point).
+  **Phase Q7 remains BLOCKED — NOT BEGUN.**
+- **Date**: 2026-09-22. Documentation-only decision entry (the
+  remediation enforces the frozen contract's own requirements).

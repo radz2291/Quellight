@@ -10,7 +10,7 @@ Stage 07C Phase Q2: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (durab
 Stage 07C Phase Q3: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (governed confirmation ceremony and quiet memory inbox)
 Stage 07C Phase Q4: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (deterministic Shared World context assembly; H-1 remediated and independently re-verified closed)
 Stage 07C Phase Q5: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (Shared World inspection, user memory control, one durable global Memory Mode; independent audit NOT VERIFIED — B-1/H-1; Q5-B-1/Q5-H-1/Q5-M-1 remediated per the frozen remediation contract and independently re-verified closed; L-3 repaired; zero-warning dev-start gate)
-Stage 07C Phase Q6: IMPLEMENTED — AWAITING INDEPENDENT Q7 VERIFICATION (deterministic final verification; offline gates and the N-C25 aggregate green; the bounded live-provider ceremony proof N-C24 BLOCKED — the operator credential OLLAMA_API_KEY is absent from the implementation environment; the live gate refused truthfully, exit 2; freeze commit ca82892…, zero amendments; implementation commits cd70bc8…, d25d9c3…; the authoritative ladder ran exactly once, first-run green, 0 vulnerabilities)
+Stage 07C Phase Q6: IMPLEMENTED — AWAITING INDEPENDENT Q7 VERIFICATION (deterministic final verification; offline gates and the N-C25 aggregate green; the bounded live-provider ceremony proof N-C24 BLOCKED — the operator credential OLLAMA_API_KEY is absent from the implementation environment; the live gate refused truthfully, exit 2; freeze commit ca82892…, zero amendments; implementation commits cd70bc8…, d25d9c3…; the authoritative ladder ran exactly once, first-run green, 0 vulnerabilities; a live-harness data-directory identity defect was found and remediated BEFORE any live execution — one verified disposable root shared by composition, restart, leak scan, and cleanup, with pre-turn identity assertions and fail-closed cleanup, commit c0e5a93…; the live execution count remains zero)
 Stage 07C Phase Q7: BLOCKED — NOT BEGUN (permitted only after the Q6 live proof has executed exactly once and passed)
 Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 closed; Q5 closed; M-1 CLOSED — stable 0.3.0 adopted; Q6 implemented — live proof blocked; Q7, 07D, 07E remaining)
 ```
@@ -82,6 +82,28 @@ Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed;
   owner-invoked live execution has run and passed. VICT stayed
   read-only; the operator `.quellight-data` directory was never
   accessed (fail-closed seam; mtimes unchanged).
+
+- **Phase Q6 live-proof data-isolation remediation (2026-09-22):
+  implementation-conformance correction; contract unchanged.** A
+  directory-identity defect was found in the live harness BEFORE any
+  live execution: the original `composeLive(reuseDataDir)` silently
+  composed against a SECOND temporary directory while ownership, leak
+  scanning, and cleanup used the first — so a live run would have
+  restarted against the wrong store, could have escaped credential
+  scanning, and could have stranded a directory. Remediation commit
+  `c0e5a93…`: the script-only helper
+  `scripts/lib/q6-live-workspace.mjs` allocates EXACTLY ONE disposable
+  root; both compositions receive that exact path explicitly and its
+  resolved identity is asserted BEFORE any provider turn (fail closed);
+  repository and `.quellight-data` paths are refused; scans cover every
+  nested byte of the root; verified cleanup FAILS the proof if the root
+  cannot be removed. A non-vacuous offline negative control against the
+  starting SHA demonstrated all four old-flow consequences; 11 permanent
+  lifecycle suites + a 6-check `live-workspace` section in `verify:q6`
+  make the regression unreturnable. Record:
+  `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-LIVE-DATA-ISOLATION-REMEDIATION.md`.
+  The live execution count remains ZERO; Q7 remains BLOCKED — NOT
+  BEGUN.
 
 - **Phase Q5 — Shared World inspection and user memory control The pinned capability advanced to
   `qlt.proposal.draft@2` with the truthful effect class `write` (the
