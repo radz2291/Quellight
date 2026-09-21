@@ -52,7 +52,7 @@ accessed, read, or present in any probe environment).
   profile 5→6) and comment updates; no migration or store change.
 - **Exact closed three-branch presentation** — the input presentation
   declares `claim → subject/epistemicType/honestyState/confidence/
-  statement`, `commitment → commitmentKey/statement`,
+statement`, `commitment → commitmentKey/statement`,
   `open_loop → subject/loopKind/detail`, every branch `required` +
   `additionalProperties: false`; the output presentation declares the
   closed accepted/refused union; the bounded model-facing description
@@ -131,8 +131,8 @@ assumption artifact, corrected below):
 
 - Worker exit 0; `ok: true`; `findings: []`; exactly five provider turns;
   turn order exactly `t1 (explicit remember request) → t2 (natural
-  discretionary fixture) → t3 (transient incident) → t4 (fresh-conversation
-  continuity) → t5 (hypothetical conflict)`.
+discretionary fixture) → t3 (transient incident) → t4 (fresh-conversation
+continuity) → t5 (hypothetical conflict)`.
 - t1: completed, exactly 1 invocation, 1 proposal. t2: completed, 1
   invocation, 1 proposal (discretionary durable extraction from the
   audit's OWN fixture text — the runner did not reuse the repository's

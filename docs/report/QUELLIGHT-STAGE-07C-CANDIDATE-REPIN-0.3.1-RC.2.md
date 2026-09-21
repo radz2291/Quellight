@@ -27,7 +27,7 @@ provider, fixture, or Q6 acceptance change.
    resolves from the public registry at exactly `0.3.1-rc.2`.
 3. **Central release-set identity** (`scripts/lib/release-set.mjs`):
    `RELEASE_IDENTITY = 'vict-release-set@1/0.3.1-rc.2'`, `CONTENT_ID =
-   'v1_55d1ad2e…'`, `EXPECTED_VERSION = '0.3.1-rc.2'` (content ID
+'v1_55d1ad2e…'`, `EXPECTED_VERSION = '0.3.1-rc.2'` (content ID
    derived by the canonical algorithm from the 13-member `name@version`
    set).
 4. **Derived gates** updated to the new exact-pin identity:
@@ -38,13 +38,13 @@ provider, fixture, or Q6 acceptance change.
 
 ## 2. What did NOT change
 
-* `qlt.proposal.draft` stays at revision **3**, declared effect stays
+- `qlt.proposal.draft` stays at revision **3**, declared effect stays
   `write`, and the authoritative `Contract.parse` stays
   unchanged-or-stricter.
-* Agent profile stays revision **6**; instructions stay revision **4**;
+- Agent profile stays revision **6**; instructions stay revision **4**;
   the exact host quiet-write policy entry
   (`qlt.host-policy.quiet-write@1`, exactly one entry) is unchanged.
-* No migration, no store, no memory-policy, no ceremony, no UI, no
+- No migration, no store, no memory-policy, no ceremony, no UI, no
   provider, no fixture, and no Q6 acceptance change of any kind. The
   capability envelope diff relative to the Execution-3 remediation state
   is version-reference-free (the capability source carries no VICT
@@ -52,15 +52,15 @@ provider, fixture, or Q6 acceptance change.
 
 ## 3. Candidate provenance (VICT side, recorded here for the consumer chain)
 
-* Release source: `a7b0018c460581e5425df80e56b0ccf309a4b4a4` (pushed
+- Release source: `a7b0018c460581e5425df80e56b0ccf309a4b4a4` (pushed
   `HEAD == origin/main`; clean; linear).
-* Publication run `35661159776` (`.github/workflows/release.yml`,
+- Publication run `35661159776` (`.github/workflows/release.yml`,
   `workflow_dispatch`): full in-workflow chain green; ALL 13 PACKAGES
   PUBLISHED under `vict-0.3.1-rc` through npm OIDC trusted publishing;
   the final same-run registry verification failed on CDN propagation lag
   (2/13 not visible after 12 read-only re-checks) — terminal-`failure`
   on verification timing only, the established recovery class.
-* Read-only successor evidence run `35662077320`
+- Read-only successor evidence run `35662077320`
   (`.github/workflows/release-evidence.yml`, permissions exactly
   `contents: read`): **terminal-`success`** — 13/13 registry manifests at
   exactly `0.3.1-rc.2`; `vict-0.3.1-rc → 0.3.1-rc.2`; `latest → 0.3.0`;
