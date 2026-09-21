@@ -163,7 +163,7 @@ const rendererPackage = JSON.parse(
 );
 if (
   rendererPackage.name !== '@victframework/renderer-svelte' ||
-  rendererPackage.version !== '0.3.0'
+  rendererPackage.version !== '0.3.1-rc.1'
 ) {
   fail(
     `released renderer identity changed: ${rendererPackage.name}@${rendererPackage.version} (expected @victframework/renderer-svelte@0.3.0).`,

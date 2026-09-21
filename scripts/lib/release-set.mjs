@@ -5,22 +5,29 @@
  * permanent governed-mutation test suite (structural gate).
  *
  * The coordinated release-set identity is immutable:
- *   `vict-release-set@1/0.2.0`
+ *   `vict-release-set@1/0.3.1-rc.1`
  *   content ID: sha256 over the sorted, newline-joined `name@version`
  *   list of the EXACT 13-member set, prefixed `v1_` (VICT
  *   `docs/RELEASE-COMPATIBILITY.md` §2 algorithm).
+ *
+ * Execution-3 remediation (2026-09-22): the recorded identity moved from
+ * the stable `0.3.0` set to the verification candidate `0.3.1-rc.1`
+ * (frozen contract
+ * docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-EXECUTION-3-REMEDIATION-CONTRACT.md §5)
+ * after its trusted-OIDC publication (run 35625570254 + the read-only
+ * successor evidence run).
  */
 
 import { createHash } from 'node:crypto';
 
 /** The recorded, authoritative public release identity: the coordinated
- * stable set `0.3.0` — the M-1 remediation content published as the
- * verified stable release after the fresh independent re-verification
- * (VICT `docs/report/VICT-M-1-INDEPENDENT-RE-VERIFICATION.md`), through
- * the same trusted-OIDC workflow. */
-export const RELEASE_IDENTITY = 'vict-release-set@1/0.3.0';
-export const CONTENT_ID = 'v1_5f3a074a50ab5623acbf933d52a24e6d383ded2ccd02bbaa78a28c3be3915580';
-export const EXPECTED_VERSION = '0.3.0';
+ * verification candidate `0.3.1-rc.1` — the B-1 model-facing
+ * capability-schema remediation content, published under the candidate
+ * tag `vict-0.3.1-rc` through the trusted-OIDC workflow (latest remains
+ * `0.3.0`; stable `0.3.1` remains unpublished). */
+export const RELEASE_IDENTITY = 'vict-release-set@1/0.3.1-rc.1';
+export const CONTENT_ID = 'v1_b6e39c1f6d6f627c03dfe12e8eb4bc0b6b8bb7f7746b4b871cf00d3c7f7ae731';
+export const EXPECTED_VERSION = '0.3.1-rc.1';
 
 /** The exact 13-member coordinated release set (recorded identity). */
 export const RELEASE_SET_MEMBERS = Object.freeze([
