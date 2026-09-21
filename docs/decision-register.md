@@ -985,3 +985,58 @@ VERIFICATION` with the live proof EXECUTED ONCE and FAILED. Q6 is NOT
   independently verified and NOT formally closed. **Phase Q7 remains
   BLOCKED — NOT BEGUN. Stage 07 remains In Progress.**
 - **Date**: 2026-09-21. Documentation-only decision entry.
+
+## D-Q6-5 — Phase Q6 live proof: Execution-1 root cause confirmed (operator credential-environment wiring, credential VALID); fresh owner-authorized Execution 2 FAILED on the missing-proposal class; further execution requires a new owner decision (documentation-only)
+
+- **Execution-1 root cause (read-only diagnosis, no ceremony
+  invocation)**: the operator's agent-configuration file held the
+  literal string `$OLLAMA_API_KEY` (an environment-variable REFERENCE)
+  as the ollama provider's API key; the Execution-1 launcher passed it
+  verbatim, so the proof sent a meaningless bearer value and received
+  the HTTP 401. The operator's REAL working Ollama Cloud key lives in
+  their agent's own credential store (`~/.pi/agent/auth.json`,
+  resolved internally by the agent — which is why the model works
+  inside the agent). A presence-verified direct probe with the real
+  key returned HTTP 200 for both the models list and a minimal chat
+  completion with the frozen model: **the credential, endpoint, and
+  model are all VALID and working**. Execution 1 was therefore an
+  operator-environment wiring failure — no harness, contract, or
+  provider defect.
+- **Execution 2 (fresh dated owner authorization, 2026-09-21 — the
+  owner directed use of the store credential)**: executed ONCE at tree
+  `a32bba5468c2f7fe8d1b805deef8803d2fcd0cad` (`HEAD == origin/main`,
+  clean; docs-only delta from `8d1273b…`; zero executable change).
+  Gate passed; composition LIVE (`ollama-cloud/glm-5.3-flash` at
+  `https://ollama.com/v1`); **t1 provider turn status=completed in
+  5,925 ms** (within every frozen bound) — but the model did NOT
+  exercise the single draft capability: zero durable invocation
+  records, zero proposals. The harness failed truthfully at the t1
+  boundary (the frozen missing-proposal failure class); true exit 1;
+  1 of 6 provider turns used; zero retries; no fallback; zero durable
+  Shared World effects; no authority exercised; both byte-level
+  credential leak scans clean; the recurring fail-closed Windows
+  cleanup finding (owned temp root unremovable by dispose) recurred and
+  was remediated by verified safe manual cleanup; the operator
+  `.quellight-data` directory was never accessed (mtime unchanged);
+  repository tree byte-clean throughout.
+- **Observation (not a gate; freeze §15)**: the frozen contract makes
+  the capability invocation structural while acknowledging model
+  wording is nondeterministic. Whether the frozen 256-token per-turn
+  output cap interacting with this model's reasoning behavior, or
+  provider-side tool-calling reliability, contributed to the missed
+  capability invocation is an open observation. Diagnosing or changing
+  bounds/model/prompts requires the freeze §13 amendment procedure —
+  an owner decision, never an improvised fix.
+- **Execution accounting**: total live-provider executions = TWO
+  (Execution 1: failed 401 — credential wiring; Execution 2: failed
+  missing proposal — credential proven valid). Each ran under its own
+  explicit owner authorization; NEITHER was retried; no silent rerun
+  exists. **Any further live execution requires a fresh dated owner
+  decision** (and, where frozen contract text is affected, the §13
+  amendment procedure).
+- **Status**: Q6 is `IMPLEMENTED — AWAITING INDEPENDENT Q7
+VERIFICATION` with the live proof EXECUTED TWICE, BOTH FAILED. Q6 is
+  NOT independently verified and NOT formally closed. **Phase Q7
+  remains BLOCKED — NOT BEGUN. Stage 07 remains In Progress.**
+- **Date**: 2026-09-21. Documentation-only decision entry. Record:
+  `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-LIVE-PROOF-FAILURE.md`.

@@ -17,9 +17,9 @@ Stage 07C Phase Q3: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (gover
 Stage 07C Phase Q4: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (deterministic Shared World context assembly; H-1 remediated and independently re-verified closed)
 Stage 07C Phase Q5: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (Shared World inspection, user memory control, one durable global Memory Mode; B-1/H-1 remediated and independently re-verified closed)
 VICT-M-1: INDEPENDENTLY VERIFIED AND FORMALLY CLOSED (truthful write-effect capability `qlt.proposal.draft@2/write`; Quellight exact-pinned to the STABLE `@victframework/*@0.3.0` = `vict-release-set@1/0.3.0`, content ID `v1_5f3a074a…`; `latest` = 0.3.0; the `0.3.0-rc.1` candidate and its recovered evidence chain remain immutable historical record)
-Stage 07C Phase Q6: IMPLEMENTED — AWAITING INDEPENDENT Q7 VERIFICATION (deterministic final verification: the offline gates and the aggregate N-C25 are green; the bounded live-provider ceremony proof N-C24 was EXECUTED ONCE on 2026-09-21 at `8d1273b…` and FAILED TRUTHFULLY at its first provider turn — the provider rejected the configured credential with an HTTP 401 (authentication failure) response class at the frozen endpoint; true process exit 1; one provider turn of the allowed six used; zero retries; no fallback; zero durable Shared World effects; credential byte-scans completed clean; safe cleanup verified; NOT rerun — the one-execution allowance for that authorization is consumed and a fresh owner decision is required for any further live execution; the freeze had zero amendments; the harness fixes `c0e5a93…` and `6a81f66…` preceded the execution unchanged; see `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-LIVE-PROOF-FAILURE.md`)
-Stage 07C Phase Q7: BLOCKED — NOT BEGUN (the independent audit is permitted only after the live proof has executed exactly once and passed; the live proof executed once and FAILED, so Q7 remains blocked)
-Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 closed; Q5 closed; M-1 CLOSED — stable 0.3.0 adopted; Q6 implemented — live proof executed once and failed (provider credential rejected); Q7, 07D, 07E remaining)
+Stage 07C Phase Q6: IMPLEMENTED — AWAITING INDEPENDENT Q7 VERIFICATION (deterministic final verification: the offline gates and the aggregate N-C25 are green; the bounded live-provider ceremony proof N-C24 was EXECUTED TWICE on 2026-09-21 — each under its own explicit owner authorization — and BOTH FAILED TRUTHFULLY. Execution 1 at `8d1273b…`: HTTP 401 at the first provider turn, root-caused to an unresolved credential-environment reference in the operator's agent configuration — the credential itself is valid and verified working directly (200/200). Execution 2 at `a32bba5…`: the provider turn SUCCEEDED (t1 completed in 5,925 ms, within all bounds) but the model did not exercise the single draft capability — zero durable invocation records, zero proposals — the frozen missing-proposal failure class; a recurring fail-closed Windows cleanup finding (owned temp root unremovable by dispose) was remediated manually both times. Zero durable Shared World effects; no authority exercised; credential byte-scans clean every time; zero retries; no fallback; NOT rerun — any further live execution, or any change to frozen bounds/model/prompts, requires a fresh dated owner decision (freeze §3/§13). Freeze had zero amendments; harness fixes `c0e5a93…` and `6a81f66…` preceded both executions unchanged; failure record: `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-LIVE-PROOF-FAILURE.md`)
+Stage 07C Phase Q7: BLOCKED — NOT BEGUN (the independent audit is permitted only after the live proof has executed and passed; the live proof failed twice, so Q7 remains blocked)
+Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 closed; Q5 closed; M-1 CLOSED — stable 0.3.0 adopted; Q6 implemented — live proof executed twice, both failed (credential wiring, then missing proposal); Q7, 07D, 07E remaining)
 ```
 
 **VICT-M-1 remediation (2026-09-21; superseded 2026-09-21 by the
@@ -331,13 +331,17 @@ npm run verify:q6:live         # the bounded LIVE Shared World ceremony proof (N
 operator action, never part of the automated test suite.
 `verify:q6:live` (the Q6 bounded live ceremony, N-C24) has the same
 explicit double gate, runs OUTSIDE every automatic gate, and must run
-EXACTLY ONCE after all offline gates. Current status: it WAS executed
-exactly once, on 2026-09-21 at tree `8d1273b…`, and FAILED truthfully
-(exit 1) at its first provider turn — the provider rejected the
-configured credential (HTTP 401 authentication-failure class) at the
-frozen endpoint. It was NOT rerun; the one-execution allowance for that
-authorization is consumed; a fresh dated owner decision is required
-before any further live execution. See
+EXACTLY ONCE after all offline gates. Current status: it was executed
+TWICE on 2026-09-21, each under its own explicit owner authorization,
+and BOTH runs FAILED truthfully (exit 1). Execution 1: HTTP 401 at the
+first provider turn (operator-configuration credential wiring — an
+unresolved `$VAR` reference was sent as the bearer value; the real
+credential was verified working directly). Execution 2: the provider
+turn completed within bounds but the model did not exercise the single
+draft capability (zero invocation records, zero proposals — the frozen
+missing-proposal failure class). Neither run was retried; any further
+live execution or bounds/model change requires a fresh dated owner
+decision. See
 `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-LIVE-PROOF-FAILURE.md`,
 `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-IMPLEMENTATION.md`, and the
 frozen `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-CONTRACT-FREEZE.md`.
