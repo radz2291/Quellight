@@ -1497,3 +1497,80 @@ Record:
 **Disposition:** Q6 is NOT independently verified and NOT formally closed.
 **NO FIFTH LIVE EXECUTION IS AUTHORIZED.** **Phase Q7 remains BLOCKED — NOT
 BEGUN.** Stage 07 remains In Progress.
+
+## D-Q6-14 — Phase Q6 tool-argument diagnostic completion: two authorized provider requests executed; the model emitted NO tool call in either response — its reasoning phase consumed the full 512-token output budget (provider-reported `finish_reason: length`, 0 content bytes, 0 tool-call deltas), so no argument JSON exists to capture; the tool-call rejection boundary remains UNIDENTIFIED (classification F); the reasoning-budget mechanism for the Execution-4 empty-reply class is now DIRECTLY EVIDENCED; corrected machinery fully validated offline (owner-decision input; no repair, no contract change, no third request)
+
+**Date:** 2026-09-22. **Trigger:** the owner's completion authorization (max
+TWO diagnostic provider requests, not live-proof executions) for capturing the
+real model's generated tool arguments and identifying the VICT bridge
+rejection boundary, using the corrected machinery from D-Q6-13.
+
+**Request accounting (exact):** starting tip `03df759…` (verified
+`== origin/main`, clean tracked trees, linear ancestry; VICT `fd0c1f7…`
+untouched). Exactly TWO provider requests to `ollama-cloud` /
+`glm-5.3-flash` / `https://ollama.com/v1` (registry-pinned, env-var
+credential lookup), both HTTP 200 with the frozen bounds (512 output tokens,
+120 s deadline, 0 retries, no fallback, `tool_choice: auto`, NO reasoning
+control — verified in both captured request bodies). **Request 1** (exact
+production request, nothing rewritten): 154 SSE events, 36,803 body bytes,
+7,926 ms — **2,403 reasoning bytes, 0 visible content bytes, 0 tool-call
+deltas, `finish_reason: length`** (router-verified `unified: length`); turn
+completed with a 0-byte restored reply, 0 invocations, 0 proposals.
+**Request 2** (permitted fallback; TRUTHFULLY DISCLOSED: executed UNFORCED
+because the probe's forcing flag was unset in the launch environment — a
+probe-side configuration omission; forcing was optional under the
+authorization, and the request was otherwise the exact production shape):
+178 SSE events, 41,897 body bytes, 6,865 ms — **2,326 reasoning bytes, 0
+content bytes, 0 tool-call deltas, `finish_reason: length`**; turn completed,
+0-byte reply, 0 invocations, 0 proposals. No third request was attempted; no
+retry; the automatic follow-up was structurally refused before any network
+byte (and did not occur — neither response contained a tool call).
+
+**Classification: F — still inconclusive on the tool-argument rejection
+boundary.** Precise reason: the model produced NO tool call in either
+authorized response — within the frozen bounds its reasoning phase consumes
+the entire 512-token output budget BEFORE any tool-call or content tokens are
+emitted. There is no generated argument JSON to capture, so the A–E
+classification remains unevidenced and the earlier diagnostic's `tool.failed`
+boundary remains unidentified. The capture/replay/corrected-fixture machinery
+is validated and ready for any future authorization.
+
+**Reasoning-budget disposition (truthful):** the mechanism for the
+Execution-4 empty-reply class is now DIRECTLY EVIDENCED — both responses
+carry the provider's own `finish_reason: length` with pure reasoning and zero
+content, reproducing the exact Execution-4 observable (completed turn, empty
+restored reply, 0 invocations, 0 proposals, ~7–9 s) twice. The earlier
+caveats stand: that specific earlier response ended `tool_calls` (so it did
+not exhaust the budget — model behavior is non-deterministic across runs:
+when the reasoning phase fits within 512 tokens the tool call completes;
+today both runs exceeded it), and reasoning control remains a separate,
+undecided concern for non-tool turns. Downstream field-preservation findings
+remain valid.
+
+**Corrected machinery (offline-validated on loopback with a SIMULATED
+provider; simulated arguments are machinery-validation artifacts, NOT model
+output):** the corrected awaited `doStream` wrapper forwards the complete
+router part chain; raw argument JSON is reassembled from SSE fragments and
+replayed through every fence — raw guard, real Mastra `validateToolInput`
+(rejected the invalid simulated shape with the exact durable code
+`VICT_TOOL_FAILED`), authoritative `Contract.parse` (accumulated per-field
+issues `{code, path}`, e.g. `QLT_INPUT_UNKNOWN_FIELD`,
+`QLT_INPUT_INVALID_ENUM`), and the real governed bridge (deterministic
+rejection: 0 invocations, 0 proposals). The smallest corrected fixture (six
+pointer-addressed transformations) parsed OK and, through the REAL governed
+bridge, produced ONE durable quiet-write invocation (completed), ONE pending
+proposal (`status: proposed`), ZERO approvals, ZERO changesets (zero
+canonical effect), no authority escalation. No production repair implemented.
+
+**Safety (all verified):** the credential was read once (memory only; never
+printed, hashed, persisted, serialized, or placed in command arguments); no
+fixture was accessed; `.quellight-data` never accessed (mtime unchanged);
+VICT never modified; neither previous report modified; no code, test, script,
+manifest, lockfile, pin, contract, prompt, instruction, schema, or bound
+changed; all probes, stores, and listeners removed and verified absent.
+Record:
+`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-TOOL-ARGUMENT-DIAGNOSTIC-COMPLETION.md`.
+
+**Disposition:** Q6 is NOT independently verified and NOT formally closed.
+**NO FIFTH LIVE EXECUTION IS AUTHORIZED.** **Phase Q7 remains BLOCKED — NOT
+BEGUN.** Stage 07 remains In Progress.
