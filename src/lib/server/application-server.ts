@@ -162,6 +162,40 @@ const INGRESS_ACTIONS: Readonly<Record<string, IngressActionSpec>> = {
     required: ['mode'],
     idempotencyRequired: true,
   },
+  // Stage 07D D1/D2 UI: the governed retention and conflict mutations
+  // reach the HTTP ingress (their field specs mirror the frozen D1a
+  // contract specs exactly; the surface re-validates as the second
+  // fence and the durable CHECKs as the third). USER authority only.
+  'act.removeRecord': {
+    fields: { recordId: S(128), recordKind: S(16), expectedVersion: NUM },
+    required: ['recordId', 'recordKind'],
+    idempotencyRequired: true,
+  },
+  'act.setClaimExpiry': {
+    fields: { claimId: S(128), expiresAtMs: NUM, expectedVersion: NUM },
+    required: ['claimId'],
+    idempotencyRequired: true,
+  },
+  'act.runRetentionPass': {
+    fields: {},
+    required: [],
+    idempotencyRequired: true,
+  },
+  'act.amendCommitment': {
+    fields: { commitmentId: S(128), statement: S(2000), reason: S(500), expectedVersion: NUM },
+    required: ['commitmentId', 'statement'],
+    idempotencyRequired: true,
+  },
+  'act.dismissChallenge': {
+    fields: { challengeId: S(128), reason: S(500), expectedVersion: NUM },
+    required: ['challengeId'],
+    idempotencyRequired: true,
+  },
+  'act.resolveChallengeWithAmendment': {
+    fields: { challengeId: S(128), statement: S(2000), reason: S(500), expectedVersion: NUM },
+    required: ['challengeId', 'statement'],
+    idempotencyRequired: true,
+  },
 };
 
 /**
@@ -214,6 +248,18 @@ export function createAppServer(
 ) {
   const plan = getCompiledPlan();
 
+  // The resolved runtime (composition) — cached so the D2 conversation
+  // lifecycle routes and the action dispatch share ONE process-single
+  // composition (the runtime singleton is already process-single; this
+  // cache only avoids re-resolving inside one server instance).
+  let resolvedRuntime: Pick<QuellightRuntime, 'composition'> | undefined;
+  async function getComposition(): Promise<QuellightRuntime['composition']> {
+    if (resolvedRuntime === undefined) {
+      resolvedRuntime = await resolveRuntime();
+    }
+    return resolvedRuntime.composition;
+  }
+
   async function dispatch(
     actionId: string,
     input?: unknown,
@@ -224,8 +270,7 @@ export function createAppServer(
       return { ok: false, code: 'UNKNOWN_ACTION', message: 'The action is not declared.' };
     }
     try {
-      const runtime = await resolveRuntime();
-      const composition = runtime.composition;
+      const composition = await getComposition();
       // The local actor is resolved SERVER-SIDE (single-actor envelope);
       // the browser never supplies or holds an identity.
       const actor = { ...composition.actor, presentedTokenKind: 'local-test' as const };
@@ -520,6 +565,7 @@ export function createAppServer(
   return {
     plan,
     dispatch,
+    composition: getComposition,
     loadRoute,
     async close(): Promise<void> {
       const runtime = await resolveRuntime();
