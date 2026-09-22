@@ -1682,3 +1682,30 @@ amended inventory) are recorded in its header and the freeze report §3.
 The freeze commit contains NO executable behavior change.
 
 Record: [the D1a freeze report](report/QUELLIGHT-STAGE-07D-PHASE-D1A-CONTRACT-FREEZE.md). **Stage 07D foundations are FROZEN; implementation lanes are next; nothing is implemented, verified, or closed by this entry.**
+
+## D-07D-3 — Stage 07D Phase D1a freeze executed; D1/D3 foundations implemented and self-verified (D2 next)
+
+**Date:** 2026-09-22. The D1a joint contract freeze was committed alone
+(`493c52e0`, declarative only), followed by the schema foundation
+(`cdcfde24`, migration 5 `qlt-retention-conflict-foundations`), Lane A
+(`68b72958`: governed user removal with content-free tombstones, claim-only
+expiry, the deterministic visible enforcement pass with append-only
+evidence, bounded dependency re-evaluation), an explicit standalone freeze
+amendment (`6856d45d`: challenge rows are mutable judgment rows,
+`version >= 1`; the commit also carried in-flight Lane B module files —
+composition disclosed), Lane B (`8fa81906`: deterministic
+commitment-key-conflict detection with quiet dismissible challenge records
+at the ceremony confirm choke point; the structural amendment-vs-execution
+operation with immutable amendment rows and amends lineage), and the
+focused gates (`866074ea`: `verify:d1` 49 checks, `verify:d3` 35 checks;
+verify-q2..q6 re-pins reconciled for the grown plan inventory and
+migration bookkeeping).
+
+Verification at delivery: full node suite 351/351 green; verify:q2 (196),
+q3 (34), q4 (41), q5 (86), q6 (114), d1 (49), d3 (35) all green; typecheck,
+format, and `git diff --check` clean. The aggregate/browser ladder was
+deliberately not run (no UI/route/dependency changes; runs once at the D2
+integration point and the D5 audit freeze). No provider access; no
+operator data or credentials touched; VICT unmodified.
+
+Record: [the implementation report](report/QUELLIGHT-STAGE-07D-PHASE-D1-D3-FOUNDATIONS-IMPLEMENTATION.md). **Stage 07D D1/D3 foundations are IMPLEMENTED — AWAITING D2 INTEGRATION; deep purge, export, and cross-store reconciliation are NOT implemented; Stage 07D is NOT verified or formally closed; Stage 07E has NOT begun.**
