@@ -541,6 +541,21 @@ export const QLT_D1_NEW_TABLES = [
   'qlt_retention_pass',
 ] as const;
 
+/**
+ * AMENDMENT 1 (explicit, standalone; committed BEFORE the dependent Lane B
+ * implementation continued — see the freeze report appendix): challenge
+ * rows are MUTABLE judgment rows on a closed transition path
+ * (open → dismissed | resolved), so they carry optimistic-concurrency
+ * versions (`version >= 1`, bumped on each closed transition). Amendment
+ * rows and pass rows stay immutable (`version = 1` / no version column).
+ */
+const D1_VERSION_MUTABLE_COLUMN: QltColumnSpec = {
+  name: 'version',
+  type: 'INTEGER',
+  notNull: true,
+  default: '1',
+};
+
 export const QLT_D1_SCHEMA_INVENTORY: Readonly<
   Record<(typeof QLT_D1_NEW_TABLES)[number], QltTableSpec>
 > = {
@@ -592,7 +607,7 @@ export const QLT_D1_SCHEMA_INVENTORY: Readonly<
   qlt_conflict_challenge: {
     columns: [
       D1_ID_COLUMN,
-      D1_VERSION_ONE_COLUMN,
+      D1_VERSION_MUTABLE_COLUMN,
       { name: 'status', type: 'TEXT', notNull: true },
       { name: 'classification', type: 'TEXT', notNull: true },
       { name: 'existing_commitment_id', type: 'TEXT', notNull: true },

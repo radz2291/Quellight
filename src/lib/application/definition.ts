@@ -17,6 +17,11 @@ import {
   retentionContractRegistry,
   retentionResource,
 } from '$lib/sharedworld/retention-surface';
+import {
+  conflictContracts,
+  conflictContractRegistry,
+  conflictResource,
+} from '$lib/sharedworld/conflict-surface';
 import { memoryPolicyResource } from '$lib/sharedworld/memory-policy-surface';
 import { QLT_MEMORY_POLICY_SET_MODE_CONTRACT_ID } from '$lib/sharedworld/policy-contract';
 import { QLT_INSPECTION_RESOURCE_ID } from '$lib/sharedworld/inspection-contract';
@@ -176,6 +181,24 @@ export const application = defineApplication({
       ],
     },
     {
+      viewId: 'v.conflict',
+      resourceId: 'qlt.conflict',
+      resourceRevision: '1',
+      fields: [
+        'challengeId',
+        'status',
+        'classification',
+        'existingCommitmentId',
+        'existingStatus',
+        'incomingProposalId',
+        'incomingStatus',
+        'resolution',
+        'createdBy',
+        'threadId',
+        'updatedAt',
+      ],
+    },
+    {
       viewId: 'v.memoryPolicy',
       resourceId: 'qlt.memory-policy',
       resourceRevision: '1',
@@ -297,6 +320,35 @@ export const application = defineApplication({
       inputContractId: contractId,
       inputContractRevision: '1',
     })),
+    // ---- Stage 07D Phase D1 Lane B: the governed conflict surface
+    // (deterministic challenge records; the amendment-vs-execution
+    // operation; USER authority only; the agent envelope is UNCHANGED —
+    // D1a freeze §8/§9/§10) --------------------------------------------
+    {
+      kind: 'query',
+      id: 'act.queryConflict',
+      revision: '1',
+      resourceId: 'qlt.conflict',
+      resourceRevision: '1',
+    },
+    ...[
+      ['act.amendCommitment', 'amendCommitment', 'qlt.conflict.amend.input'],
+      ['act.dismissChallenge', 'dismissChallenge', 'qlt.conflict.dismiss.input'],
+      [
+        'act.resolveChallengeWithAmendment',
+        'resolveChallengeWithAmendment',
+        'qlt.conflict.resolveAmend.input',
+      ],
+    ].map(([id, op, contractId]) => ({
+      kind: 'mutation' as const,
+      id,
+      revision: '1',
+      resourceId: 'qlt.conflict',
+      resourceRevision: '1',
+      op,
+      inputContractId: contractId,
+      inputContractRevision: '1',
+    })),
     {
       kind: 'mutation',
       id: 'act.setMemoryMode',
@@ -313,6 +365,7 @@ export const application = defineApplication({
     { resourceId: 'qlt.memory', revision: '1' },
     { resourceId: QLT_INSPECTION_RESOURCE_ID, revision: '1' },
     { resourceId: 'qlt.retention', revision: '1' },
+    { resourceId: 'qlt.conflict', revision: '1' },
     { resourceId: 'qlt.memory-policy', revision: '1' },
   ],
   components: [{ componentId: 'qlt.conversation-workspace', revision: '1' }],
@@ -411,6 +464,10 @@ export const inputContractImplementations = [
   // in the D1a contract data; the surface re-validates as the second
   // fence).
   ...retentionContracts,
+  // The Stage 07D D1 Lane B conflict contracts (closed field sets frozen
+  // in the D1a contract data; the surface re-validates as the second
+  // fence).
+  ...conflictContracts,
   // The Q5 Memory Mode contract (closed single field; the surface
   // re-validates the closed vocabulary as the second fence).
   closedStringContract(QLT_MEMORY_POLICY_SET_MODE_CONTRACT_ID, { mode: 32 }, ['mode']),
@@ -424,6 +481,7 @@ export const inputContracts = [
   { id: 'qlt.threads.reopen.input', revision: '1' },
   ...memoryContractRegistry,
   ...retentionContractRegistry,
+  ...conflictContractRegistry,
   { id: QLT_MEMORY_POLICY_SET_MODE_CONTRACT_ID, revision: '1' },
 ] as const;
 
@@ -442,6 +500,7 @@ export function compileAppPlan(): ApplicationPlan {
       memoryResource,
       inspectionResource,
       retentionResource,
+      conflictResource,
       memoryPolicyResource,
     ],
     contracts: bindings.contracts,

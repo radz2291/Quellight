@@ -42,6 +42,10 @@ import {
   createSharedWorldRetentionStore,
   type SharedWorldRetentionStore,
 } from './retention-store.js';
+import {
+  createSharedWorldConflictStore,
+  type SharedWorldConflictStore,
+} from './conflict-store.js';
 import { runSharedWorldMigrations } from './migrations.js';
 import type { ContextCandidateRow, QltContextAssemblyRecord } from './context-assembler.js';
 import { QLT_CONTEXT_MAX_RECORDS, QLT_CONTEXT_SCAN_LIMIT_PER_FAMILY } from './context-contract.js';
@@ -352,6 +356,12 @@ export interface SharedWorldSqlite extends SharedWorldPort {
    */
   readonly retention: SharedWorldRetentionStore;
   /**
+   * Stage 07D Lane B (D1a freeze): the governed conflict and amendment
+   * repository over the SAME connection (challenge judgment records, the
+   * amendment-vs-execution mechanics). User authority only.
+   */
+  readonly conflict: SharedWorldConflictStore;
+  /**
    * A-AMEND-1 (Q3): ONE bounded READ-ONLY thread-scoped listing over the
    * same connection (SELECT only; no write/effect path). Serves the user
    * presentation read of claims/commitments/open loops for a thread.
@@ -473,6 +483,10 @@ export function createSharedWorldSqlite(options: SharedWorldSqliteOptions): Shar
   });
 
   const retention = createSharedWorldRetentionStore(db, { clock });
+  const conflict = createSharedWorldConflictStore(db, {
+    clock,
+    ids: { recordId: options.ids?.recordId },
+  });
 
   function getThreadRow(threadIdValue: string): ThreadRow | undefined {
     return db.prepare('SELECT * FROM qlt_thread WHERE id = ?;').get(threadIdValue) as
@@ -1946,6 +1960,7 @@ export function createSharedWorldSqlite(options: SharedWorldSqliteOptions): Shar
     contracts: sharedWorldContracts,
     meaning,
     retention,
+    conflict,
     memoryPolicy,
     listMemoryRows,
     getThreadIdByConversation,

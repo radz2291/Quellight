@@ -291,3 +291,17 @@ The existing 07C phase gates are re-pinned where the frozen plan inventory
 legitimately grows (Q4/Q5 reconciliation precedent); no 07C assertion is
 otherwise weakened. The combined independent audit remains D5 scope after
 D4.
+
+## Appendix — Amendment 1 (explicit, standalone; pre-implementation)
+
+**Date:** 2026-09-22. **Scope:** the `qlt_conflict_challenge` family only.
+**Change:** the table's version CHECK moves from `version = 1` (immutable)
+to `version >= 1` (mutable): challenge rows are JUDGMENT ROWS on a closed
+transition path (`open → dismissed | resolved`) and carry
+optimistic-concurrency versions that bump on each closed transition —
+mirroring the 07C proposal-table discipline. The `qlt_amendment` family is
+unchanged (immutable; `version = 1`), and the pass-evidence family carries
+no version column. Machine-readable data updated in `d1-contract.ts`
+(`QLT_D1_SCHEMA_INVENTORY.qlt_conflict_challenge`) and the migration-5 DDL.
+No other freeze term changes. This amendment was committed standalone
+BEFORE the dependent Lane B implementation continued, per freeze §17.

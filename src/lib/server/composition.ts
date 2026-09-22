@@ -71,8 +71,15 @@ import {
   createRetentionSurface,
   type RetentionSurfaceDeps,
 } from '../sharedworld/retention-surface';
-import { QLT_RETENTION_RESOURCE_ID } from '../sharedworld/d1-contract';
-import { QLT_CONFLICT_RESOURCE_ID } from '../sharedworld/d1-contract';
+import {
+  QLT_CONFLICT_RESOURCE_ID,
+  QLT_RETENTION_RESOURCE_ID,
+} from '../sharedworld/d1-contract';
+import {
+  createConflictSurface,
+  detectCommitmentConflict,
+  type ConflictSurfaceDeps,
+} from '../sharedworld/conflict-surface';
 import {
   createInspectionSurface,
   type InspectionSurfaceDeps,
@@ -763,6 +770,26 @@ export async function createQuellightComposition(
   // structurally cannot carry a mutation input, D-4/D-9 history) fail
   // closed exactly as in Stage 07B.
   // ---- Q3 memory ceremony surface (one bounded application resource) ------
+
+  // ---- Stage 07D Phase D1 Lane B: the governed conflict surface plus
+  // the deterministic confirm-time detector wired into the Q3 ceremony
+  // surface (USER-attributed; quiet, non-blocking refusals) -------------
+  const conflictSurface = createConflictSurface({
+    conflict: sharedWorld.conflict,
+    userActorId: LOCAL_ACTOR_ID,
+  } satisfies ConflictSurfaceDeps);
+  const conflictHook = (proposal: Parameters<typeof detectCommitmentConflict>[1]) =>
+    detectCommitmentConflict(
+      {
+        conflict: sharedWorld.conflict,
+        resolveCurrentEffectiveCommitment: async (key) => {
+          const active = await sharedWorld.meaning.resolveCurrentEffectiveCommitment(key);
+          return active === undefined ? undefined : { id: active.id };
+        },
+        userActorId: LOCAL_ACTOR_ID,
+      },
+      proposal,
+    );
   // The USER-attributed ceremony actions and the thread-scoped presentation
   // read; routed by resourceId inside the ONE application-data port so the
   // released VICT 0.2.0 command boundary remains the single effect path.
@@ -771,6 +798,7 @@ export async function createQuellightComposition(
     listRecordRows: (options) => sharedWorld.listMemoryRows(options),
     getThread: (id) => sharedWorld.getThread(id),
     userActorId: LOCAL_ACTOR_ID,
+    conflictHook,
   } satisfies MemorySurfaceDeps);
 
   // ---- Stage 07D Phase D1 Lane A: the governed retention surface
@@ -781,6 +809,7 @@ export async function createQuellightComposition(
     retention: sharedWorld.retention,
     userActorId: LOCAL_ACTOR_ID,
   } satisfies RetentionSurfaceDeps);
+
 
   // ---- Q5 inspection and Memory Mode surfaces (one bounded read surface;
   // ONE user-attributed Memory Mode mutation; both routed by resourceId
@@ -917,6 +946,22 @@ export async function createQuellightComposition(
           { permissions: ['qlt.retention.read'], effect: 'read' },
         );
       }
+      if (request['resourceId'] === QLT_CONFLICT_RESOURCE_ID) {
+        // Stage 07D D1: the conflict surface answers qlt.conflict reads
+        // (user-only; bounded, deterministic, quiet list rows).
+        return conflictSurface.query(
+          {
+            op: 'list',
+            resourceId: QLT_CONFLICT_RESOURCE_ID,
+            ...(filters !== undefined ? { filters } : {}),
+            ...(Array.isArray(request['sort']) ? { sort: request['sort'] } : {}),
+            ...(typeof request['limit'] === 'number' ? { limit: request['limit'] } : {}),
+            ...(typeof request['offset'] === 'number' ? { offset: request['offset'] } : {}),
+            ...(Array.isArray(request['projection']) ? { projection: request['projection'] } : {}),
+          },
+          { permissions: ['qlt.conflict.read'], effect: 'read' },
+        );
+      }
       if (request['resourceId'] === QLT_INSPECTION_RESOURCE_ID) {
         return inspectionSurface.query(
           {
@@ -987,6 +1032,20 @@ export async function createQuellightComposition(
             ...(idempotencyKey !== undefined ? { idempotencyKey } : {}),
           },
           { permissions: ['qlt.retention.read', 'qlt.retention.write'], effect: 'write' },
+        );
+      }
+      if (request['resourceId'] === QLT_CONFLICT_RESOURCE_ID) {
+        // Stage 07D D1: the governed conflict write path (user-attributed
+        // inside the surface; the server-derived local actor).
+        return conflictSurface.mutate(
+          {
+            resourceId: QLT_CONFLICT_RESOURCE_ID,
+            op,
+            input,
+            ...(id !== undefined ? { id } : {}),
+            ...(idempotencyKey !== undefined ? { idempotencyKey } : {}),
+          },
+          { permissions: ['qlt.conflict.read', 'qlt.conflict.write'], effect: 'write' },
         );
       }
       if (request['resourceId'] === 'qlt.memory-policy') {

@@ -222,6 +222,17 @@ export const memoryContractRegistry = QLT_MEMORY_CONTRACT_SPECS.map((spec) => ({
 export interface MemorySurfaceDeps {
   /** The Q2 meaning repository (all ceremony writes; SQL lives there). */
   readonly meaning: SharedWorldMeaningStore;
+  /**
+   * Stage 07D D1a (Lane B): the deterministic confirm-time conflict hook
+   * (`detectCommitmentConflict`). When present it is consulted BEFORE
+   * any confirmation; for a conflicting commitment confirmation it
+   * records the challenge judgment row and returns the stable
+   * `QLT_COMMITMENT_CONFLICT` refusal (quiet; zero mutation). Absent in
+   * legacy test compositions — the 07C behavior is unchanged then.
+   */
+  readonly conflictHook?: (
+    proposal: QltProposal,
+  ) => Promise<ApplicationDataResult | undefined>;
   /** A-AMEND-1 read-only thread-scoped record listing (same connection). */
   readonly listRecordRows: (
     options: QltMemoryListOptions,
@@ -626,6 +637,21 @@ export function createMemorySurface(deps: MemorySurfaceDeps): {
         case 'confirmProposal': {
           const proposalId = input['proposalId'] as string;
           await awaitingSubStep(proposalId, idempotencyKey ?? proposalId);
+          // Stage 07D D1a (Lane B): the deterministic conflict detector
+          // runs BEFORE any confirmation. A conflicting commitment
+          // confirmation is refused with the stable code, the challenge
+          // judgment row is recorded (idempotent per proposal), and
+          // NOTHING is mutated (the existing commitment and the incoming
+          // proposal both keep their exact state).
+          if (deps.conflictHook !== undefined) {
+            const probe = await deps.meaning.getProposal(proposalId);
+            if (probe !== undefined && probe.status === 'awaiting_decision') {
+              const refusal = await deps.conflictHook(probe);
+              if (refusal !== undefined) {
+                return refusal;
+              }
+            }
+          }
           const outcome = await deps.meaning.confirmProposal({
             proposalId,
             confirmedBy: user,

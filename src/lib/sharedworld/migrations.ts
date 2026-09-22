@@ -607,7 +607,7 @@ const MIGRATION_0005_RETENTION_CONFLICT_FOUNDATIONS: QuellightMigration = {
       -- ------------------------------------------------------------------
       CREATE TABLE qlt_conflict_challenge (
         id TEXT NOT NULL PRIMARY KEY,
-        version INTEGER NOT NULL DEFAULT 1 CHECK (version = 1),
+        version INTEGER NOT NULL DEFAULT 1 CHECK (version >= 1),
         status TEXT NOT NULL CHECK (status IN ('open','dismissed','resolved')),
         classification TEXT NOT NULL CHECK (classification IN ('commitment-key-conflict')),
         existing_commitment_id TEXT NOT NULL REFERENCES qlt_commitment (id),
