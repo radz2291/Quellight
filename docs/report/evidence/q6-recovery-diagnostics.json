@@ -1,0 +1,374 @@
+{
+  "authorization": "2026-09-22",
+  "startingQuellight": "c07385e5b9b05e16471a00b8337c84afee8cf0ad",
+  "vict": "fd0c1f7bcd9b0b53a97dfc578a5911244e4bacc4",
+  "providerRequests": 5,
+  "formalProofExecutions": 0,
+  "diagnostics": [
+    {
+      "scenario": "none",
+      "requests": [
+        {
+          "request": 1,
+          "purpose": "diagnostic-none",
+          "maxTokens": 512,
+          "reasoningEffort": "none",
+          "toolChoice": "auto",
+          "toolCount": 1,
+          "schemaUnchanged": true,
+          "rewritten": true,
+          "http": 200,
+          "reasoningBytes": 0,
+          "contentBytes": 2438,
+          "toolDeltas": 0,
+          "finish": "length",
+          "done": true,
+          "arguments": []
+        }
+      ],
+      "evidence": {
+        "status": "completed",
+        "visibleReplyBytes": 2438,
+        "invocations": [],
+        "proposals": [],
+        "canonical": 0
+      },
+      "refused": 0,
+      "cleanupRemoved": true,
+      "provenance": "Recovered completed command exec-c2a51458-9fc1-4127-b674-cc230872962e from the Codex task record; no request repeated."
+    },
+    {
+      "scenario": "none1024",
+      "requests": [
+        {
+          "request": 1,
+          "purpose": "diagnostic-none1024",
+          "maxTokens": 1024,
+          "reasoningEffort": "none",
+          "toolChoice": "auto",
+          "toolCount": 1,
+          "schemaUnchanged": true,
+          "rewritten": true,
+          "http": 200,
+          "reasoningBytes": 0,
+          "contentBytes": 3157,
+          "toolDeltas": 1,
+          "finish": "tool_calls",
+          "done": true,
+          "arguments": [
+            {
+              "tool": "qlt_proposal_draft",
+              "bytes": 260,
+              "json": true,
+              "kind": "claim",
+              "keys": ["content", "proposalKind"],
+              "contentKeys": [
+                "confidence",
+                "epistemicType",
+                "honestyState",
+                "statement",
+                "subject"
+              ],
+              "guard": "accepted",
+              "mastraAccepted": false,
+              "normalizationChanged": false,
+              "contractAccepted": false,
+              "domainAccepted": false,
+              "issues": [
+                {
+                  "code": "QLT_INPUT_OVERSIZE",
+                  "path": "content.epistemicType"
+                },
+                {
+                  "code": "QLT_INPUT_INVALID_ENUM",
+                  "path": "content.honestyState"
+                },
+                {
+                  "code": "QLT_INPUT_INVALID_ENUM",
+                  "path": "content.confidence"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "request": 2,
+          "purpose": "diagnostic-none1024",
+          "maxTokens": 1024,
+          "reasoningEffort": "none",
+          "toolChoice": "auto",
+          "toolCount": 1,
+          "schemaUnchanged": true,
+          "rewritten": true,
+          "http": 200,
+          "reasoningBytes": 0,
+          "contentBytes": 3305,
+          "toolDeltas": 1,
+          "finish": "tool_calls",
+          "done": true,
+          "arguments": [
+            {
+              "tool": "qlt_proposal_draft",
+              "bytes": 264,
+              "json": true,
+              "kind": "claim",
+              "keys": ["content", "proposalKind"],
+              "contentKeys": [
+                "confidence",
+                "epistemicType",
+                "honestyState",
+                "statement",
+                "subject"
+              ],
+              "guard": "accepted",
+              "mastraAccepted": false,
+              "normalizationChanged": false,
+              "contractAccepted": false,
+              "domainAccepted": false,
+              "issues": [
+                {
+                  "code": "QLT_INPUT_OVERSIZE",
+                  "path": "content.epistemicType"
+                },
+                {
+                  "code": "QLT_INPUT_INVALID_ENUM",
+                  "path": "content.honestyState"
+                },
+                {
+                  "code": "QLT_INPUT_INVALID_ENUM",
+                  "path": "content.confidence"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "refused": 1,
+      "routerParts": {
+        "stream-start": 2,
+        "response-metadata": 2,
+        "text-start": 2,
+        "text-delta": 504,
+        "tool-input-start": 2,
+        "tool-input-delta": 2,
+        "text-end": 2,
+        "tool-input-end": 2,
+        "tool-call": 2,
+        "finish": 2
+      },
+      "routerArguments": [
+        {
+          "bytes": 260,
+          "json": true,
+          "kind": "claim",
+          "keys": ["content", "proposalKind"],
+          "contentKeys": ["confidence", "epistemicType", "honestyState", "statement", "subject"],
+          "guard": "accepted",
+          "mastraAccepted": false,
+          "normalizationChanged": false,
+          "contractAccepted": false,
+          "domainAccepted": false,
+          "issues": [
+            {
+              "code": "QLT_INPUT_OVERSIZE",
+              "path": "content.epistemicType"
+            },
+            {
+              "code": "QLT_INPUT_INVALID_ENUM",
+              "path": "content.honestyState"
+            },
+            {
+              "code": "QLT_INPUT_INVALID_ENUM",
+              "path": "content.confidence"
+            }
+          ]
+        },
+        {
+          "bytes": 264,
+          "json": true,
+          "kind": "claim",
+          "keys": ["content", "proposalKind"],
+          "contentKeys": ["confidence", "epistemicType", "honestyState", "statement", "subject"],
+          "guard": "accepted",
+          "mastraAccepted": false,
+          "normalizationChanged": false,
+          "contractAccepted": false,
+          "domainAccepted": false,
+          "issues": [
+            {
+              "code": "QLT_INPUT_OVERSIZE",
+              "path": "content.epistemicType"
+            },
+            {
+              "code": "QLT_INPUT_INVALID_ENUM",
+              "path": "content.honestyState"
+            },
+            {
+              "code": "QLT_INPUT_INVALID_ENUM",
+              "path": "content.confidence"
+            }
+          ]
+        }
+      ],
+      "rawRouterEqual": true,
+      "evidence": {
+        "status": "failed",
+        "errorCode": "VICT_AGENT_TURN_FAILED",
+        "acceptance": [
+          "natural-flow: the reply claims a memory write (\"i've saved\" class)",
+          "natural-flow: the reply exposes implementation jargon (\"tool call\" class)",
+          "t1: expected exactly one pending proposal, found 0"
+        ],
+        "visibleReplyBytes": 6462,
+        "invocations": [],
+        "proposals": [],
+        "canonical": 0,
+        "milestones": [
+          {
+            "kind": "tool.requested"
+          },
+          {
+            "kind": "tool.started"
+          },
+          {
+            "kind": "tool.failed",
+            "code": "VICT_TOOL_FAILED"
+          },
+          {
+            "kind": "tool.requested"
+          },
+          {
+            "kind": "tool.started"
+          },
+          {
+            "kind": "tool.failed",
+            "code": "VICT_TOOL_FAILED"
+          }
+        ]
+      }
+    },
+    {
+      "scenario": "guided2048",
+      "requests": [
+        {
+          "request": 1,
+          "purpose": "diagnostic-guided2048",
+          "maxTokens": 2048,
+          "reasoningEffort": "omitted",
+          "toolChoice": "auto",
+          "toolCount": 1,
+          "schemaUnchanged": true,
+          "rewritten": true,
+          "http": 200,
+          "reasoningBytes": 2240,
+          "contentBytes": 0,
+          "toolDeltas": 1,
+          "finish": "tool_calls",
+          "done": true,
+          "arguments": [
+            {
+              "tool": "qlt_proposal_draft",
+              "bytes": 268,
+              "json": true,
+              "kind": "claim",
+              "keys": ["content", "proposalKind"],
+              "contentKeys": [
+                "confidence",
+                "epistemicType",
+                "honestyState",
+                "statement",
+                "subject"
+              ],
+              "guard": "accepted",
+              "mastraAccepted": true,
+              "normalizationChanged": false,
+              "contractAccepted": true,
+              "domainAccepted": true,
+              "issues": []
+            }
+          ]
+        },
+        {
+          "request": 2,
+          "purpose": "diagnostic-guided2048",
+          "maxTokens": 2048,
+          "reasoningEffort": "omitted",
+          "toolChoice": "auto",
+          "toolCount": 1,
+          "schemaUnchanged": true,
+          "rewritten": true,
+          "http": 200,
+          "reasoningBytes": 219,
+          "contentBytes": 205,
+          "toolDeltas": 0,
+          "finish": "stop",
+          "done": true,
+          "arguments": []
+        }
+      ],
+      "refused": 0,
+      "routerParts": {
+        "stream-start": 2,
+        "response-metadata": 2,
+        "reasoning-start": 2,
+        "reasoning-delta": 186,
+        "reasoning-end": 2,
+        "tool-input-start": 1,
+        "tool-input-delta": 1,
+        "tool-input-end": 1,
+        "tool-call": 1,
+        "finish": 2,
+        "text-start": 1,
+        "text-delta": 18,
+        "text-end": 1
+      },
+      "routerArguments": [
+        {
+          "bytes": 268,
+          "json": true,
+          "kind": "claim",
+          "keys": ["content", "proposalKind"],
+          "contentKeys": ["confidence", "epistemicType", "honestyState", "statement", "subject"],
+          "guard": "accepted",
+          "mastraAccepted": true,
+          "normalizationChanged": false,
+          "contractAccepted": true,
+          "domainAccepted": true,
+          "issues": []
+        }
+      ],
+      "rawRouterEqual": true,
+      "evidence": {
+        "status": "completed",
+        "acceptance": [],
+        "visibleReplyBytes": 205,
+        "invocations": [
+          {
+            "status": "completed",
+            "effect": "write",
+            "approvalRequired": false,
+            "approvalDisposition": "host-policy-write-without-separate-approval"
+          }
+        ],
+        "proposals": [
+          {
+            "kind": "claim",
+            "status": "proposed"
+          }
+        ],
+        "canonical": 0,
+        "milestones": [
+          {
+            "kind": "tool.requested"
+          },
+          {
+            "kind": "tool.started"
+          },
+          {
+            "kind": "tool.completed"
+          }
+        ]
+      }
+    }
+  ]
+}

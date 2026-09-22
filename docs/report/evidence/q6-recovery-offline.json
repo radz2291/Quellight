@@ -1,0 +1,64 @@
+{
+  "date": "2026-09-22",
+  "implementation": "ac594628e51d1c5901490f656b3ce6dabe3a31cc",
+  "authoritativeLadderExecutions": 1,
+  "providerCredentialsUnset": true,
+  "formalLiveExecutions": 0,
+  "steps": [
+    {
+      "name": "install",
+      "exit": 0,
+      "elapsedMs": 54361
+    },
+    {
+      "name": "consumer",
+      "exit": 0,
+      "elapsedMs": 51738
+    },
+    {
+      "name": "quellight",
+      "exit": 0,
+      "elapsedMs": 227946
+    },
+    {
+      "name": "stage7c",
+      "exit": 0,
+      "elapsedMs": 22970
+    },
+    {
+      "name": "audit",
+      "exit": 0,
+      "elapsedMs": 2111
+    },
+    {
+      "name": "diff",
+      "exit": 0,
+      "elapsedMs": 55
+    }
+  ],
+  "cleanup": {
+    "removed": 57,
+    "failures": []
+  },
+  "coverage": [
+    "exact registry-only VICT 0.3.1 release set and unreachable-registry negative control",
+    "format, typecheck, Q1-Q6 focused gates",
+    "full node and UI suites",
+    "production build; one allowlisted warning, no unrecognized warnings",
+    "real-browser smoke, keyboard, responsive, axe, Stop and ceremony checks",
+    "artifact scan: 266 source/build files",
+    "N-C1..N-C25 manifest and constituent negative controls",
+    "npm audit --omit=dev: zero vulnerabilities",
+    "git diff --check"
+  ],
+  "instrumentation": [
+    "fragmented synthetic SSE preserves raw and routed arguments",
+    "valid, invalid enum, reasoning-only length, per-turn/global request caps, stalled-stream deadline",
+    "six-turn real-adapter network-disabled matrix: eight simulated HTTP requests, zero findings",
+    "parent/worker launcher offline lifecycle, fixture identity, credential scan and cleanup"
+  ],
+  "limitations": [
+    "Aggregate gates suppress successful child test output; exact suite test counts are not asserted.",
+    "One stale aggregate log label says 0.3.0; the executable release-identity check and consumer metadata prove 0.3.1."
+  ]
+}
