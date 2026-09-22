@@ -1598,3 +1598,27 @@ The audit's own authoritative ladder ran on the untouched tree: `npm ci`, `verif
 Findings: 0 Blocking, 0 High, 0 Medium; Low L-1 (the offline matrix records but does not fail on `normalizationChanged` alone; permanently asserted at probe level), Low L-2 (the global cap's earliest reachable matrix phase is post-ceremony under the frozen tool budget); both carried disclosures unchanged (stale `0.3.0` console labels; hashed Mastra dist import coupling). Disposition per reference §27.4: PASS.
 
 Record: [Q7 independent verification](report/QUELLIGHT-STAGE-07C-PHASE-Q7-INDEPENDENT-VERIFICATION.md) and the [Q6/Q7 formal closure](report/QUELLIGHT-STAGE-07C-PHASE-Q7-FORMAL-CLOSURE.md). **Phase Q6 and Phase Q7 are FORMALLY CLOSED; Stage 07C is FORMALLY CLOSED; Stage 07D is PERMITTED and NOT BEGUN; Stage 07 remains In Progress.**
+
+## D-07D-0 — Stage 07D Phase D0 planning complete; owner decisions pending (documentation-only; non-binding)
+
+**Date:** 2026-09-22. **Trigger:** the Stage 07C formal closure's handoff
+(D-Q6-16). A non-binding planning document for Stage 07D — Retention,
+Recovery, and Real-Use Proof — was produced against the Stage 07 architecture,
+the 07C handoff §18 boundary, the closed 07C implementation, and the
+applicable `QLT-*`/`INV-*`/`MSTR-012` requirements.
+
+The plan: one joint contract freeze (D1a), then retention/tombstones/expiry
+with dependency re-evaluation and user removal (Lane A) and conflict
+identification with amendment-vs-execution semantics (Lane B) as parallel
+lanes with disjoint file ownership, then governed deletion/export with
+cross-store reconciliation (D2), then the MSTR-012 real-use and
+data-protection proof (D4, one-shot owner-authorized), then independent
+verification and formal closure with the Stage 07E handoff (D5).
+
+Six genuine owner decisions are presented with recommended defaults and are
+PENDING (retention/expiry defaults; removal depth and residue truthfulness;
+deletion-cascade policy; conflict-challenge visibility; real-use
+authorization shape; audit shape). Nothing is frozen, implemented, verified,
+or closed by this entry.
+
+Record: [the D0 planning document](report/QUELLIGHT-STAGE-07D-PHASE-D0-PLANNING-AND-OWNER-DECISIONS.md). **Stage 07D planning is COMPLETE; owner decisions are PENDING; Stage 07D implementation has NOT begun; Stage 07E has NOT begun; Stage 07 remains In Progress.**

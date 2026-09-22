@@ -1,6 +1,6 @@
 # Quellight system reference — Stage 07B/07C
 
-## Status (current, 2026-09-22 — PHASE Q7 INDEPENDENT AUDIT COMPLETE (VERIFIED, 0 BLOCKING / 0 HIGH / 0 MEDIUM); PHASE Q6 AND STAGE 07C FORMALLY CLOSED; STAGE 07D PERMITTED AND NOT BEGUN)
+## Status (current, 2026-09-22 — STAGE 07C FORMALLY CLOSED (PHASE Q7 AUDIT VERIFIED, 0 BLOCKING / 0 HIGH / 0 MEDIUM); STAGE 07D PLANNING COMPLETE — OWNER DECISIONS PENDING, IMPLEMENTATION NOT BEGUN; STAGE 07E NOT BEGUN)
 
 ```text
 VICT-M-1: INDEPENDENTLY VERIFIED AND FORMALLY CLOSED (qlt.proposal.draft@2/write; exact host quiet-write policy qlt.host-policy.quiet-write@1; adopted STABLE set @victframework/*@0.3.0 = vict-release-set@1/0.3.0, contentId v1_5f3a074a…; latest = 0.3.0; the 0.3.0-rc.1 candidate and its recovered evidence chain remain immutable historical record)
@@ -13,7 +13,7 @@ Stage 07C Phase Q5: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (Share
 Stage 07C Phase Q6: VERIFIED WITH NON-BLOCKING FINDINGS — FORMALLY CLOSED (root-cause recovery; ONE recovery live ceremony passed 2026-09-22 — six turns, eight HTTP requests, zero findings, exact stable VICT 0.3.1, instructions 5/profile 7; the one-shot live authorization is consumed; independently verified by the Phase Q7 audit with independent offline negative controls for every mandated defect class; see docs/report/QUELLIGHT-STAGE-07C-PHASE-Q7-INDEPENDENT-VERIFICATION.md and docs/report/QUELLIGHT-STAGE-07C-PHASE-Q7-FORMAL-CLOSURE.md)
 Stage 07C Phase Q7: COMPLETE — AUTHORITATIVE VERDICT PASS (independent Stage 07C audit; the audited tree 8a26d31…; audit ladder green with one recorded browser-timing rerun, unchanged assertions)
 Stage 07C: FORMALLY CLOSED (Phases F and Q1–Q5 closed in their own records; Q6/Q7 closed by the Q7 audit and closure record)
-Stage 07D: PERMITTED AND NOT BEGUN (next increment per the Stage 07C handoff §18 boundary)
+Stage 07D: PLANNING COMPLETE (Phase D0) — OWNER DECISIONS PENDING, IMPLEMENTATION NOT BEGUN (retention/tombstones/expiry via a visible enforcement pass; governed deletion/export with cross-store reconciliation; conflict identification and amendment-vs-execution; MSTR-012 real-use proof; then independent verification and closure — see docs/report/QUELLIGHT-STAGE-07D-PHASE-D0-PLANNING-AND-OWNER-DECISIONS.md)
 Stage 07:  IN PROGRESS (07A, 07B, 07C closed; 07D permitted and not begun; 07D, 07E remain)
 ```
 
