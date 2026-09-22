@@ -12,11 +12,11 @@ In Progress.**
 
 ## 1. Starting and final SHAs
 
-| Item                                                                                         | Value                                                                                                                    |
-| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Starting Quellight HEAD (investigation start; verified `== origin/main`, clean tracked tree) | `5e43aba7d2e48f60110930b1b239b606966b4ba5`                                                                               |
-| Starting VICT HEAD (verified `== origin/main`; read-only reference)                          | `fd0c1f7bcd9b0b53a97dfc578a5911244e4bacc4`                                                                               |
-| Final Quellight tip                                                                          | the documentation commit carrying this report (recorded in the decision register D-Q6-12 and in the conversation return) |
+| Item                                                                                         | Value                                                                                                                           |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Starting Quellight HEAD (investigation start; verified `== origin/main`, clean tracked tree) | `5e43aba7d2e48f60110930b1b239b606966b4ba5`                                                                                      |
+| Starting VICT HEAD (verified `== origin/main`; read-only reference)                          | `fd0c1f7bcd9b0b53a97dfc578a5911244e4bacc4`                                                                                      |
+| Final Quellight tip (documentation commit carrying this report)                              | `7d003093d0fec08279c81e53e7f2ef1075370cc4` — this SHA line was added additively in the immediate follow-up documentation commit |
 
 Both repositories were fetched at the start; no remote advancement occurred
 during the investigation. Linear ancestry verified (origin/main is an
