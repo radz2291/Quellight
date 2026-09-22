@@ -1418,3 +1418,82 @@ earlier runs were left untouched. Record:
 **Disposition:** Q6 is NOT independently verified and NOT formally closed.
 **NO FIFTH LIVE EXECUTION IS AUTHORIZED.** **Phase Q7 remains BLOCKED — NOT
 BEGUN.** Stage 07 remains In Progress.
+
+## D-Q6-13 — Phase Q6 real-model tool-argument diagnostic: the one authorized provider request attempt was aborted mid-flight by a verified probe instrumentation defect; the tool-argument JSON was NOT captured; the earlier reasoning-budget conclusion is truthfully DISPOSED OF as an unevidenced hypothesis; no A–E classification is evidence-backed (owner-decision input; no repair, no contract change, no re-run)
+
+**Date:** 2026-09-22. **Trigger:** the owner's correction of the D-Q6-12
+reasoning-budget inference and the authorization of exactly ONE diagnostic
+provider request to capture the real model's generated tool-argument JSON and
+identify the tool-call rejection boundary.
+
+**Request accounting (truthful):** starting tip `860f172…` (verified
+`== origin/main`, clean tracked tree; VICT `fd0c1f7…` untouched). Exactly ONE
+provider request attempt was initiated through the real composition (real
+profile, revision-3 capability, real bridge, bounds unchanged: 512 output
+tokens, 120 s deadline, zero retries, `tool_choice: auto`, NO reasoning
+control field — verified in the captured request body). The tool schema
+transmitted upstream was verified STRUCTURALLY EQUAL to the frozen
+revision-3 presentation (1,781 bytes; the wire layer normalizes key order).
+The request was aborted mid-flight (~200–300 ms into the attempt) by a PROBE
+instrumentation defect — the `doStream` wrapper did not await the async
+original, so the stream chain errored on first pull and the in-flight fetch
+was aborted; the defect was REPRODUCED offline with zero network (first-pull
+`TypeError`). No response, finish reason, reasoning/content byte counts, or
+tool-argument JSON was captured; the turn failed truthfully in 425 ms
+(`VICT_AGENT_TURN_FAILED`; 0 invocations, 0 proposals, no assistant message;
+ledger `response.started` → `usage.updated` 0/0/0 → `response.failed`;
+Mastra span `finishReason: error`, no persisted error payload). Whether
+request bytes reached the provider endpoint could NOT be determined; the
+one-request authorization is CONSERVATIVELY TREATED AS CONSUMED. NO second
+request, retry, follow-up, model-list query, credential test, or diagnostic
+chat was made or is authorized by this task.
+
+**Corrected machinery (validated on LOOPBACK; zero real provider contact;
+canary only):** the corrected `await`-ed wrapper forwards the complete router
+part chain (stream-start → response-metadata → reasoning ×4 → tool-input ×4 →
+tool-call → finish `tool_calls`); the raw argument JSON is captured from SSE
+fragments and replayed through every fence — raw-argument guard (pass),
+Mastra `validateToolInput` with the REAL frozen contract (accepted),
+authoritative `Contract.parse` (accepted), content-domain parse (accepted) —
+and the REAL governed bridge accepted the structurally valid synthetic shape
+end-to-end: ONE durable quiet keyed invocation `completed`, EXACTLY ONE
+pending claim proposal, `tool.completed`, zero approvals;
+`convertUndefinedToNull` changed NOTHING for this shape; the one-request cap
+structurally refused the loop's automatic post-tool follow-up BEFORE any
+network byte.
+
+**Disposition of D-Q6-12's "Classification B":** WITHDRAWN as an established
+conclusion. The earlier diagnostic response ended `finish_reason: tool_calls`
+(not `length`), so reasoning-budget exhaustion was NOT proven; zero visible
+content before completing a tool call is normal provider behavior; the
+immediate failure in that response was the tool-call contract rejection
+(cause unknown — the arguments were not captured). Reasoning-budget
+consumption is now recorded as an UNEVIDENCED hypothesis for Execution 4.
+What REMAINS validly established offline: every downstream layer preserves
+every supported field; reasoning-only responses map exactly to the
+Execution-4 observable; the request sends `max_tokens: 512` with NO reasoning
+control. NEW uncertainty: Execution-4 per-turn elapsed times (6.4–7.8 s) can
+no longer be mapped to a single provider request (a reasoning + tool-call
+response triggers the loop's automatic follow-up within `maxSteps: 8`), so
+Execution 4's per-turn request counts and finish reasons remain unknown.
+
+**Classification:** NONE of A–E is evidence-backed — the central objective
+(the real model's generated tool-argument JSON) was not captured. The
+tool-call rejection boundary remains UNIDENTIFIED. The smallest correction
+now available is procedural: the corrected probe is machinery-validated and
+ready; a new single-request authorization would be a NEW owner decision.
+
+**Safety (all verified):** the credential was read once (memory only; never
+printed, hashed, serialized, persisted, or placed in command arguments); the
+disposable diagnostic store was byte-scanned (0 credential occurrences) and
+deleted; the loopback validation used a canary and never read `auth.json`;
+no fixture was accessed; `.quellight-data` never accessed (mtime unchanged);
+VICT never modified; no historical report modified; no code, test, script,
+manifest, lockfile, frozen contract, prompt, instruction, schema, or bound
+changed; all probes, stores, and listeners removed and verified absent.
+Record:
+`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-REAL-MODEL-TOOL-ARGUMENT-DIAGNOSTIC.md`.
+
+**Disposition:** Q6 is NOT independently verified and NOT formally closed.
+**NO FIFTH LIVE EXECUTION IS AUTHORIZED.** **Phase Q7 remains BLOCKED — NOT
+BEGUN.** Stage 07 remains In Progress.
