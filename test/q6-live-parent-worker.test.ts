@@ -49,10 +49,6 @@ const runModeled = async (options: ParentOptions = {}) => {
   writeFileSync(fixtureFile, FAKE_FIXTURE, 'utf8');
   const identity = {
     byteLength: Buffer.byteLength(FAKE_FIXTURE, 'utf8'),
-    sha256: (await import('node:crypto'))
-      .createHash('sha256')
-      .update(Buffer.from(FAKE_FIXTURE, 'utf8'))
-      .digest('hex'),
   };
   let spawnedRoot: string | undefined;
   const spawnFn = (_file: string, _args: string[], spawnOptions: object) => {

@@ -3,7 +3,6 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runQ6LiveMatrix, QLT_Q6_FAILURE_CODES } from '../scripts/lib/q6-live-matrix.mjs';
@@ -11,7 +10,10 @@ import {
   createQ6LiveWorkspace,
   Q6_LIVE_WORKSPACE_PREFIX,
 } from '../scripts/lib/q6-live-workspace.mjs';
-import { reverifyFixtureIdentity } from '../scripts/lib/q6-fixture-boundary.mjs';
+import {
+  resolveNaturalFixture,
+  reverifyFixtureIdentity,
+} from '../scripts/lib/q6-fixture-boundary.mjs';
 import { Q6_RESULT_FILE_NAME } from '../scripts/lib/q6-live-parent.mjs';
 import { resolveQuellightEnvironment } from '../src/lib/server/composition';
 
@@ -80,25 +82,20 @@ interface WorkspaceHandle {
 /** Allocate the workspace and the EXTERNAL synthetic fixture file. */
 function allocate(): {
   workspace: WorkspaceHandle;
-  fixture: { path: string; text: string; byteLength: number; sha256: string };
+  fixture: { path: string; text: string; byteLength: number; identity: object };
 } {
   const workspace = createQ6LiveWorkspace() as unknown as WorkspaceHandle;
   tempDirs.push(workspace.root);
   const fixtureDir = tempDir('qlt-q6-offline-fixture-');
   const fixturePath = join(fixtureDir, 'fixture.txt');
   writeFileSync(fixturePath, SYNTHETIC_FIXTURE, 'utf8');
-  const fixture = {
-    path: fixturePath,
-    text: SYNTHETIC_FIXTURE,
-    byteLength: Buffer.byteLength(SYNTHETIC_FIXTURE, 'utf8'),
-    sha256: createHash('sha256').update(Buffer.from(SYNTHETIC_FIXTURE, 'utf8')).digest('hex'),
-  };
+  const fixture = resolveNaturalFixture({ fixturePath, repoRoot: process.cwd() });
   return { workspace, fixture };
 }
 
 const matrixOptionsFor = (
   workspace: WorkspaceHandle,
-  fixture: { text: string; byteLength: number; sha256: string },
+  fixture: { text: string; byteLength: number; identity: object },
 ) => ({
   ownedRoot: workspace.root,
   mode: 'offline' as const,
@@ -125,7 +122,7 @@ describe('Q6 offline worker-path proof (frozen contract §7)', () => {
         QUELLIGHT_Q6_NATURAL_FIXTURE_FILE: fixture.path,
         QUELLIGHT_Q6_FIXTURE_IDENTITY: JSON.stringify({
           byteLength: fixture.byteLength,
-          sha256: fixture.sha256,
+          identity: fixture.identity,
         }),
       };
       delete childEnv.OLLAMA_API_KEY;
@@ -145,15 +142,16 @@ describe('Q6 offline worker-path proof (frozen contract §7)', () => {
       const result = JSON.parse(readFileSync(join(workspace.root, Q6_RESULT_FILE_NAME), 'utf8'));
       expect(result.ok).toBe(true);
       expect(result.findings).toEqual([]);
-      expect(result.providerTurns).toBe(5);
+      expect(result.providerTurns).toBe(6);
       expect(result.turns.map((turn: { id: string }) => turn.id)).toEqual([
         't1 (explicit remember request)',
         't2 (natural discretionary fixture)',
         't3 (transient incident)',
         't4 (fresh-conversation continuity)',
         't5 (hypothetical conflict)',
+        't6 (transient conversation)',
       ]);
-      // The five-turn behavioral shape (the offline deterministic mirror of
+      // The six-turn behavioral shape (the offline deterministic mirror of
       // the live acceptance controls):
       const byId = (id: string) =>
         result.turns.find((turn: { id: string }) => turn.id.startsWith(id));
@@ -161,16 +159,16 @@ describe('Q6 offline worker-path proof (frozen contract §7)', () => {
       expect(byId('t2')).toMatchObject({ status: 'completed', invocations: 1, proposals: 1 });
       expect(byId('t3')).toMatchObject({ status: 'completed', invocations: 0, proposals: 0 });
       expect(byId('t5')).toMatchObject({ status: 'completed', invocations: 0, proposals: 0 });
-      expect(result.fixture).toEqual({ byteLength: fixture.byteLength, sha256: fixture.sha256 });
+      expect(result.fixture).toEqual({ byteLength: fixture.byteLength });
 
       // ---- parent-side phase (the real parent helpers) ---------------------
       // fixture identity re-verification (read-only content safety):
       const identity = reverifyFixtureIdentity({
         fixturePath: fixture.path,
         repoRoot: process.cwd(),
-        expected: { byteLength: fixture.byteLength, sha256: fixture.sha256 },
+        expected: fixture,
       });
-      expect(identity).toEqual({ byteLength: fixture.byteLength, sha256: fixture.sha256 });
+      expect(identity).toEqual({ byteLength: fixture.byteLength });
       // the byte-level credential scan over EVERY persisted byte:
       const offending = workspace.scanForCredential(CREDENTIAL_CANARY);
       expect(offending).toEqual([]);
@@ -189,8 +187,8 @@ describe('Q6 offline worker-path proof (frozen contract §7)', () => {
       const result = await runQ6LiveMatrix(matrixOptionsFor(workspace, fixture));
       expect(result.ok).toBe(true);
       expect(result.findings).toEqual([]);
-      expect(result.providerTurns).toBe(5);
-      expect(result.turns).toHaveLength(5);
+      expect(result.providerTurns).toBe(6);
+      expect(result.turns).toHaveLength(6);
       // In-process Windows handle release can lag the close; the AUTHORITATIVE
       // parent-scan-and-cleanup proof is the spawned-worker test above. Here
       // disposal is retried patiently; eventual removal is verified.
@@ -251,8 +249,8 @@ describe('Q6 offline worker-path proof (frozen contract §7)', () => {
       // It was recorded BEFORE result serialization, and the matrix went on to
       // traverse every remaining phase deterministically:
       expect(result.ok).toBe(false);
-      expect(result.providerTurns).toBe(5);
-      expect(result.turns).toHaveLength(5);
+      expect(result.providerTurns).toBe(6);
+      expect(result.turns).toHaveLength(6);
       await workspace.dispose();
     },
   );

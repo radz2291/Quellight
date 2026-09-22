@@ -228,14 +228,14 @@ async function canonicalTotal(composition: QuellightComposition): Promise<number
 }
 
 describe('Q6 discretion identity (D-Q6-6; amendment §4)', () => {
-  it('the composition activates instruction artifact revision 4 through profile revision 5', async () => {
+  it('the composition activates instruction artifact revision 5 through profile revision 7', async () => {
     const composition = await compose({ Hello: { kind: 'text', text: 'Hello.' } });
     expect(composition.activation.instructions.reference.id).toBe(
       'quellight.conversation-instructions',
     );
-    expect(composition.activation.instructions.reference.revision).toBe('4');
+    expect(composition.activation.instructions.reference.revision).toBe('5');
     expect(composition.activation.profile.profile.id).toBe('agent.quellight.conversation');
-    expect(composition.activation.profile.profile.revision).toBe('6');
+    expect(composition.activation.profile.profile.revision).toBe('7');
     // The authority envelope is unchanged by the identity bump.
     expect(composition.activation.capabilities).toHaveLength(1);
     expect(composition.activation.capabilities[0]?.revision).toBe('3');

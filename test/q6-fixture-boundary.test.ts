@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { createHash } from 'node:crypto';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -33,15 +32,14 @@ const tempFixture = (content: string): string => {
 const CANARY = 'PERSONAL-CANARY-CONTENT that must never be echoed';
 
 describe('Q6 fixture boundary: acceptance and safe evidence', () => {
-  it('a valid external fixture resolves with byte length and SHA-256 identity only', () => {
+  it('a valid external fixture resolves with byte length and filesystem metadata without hashing content', () => {
     const file = tempFixture(CANARY);
     try {
       const resolved = resolveNaturalFixture({ fixturePath: file, repoRoot });
-      expect(Object.keys(resolved).sort()).toEqual(['byteLength', 'path', 'sha256', 'text']);
+      expect(Object.keys(resolved).sort()).toEqual(['byteLength', 'identity', 'path', 'text']);
       expect(resolved.byteLength).toBe(Buffer.byteLength(CANARY, 'utf8'));
-      expect(resolved.sha256).toBe(
-        createHash('sha256').update(Buffer.from(CANARY, 'utf8')).digest('hex'),
-      );
+      expect(resolved.identity.size).toBe(resolved.byteLength);
+      expect(resolved).not.toHaveProperty('sha256');
       expect(resolved.path).toBe(resolve(file));
       // The raw text is available ONLY in memory for the live worker.
       expect(resolved.text).toBe(CANARY);
@@ -59,7 +57,7 @@ describe('Q6 fixture boundary: acceptance and safe evidence', () => {
         repoRoot,
         expected: {
           byteLength: Buffer.byteLength(CANARY, 'utf8'),
-          sha256: createHash('sha256').update(Buffer.from(CANARY, 'utf8')).digest('hex'),
+          text: CANARY,
         },
       });
       expect(readFileSync(file, 'utf8')).toBe(CANARY);
@@ -203,11 +201,11 @@ describe('Q6 fixture boundary: fail-closed, non-echoing validation', () => {
     try {
       const identity = {
         byteLength: Buffer.byteLength(CANARY, 'utf8'),
-        sha256: createHash('sha256').update(Buffer.from(CANARY, 'utf8')).digest('hex'),
+        text: CANARY,
       };
-      expect(reverifyFixtureIdentity({ fixturePath: file, repoRoot, expected: identity })).toEqual(
-        identity,
-      );
+      expect(reverifyFixtureIdentity({ fixturePath: file, repoRoot, expected: identity })).toEqual({
+        byteLength: identity.byteLength,
+      });
       writeFileSync(file, 'changed content entirely', 'utf8');
       try {
         reverifyFixtureIdentity({ fixturePath: file, repoRoot, expected: identity });

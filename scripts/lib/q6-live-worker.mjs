@@ -72,7 +72,10 @@ try {
 }
 try {
   const expected = JSON.parse(process.env.QUELLIGHT_Q6_FIXTURE_IDENTITY ?? '');
-  if (expected.byteLength !== fixture.byteLength || expected.sha256 !== fixture.sha256) {
+  if (
+    expected.byteLength !== fixture.byteLength ||
+    JSON.stringify(expected.identity) !== JSON.stringify(fixture.identity)
+  ) {
     console.error(
       'WORKER REFUSED: the fixture changed between parent validation and worker use (content not echoed).',
     );
@@ -84,7 +87,12 @@ try {
 }
 
 // ---- run the REAL matrix and record the result ---------------------------
+// Dependency log messages can contain raw provider arguments on validation failure.
+// Only the explicitly metadata-only matrix notes are emitted during execution.
+const metadataLog = console.log.bind(console);
+for (const method of ['log', 'info', 'warn', 'error', 'debug']) console[method] = () => {};
 const result = await runQ6LiveMatrix({
+  note: (message) => metadataLog(`  ${message}`),
   ownedRoot: ownedDataDir,
   mode: offline ? 'offline' : 'live',
   credential:

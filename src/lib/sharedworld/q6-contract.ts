@@ -24,17 +24,16 @@
 
 /** The hard bounds of the ONE bounded live-provider ceremony proof.
  *
- * The per-turn output-token ceiling was amended from 256 to 512 by the
- * bounded-memory-discretion amendment (2026-09-21,
- * docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-BOUNDED-DISCRETION-AMENDMENT.md,
- * §6): a reasoning-capable model needs room to exercise tool choice within
- * one turn. Every other bound is unchanged from the original freeze.
+ * D-Q6-15 (2026-09-22 recovery amendment) replaces the 512-token request
+ * allowance with 2048 and bounds actual HTTP requests as well as user turns.
  */
 export const QLT_Q6_LIVE_BOUNDS = {
   /** No more than 6 provider turns for the whole ceremony. */
   maxProviderTurns: 6,
-  /** No more than 512 output tokens per provider turn (amended; was 256). */
-  maxOutputTokensPerTurn: 512,
+  /** D-Q6-15: reasoning, tool arguments and text share this per-request allowance. */
+  maxOutputTokensPerRequest: 2048,
+  maxProviderRequests: 12,
+  maxProviderRequestsPerTurn: 3,
   /** Maximum 120-second deadline per provider turn. */
   turnDeadlineMs: 120_000,
   /** Exactly ONE authoritative execution (process discipline). */
@@ -77,8 +76,8 @@ export const QLT_Q6_UNCHANGED_ENVELOPE = {
   declaredEffect: 'write',
   hostQuietWritePolicyIdentity: 'qlt.host-policy.quiet-write@1',
   actionInventory: 21,
-  agentProfileRevision: '6',
-  conversationInstructionsRevision: '4',
+  agentProfileRevision: '7',
+  conversationInstructionsRevision: '5',
   conversationInstructionsId: 'quellight.conversation-instructions',
   maxToolCalls: 2,
 } as const;
@@ -99,8 +98,8 @@ export const QLT_Q6_AMENDMENT = {
  *
  * The Turn-2 natural fixture is the operator's personal text. It lives in an
  * operator-designated external UTF-8 file and is NEVER committed, embedded,
- * logged, or reported — only its byte length and SHA-256 identity may enter
- * safe evidence (amendment §7).
+ * logged, or reported. Recovery evidence carries byte length only; the privacy
+ * amendment prohibits content digests and uses in-memory equality instead.
  */
 export const QLT_Q6_NATURAL_FIXTURE_VAR = 'QUELLIGHT_Q6_NATURAL_FIXTURE_FILE' as const;
 
@@ -108,7 +107,7 @@ export const QLT_Q6_NATURAL_FIXTURE_VAR = 'QUELLIGHT_Q6_NATURAL_FIXTURE_FILE' as
 export const QLT_Q6_NATURAL_FIXTURE_MAX_BYTES = 12_288;
 
 // ---------------------------------------------------------------------------
-// The five-turn live proof matrix (amendment §5; replaces the single
+// The six-turn live proof matrix (amendment §5; replaces the single
 // implicit-positive proof). Turn 2's input is the EXTERNAL fixture; turns
 // 1/3/4/5 use these fixed statements.
 // ---------------------------------------------------------------------------
@@ -128,6 +127,10 @@ export const QLT_Q6_T4_STATEMENT =
 /** Turn 5 — hypothetical conflict and negative control. */
 export const QLT_Q6_T5_STATEMENT =
   'For this thought experiment only, suppose I leave tomorrow without a plan.' as const;
+
+/** D-Q6-15: transient feelings, logistics, speculation and ordinary conversation. */
+export const QLT_Q6_T6_STATEMENT =
+  "The delivery was late today and I'm annoyed right now. Maybe the rain caused it. Anyway, how's your day going?" as const;
 
 /** The semantic anchors the Turn-2 commitment proposal MUST preserve
  * (normalized matching; minor grammatical normalization allowed). */

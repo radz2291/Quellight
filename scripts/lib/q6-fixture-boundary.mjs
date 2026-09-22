@@ -16,14 +16,13 @@
  *     bytes, and must decode as valid UTF-8;
  *   - every failure is NON-ECHOING: the error message names the stable
  *     reason only — never the path and never any content;
- *   - the returned EVIDENCE carries only the byte length and the SHA-256
- *     fixture identity (plus the in-memory text the live worker sends as
+ *   - returned evidence carries only byte length; filesystem identity and
+ *     text stay in memory (the live worker sends the text as
  *     the user turn — the text never enters any report, log, or artifact);
  *   - the fixture is read-only input: nothing in this module writes,
  *     moves, or deletes it, and the parent re-verifies its identity after
  *     the worker exits (a changed or vanished fixture fails the proof).
  */
-import { createHash } from 'node:crypto';
 import { readFileSync, statSync } from 'node:fs';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 import {
@@ -44,6 +43,14 @@ export const Q6_FIXTURE_ERROR_CODES = {
   NOT_UTF8: 'QLT_Q6_FIXTURE_NOT_UTF8',
 };
 
+const fileIdentity = (stats) => ({
+  dev: stats.dev,
+  ino: stats.ino,
+  size: stats.size,
+  mtimeMs: stats.mtimeMs,
+  ctimeMs: stats.ctimeMs,
+});
+
 /** A fixture-boundary failure: a stable code plus a message that names the
  * reason only — never the path, never any content. */
 export class Q6FixtureBoundaryError extends Error {
@@ -58,7 +65,7 @@ export class Q6FixtureBoundaryError extends Error {
  * The safe evidence identity of the external fixture (the ONLY fixture
  * facts that may enter reports, logs, or completion output).
  *
- * @typedef {{ byteLength: number; sha256: string }} Q6FixtureIdentity
+ * @typedef {{ byteLength: number; identity?: object; text?: string }} Q6FixtureIdentity
  */
 
 /**
@@ -66,7 +73,7 @@ export class Q6FixtureBoundaryError extends Error {
  * The in-memory `text` is for the live worker's Turn-2 user input ONLY.
  *
  * @param {{ fixturePath: string | undefined; repoRoot: string }} input
- * @returns {{ path: string; byteLength: number; sha256: string; text: string }}
+ * @returns {{ path: string; byteLength: number; identity: Record<string, number>; text: string }}
  */
 export const resolveNaturalFixture = ({ fixturePath, repoRoot }) => {
   if (typeof fixturePath !== 'string' || fixturePath.trim() === '') {
@@ -97,8 +104,10 @@ export const resolveNaturalFixture = ({ fixturePath, repoRoot }) => {
     );
   }
   let bytes;
+  let identity;
   try {
     const stats = statSync(candidate);
+    identity = fileIdentity(stats);
     if (!stats.isFile()) {
       throw new Q6FixtureBoundaryError(
         Q6_FIXTURE_ERROR_CODES.NOT_REGULAR_FILE,
@@ -106,6 +115,9 @@ export const resolveNaturalFixture = ({ fixturePath, repoRoot }) => {
       );
     }
     bytes = readFileSync(candidate);
+    if (JSON.stringify(identity) !== JSON.stringify(fileIdentity(statSync(candidate)))) {
+      throw new Error('fixture changed while reading');
+    }
   } catch (error) {
     if (error instanceof Q6FixtureBoundaryError) {
       throw error;
@@ -134,26 +146,29 @@ export const resolveNaturalFixture = ({ fixturePath, repoRoot }) => {
       'the natural fixture is not valid UTF-8 (content not echoed)',
     );
   }
-  const sha256 = createHash('sha256').update(bytes).digest('hex');
-  return { path: candidate, byteLength: bytes.length, sha256, text };
+  return { path: candidate, byteLength: bytes.length, identity, text };
 };
 
 /**
  * Re-verify the fixture identity AFTER the worker exits (parent-side
  * content-safety check): the file must still exist, still be readable,
- * and still hash to the SAME identity. Returns the identity; throws a
+ * and match the original bytes and file identity. Returns byte length; throws a
  * non-echoing boundary error on any change or disappearance.
  *
  * @param {{ fixturePath: string | undefined; repoRoot: string; expected: Q6FixtureIdentity }} input
- * @returns {Q6FixtureIdentity}
+ * @returns {{ byteLength: number }}
  */
 export const reverifyFixtureIdentity = ({ fixturePath, repoRoot, expected }) => {
   const current = resolveNaturalFixture({ fixturePath, repoRoot });
-  if (current.byteLength !== expected.byteLength || current.sha256 !== expected.sha256) {
+  if (
+    current.byteLength !== expected.byteLength ||
+    current.text !== expected.text ||
+    (expected.identity && JSON.stringify(current.identity) !== JSON.stringify(expected.identity))
+  ) {
     throw new Q6FixtureBoundaryError(
       Q6_FIXTURE_ERROR_CODES.NOT_READABLE,
       'the external fixture changed during the proof — a modified fixture fails the content-safety check (content not echoed)',
     );
   }
-  return { byteLength: current.byteLength, sha256: current.sha256 };
+  return { byteLength: current.byteLength };
 };

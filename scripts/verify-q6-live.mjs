@@ -32,7 +32,7 @@
  *     WITHOUT echoing the path or the content.
  *
  * BOUNDS (frozen, as amended): <= 6 provider turns (the matrix plans
- * 5); <= 512 output tokens per turn (amended from 256); <= 120 s
+ * 6); <= 2048 output tokens per request, <= 12 HTTP requests; <= 120 s
  * deadline per turn; exactly ONE authoritative execution per owner
  * authorization (never re-run silently); ZERO automatic provider
  * retries; one provider, one model, no fallback.
@@ -60,13 +60,12 @@ if (outcome.result !== undefined) {
       `  turn ${turn.id}: status=${turn.status}, ${turn.elapsedMs}ms, ${turn.invocations} invocation(s), ${turn.proposals} proposal(s)`,
     );
   }
-  console.log(
-    `  provider turns used: ${outcome.result.providerTurns} (planned five; frozen ceiling six)`,
-  );
+  console.log(`  user turns used: ${outcome.result.providerTurns} (planned six; ceiling six)`);
+  for (const request of outcome.result.providerRequests ?? []) {
+    console.log(`  provider request: ${JSON.stringify(request)}`);
+  }
 }
-console.log(
-  `  fixture identity: ${outcome.fixture?.byteLength ?? '?'} bytes, sha256 ${outcome.fixture?.sha256 ?? '?'}`,
-);
+console.log(`  fixture: ${outcome.fixture?.byteLength ?? '?'} bytes; no content digest`);
 console.log(`  lifecycle ordering: ${outcome.order.join(' -> ')}`);
 
 if (outcome.exit !== 0) {
@@ -78,6 +77,6 @@ if (outcome.exit !== 0) {
 }
 console.log('');
 console.log(
-  'verify:q6:live: PASS — the five-turn bounded live discretion matrix is green (explicit remembering, discretionary durable meaning with the four commitment anchors, transient abstention, governed user ceremony, restart, fresh-thread C1 continuity, hypothetical conflict non-mutation; credential absent from every observable surface; the external fixture untouched).',
+  'verify:q6:live: PASS — the six-turn bounded live discretion matrix is green (explicit remembering, discretionary durable meaning with the four commitment anchors, transient abstention, governed user ceremony, restart, fresh-thread C1 continuity, hypothetical conflict non-mutation; credential absent from every observable surface; the external fixture untouched).',
 );
 process.exit(0);

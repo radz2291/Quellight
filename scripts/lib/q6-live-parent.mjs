@@ -68,7 +68,7 @@ const GATE_REASONS = {
  *   refused?: string;
  *   findings: string[];
  *   order: string[];
- *   fixture?: { byteLength: number; sha256: string };
+ *   fixture?: { byteLength: number; identity?: object; text?: string };
  *   workerStatus?: number;
  *   result?: object;
  * }>}
@@ -121,7 +121,7 @@ export const runQ6LiveProof = async (options = {}) => {
   }
   order.push('fixture-validated');
   log(
-    `fixture boundary: external fixture accepted (${fixture.byteLength} bytes; sha256 recorded; content never read into evidence)`,
+    `fixture boundary: external fixture accepted (${fixture.byteLength} bytes; no content digest; content never read into evidence)`,
   );
 
   // ---- the worker: EVERY composition, turn, restart, and ceremony ----
@@ -130,9 +130,9 @@ export const runQ6LiveProof = async (options = {}) => {
     QUELLIGHT_Q6_OWNED_ROOT: workspace.root,
     QUELLIGHT_Q6_FIXTURE_IDENTITY: JSON.stringify({
       byteLength: fixture.byteLength,
-      sha256: fixture.sha256,
+      identity: fixture.identity,
     }),
-    QUELLIGHT_MAX_OUTPUT_TOKENS: String(QLT_Q6_LIVE_BOUNDS.maxOutputTokensPerTurn),
+    QUELLIGHT_MAX_OUTPUT_TOKENS: String(QLT_Q6_LIVE_BOUNDS.maxOutputTokensPerRequest),
     QUELLIGHT_TURN_DEADLINE_MS: String(QLT_Q6_LIVE_BOUNDS.turnDeadlineMs),
   };
   const worker = spawnFn(process.execPath, ['--import', 'tsx', workerPath], {
@@ -153,6 +153,14 @@ export const runQ6LiveProof = async (options = {}) => {
     result = parsed;
   } catch {
     findings.push('the worker result record is missing or unreadable — the proof fails closed');
+    try {
+      const requests = JSON.parse(
+        readFileSync(join(workspace.root, 'q6-provider-requests.json'), 'utf8'),
+      );
+      if (Array.isArray(requests)) result = { ok: false, findings: [], providerRequests: requests };
+    } catch {
+      /* no request checkpoint exists; the missing result remains a failure */
+    }
   }
   order.push('result-read');
   if (result !== undefined) {
@@ -165,7 +173,7 @@ export const runQ6LiveProof = async (options = {}) => {
     reverifyFixtureIdentity({
       fixturePath: env[QLT_Q6_NATURAL_FIXTURE_VAR],
       repoRoot,
-      expected: { byteLength: fixture.byteLength, sha256: fixture.sha256 },
+      expected: fixture,
     });
     log(
       'fixture safety: the external fixture survived the proof byte-identical (never deleted, never modified)',
@@ -212,7 +220,7 @@ export const runQ6LiveProof = async (options = {}) => {
     exit: findings.length > 0 ? 1 : 0,
     findings,
     order,
-    fixture: { byteLength: fixture.byteLength, sha256: fixture.sha256 },
+    fixture: { byteLength: fixture.byteLength },
     workerStatus,
     result,
   };

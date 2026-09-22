@@ -5,7 +5,7 @@
  * docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-EXECUTION-3-REMEDIATION-CONTRACT.md).
  *
  * This module is the REAL worker orchestration, factored so it can run in
- * TWO modes against the SAME five-turn matrix:
+ * TWO modes against the SAME six-turn matrix:
  *
  *   - mode 'live'    — exactly the prepared Execution-3 behavior: every
  *     composition, provider turn, restart, and ceremony operation with the
@@ -31,7 +31,7 @@
  *           text NEVER enters findings (the old bounded slicing of the
  *           thrown value is removed entirely).
  *
- * The five-turn matrix, the natural-flow acceptance predicates, every
+ * The six-turn matrix, the natural-flow acceptance predicates, every
  * acceptance rule, the durable-invocation truth checks, the governed
  * ceremony, the restart, the fresh-thread continuity, the conflict
  * non-mutation, the in-memory credential surfaces, and the bounds are
@@ -54,13 +54,18 @@ import {
   QLT_Q6_T3_STATEMENT,
   QLT_Q6_T4_STATEMENT,
   QLT_Q6_T5_STATEMENT,
+  QLT_Q6_T6_STATEMENT,
 } from '../../src/lib/sharedworld/q6-contract.ts';
 import {
   evaluateConflictTurn,
   evaluateDiscretionaryNegative,
   evaluateDiscretionaryPositive,
   evaluateExplicitPositive,
+  evaluateNaturalFlow,
 } from './q6-acceptance.mjs';
+import { installProviderObserver } from './q6-provider-observer.mjs';
+import { writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 /** The closed vocabulary of matrix failure codes (M-2; non-echoing). */
 export const QLT_Q6_FAILURE_CODES = Object.freeze({
@@ -129,6 +134,9 @@ export function offlineMatrixScriptFor(fixtureText) {
     },
     [QLT_Q6_T5_STATEMENT]: {
       text: 'As a pure thought experiment that would change everything — in reality you set the terms.',
+    },
+    [QLT_Q6_T6_STATEMENT]: {
+      text: 'That sounds frustrating. I can keep you company while you wait.',
     },
   };
 }
@@ -261,7 +269,7 @@ export function offlineModelFactoryFor(script) {
 }
 
 /**
- * Run the complete five-turn matrix. Returns the machine-readable result
+ * Run the complete six-turn matrix. Returns the machine-readable result
  * record (safe metadata only). The caller owns workspace adoption, fixture
  * validation, result serialization, process exit, and (for live runs) the
  * parent-side scans.
@@ -270,7 +278,7 @@ export function offlineModelFactoryFor(script) {
  *   ownedRoot: string;
  *   mode: 'live' | 'offline';
  *   credential: string;
- *   fixture: { text: string; byteLength: number; sha256: string };
+ *   fixture: { text: string; byteLength: number; identity?: object; text?: string };
  *   requireOwned?: (directory: string, label: string) => void;
  *   dataEnv?: (directory: string) => Record<string, string>;
  *   requireResolvedEnvironmentDataDir?: (environment: unknown) => void;
@@ -319,12 +327,25 @@ export async function runQ6LiveMatrix(options) {
   let providerTurnCount = 0;
   /** The current matrix phase label (stable, non-echoing evidence). */
   let phase = 'start';
+  const providerObserver =
+    mode === 'live'
+      ? installProviderObserver({
+          maxRequests: QLT_Q6_LIVE_BOUNDS.maxProviderRequests,
+          maxRequestsPerTurn: QLT_Q6_LIVE_BOUNDS.maxProviderRequestsPerTurn,
+          turnDeadlineMs: QLT_Q6_LIVE_BOUNDS.turnDeadlineMs,
+          maxTokens: QLT_Q6_LIVE_BOUNDS.maxOutputTokensPerRequest,
+          purpose: () => phase,
+          transport: options.providerTransport,
+          onUpdate: (records) =>
+            writeFileSync(join(ownedRoot, 'q6-provider-requests.json'), JSON.stringify(records)),
+        })
+      : undefined;
 
   let result = {
     ok: false,
     findings,
     turns: turnRecords,
-    fixture: { byteLength: fixture.byteLength, sha256: fixture.sha256 },
+    fixture: { byteLength: fixture.byteLength },
     providerTurns: 0,
   };
 
@@ -335,7 +356,7 @@ export async function runQ6LiveMatrix(options) {
       {
         ...workspace.dataEnv(directory),
         ...(mode === 'live' ? { QUELLIGHT_LIVE_PROOF: '1' } : {}),
-        QUELLIGHT_MAX_OUTPUT_TOKENS: String(QLT_Q6_LIVE_BOUNDS.maxOutputTokensPerTurn),
+        QUELLIGHT_MAX_OUTPUT_TOKENS: String(QLT_Q6_LIVE_BOUNDS.maxOutputTokensPerRequest),
         QUELLIGHT_TURN_DEADLINE_MS: String(QLT_Q6_LIVE_BOUNDS.turnDeadlineMs),
       },
       process.cwd(),
@@ -370,7 +391,7 @@ export async function runQ6LiveMatrix(options) {
         `composed in LIVE mode: ${QLT_Q6_PROVIDER_IDENTITY.provider} / ${QLT_Q6_PROVIDER_IDENTITY.model} (${QLT_Q6_PROVIDER_IDENTITY.routerIdentity} at ${QLT_Q6_PROVIDER_IDENTITY.endpoint})`,
       );
       note(
-        `bounds: <=${QLT_Q6_LIVE_BOUNDS.maxProviderTurns} provider turns, <=${QLT_Q6_LIVE_BOUNDS.maxOutputTokensPerTurn} output tokens/turn, <=${QLT_Q6_LIVE_BOUNDS.turnDeadlineMs}ms deadline/turn, zero retries, no fallback`,
+        `bounds: <=${QLT_Q6_LIVE_BOUNDS.maxProviderTurns} user turns, <=${QLT_Q6_LIVE_BOUNDS.maxProviderRequests} HTTP requests, <=${QLT_Q6_LIVE_BOUNDS.maxOutputTokensPerRequest} output tokens/request, <=${QLT_Q6_LIVE_BOUNDS.turnDeadlineMs}ms deadline/turn, zero retries, no fallback`,
       );
     } else {
       note(
@@ -390,6 +411,7 @@ export async function runQ6LiveMatrix(options) {
       const restored = await replyComposition.restoreThread(threadId);
       const messages = restored.messages ?? [];
       for (let index = messages.length - 1; index >= 0; index -= 1) {
+        if (messages[index].role === 'user') return '';
         if (messages[index].role === 'assistant') {
           return String(messages[index].text ?? '');
         }
@@ -420,31 +442,33 @@ export async function runQ6LiveMatrix(options) {
       try {
         const invocations =
           await truthComposition.stores.invocations.listInvocationsForTurn(turnId);
-        const invocation = invocations.at(-1);
-        if (invocation === undefined) {
+        if (invocations.length === 0) {
           fail(`${label}: no durable invocation record exists for the turn`);
           return;
         }
-        if (invocation.effect !== 'write') {
-          fail(
-            `${label}: the durable invocation effect is ${invocation.effect}, expected the truthful write`,
+        for (const invocation of invocations) {
+          if (invocation.status !== 'completed') fail(`${label}: invocation did not complete`);
+          if (invocation.effect !== 'write') {
+            fail(
+              `${label}: the durable invocation effect is ${invocation.effect}, expected the truthful write`,
+            );
+          }
+          if (invocation.approvalRequired !== false) {
+            fail(`${label}: the durable invocation did not record approvalRequired=false`);
+          }
+          if (invocation.approvalDisposition !== 'host-policy-write-without-separate-approval') {
+            fail(
+              `${label}: the durable invocation disposition is ${invocation.approvalDisposition} (expected the host quiet-write policy disposition)`,
+            );
+          }
+          const approvals = await truthComposition.stores.approvals.listApprovalsForInvocation(
+            invocation.invocationId,
           );
-        }
-        if (invocation.approvalRequired !== false) {
-          fail(`${label}: the durable invocation did not record approvalRequired=false`);
-        }
-        if (invocation.approvalDisposition !== 'host-policy-write-without-separate-approval') {
-          fail(
-            `${label}: the durable invocation disposition is ${invocation.approvalDisposition} (expected the host quiet-write policy disposition)`,
-          );
-        }
-        const approvals = await truthComposition.stores.approvals.listApprovalsForInvocation(
-          invocation.invocationId,
-        );
-        if (approvals.length !== 0) {
-          fail(
-            `${label}: ${approvals.length} approval rows exist for the quiet proposal write (expected 0)`,
-          );
+          if (approvals.length !== 0) {
+            fail(
+              `${label}: ${approvals.length} approval rows exist for the quiet proposal write (expected 0)`,
+            );
+          }
         }
       } catch {
         fail(`${QLT_Q6_FAILURE_CODES.EVIDENCE} (evidence target: ${label})`);
@@ -462,6 +486,9 @@ export async function runQ6LiveMatrix(options) {
       label,
     ) => {
       phase = label;
+      if (providerTurnCount >= QLT_Q6_LIVE_BOUNDS.maxProviderTurns)
+        throw new Q6MatrixFailure(QLT_Q6_FAILURE_CODES.MATRIX, 'turn-bound');
+      const requestOffset = providerObserver?.records.length ?? 0;
       const before = await canonicalTotals(sharedWorld);
       const proposalsBefore = (
         await sharedWorld.meaning.listProposals({ sourceThreadId: swThreadId })
@@ -500,6 +527,33 @@ export async function runQ6LiveMatrix(options) {
         void cause;
         throw new Q6MatrixFailure(QLT_Q6_FAILURE_CODES.REPLY_RESTORE, label);
       });
+      for (const finding of evaluateNaturalFlow(reply)) fail(`${label}: ${finding}`);
+      const requests = providerObserver?.records.slice(requestOffset) ?? [];
+      if (
+        providerObserver &&
+        (requests.length === 0 ||
+          requests.some(
+            (request) =>
+              request.http !== 200 ||
+              !request.done ||
+              !['stop', 'tool_calls'].includes(request.finish) ||
+              request.parseFailed ||
+              !request.schemaUnchanged ||
+              request.arguments.some((args) => !args.contractAccepted || !args.mastraAccepted),
+          ))
+      ) {
+        fail(`${label}: QLT_Q6_PROVIDER_BOUNDARY_FAILED`);
+      }
+      const frames = await turnComposition.stores.streamLedger.listEventsFrom(turn.streamId, 0);
+      if (
+        frames.some(
+          (frame) => frame.kind === 'tool.failed' || frame.kind === 'tool.awaiting_approval',
+        )
+      ) {
+        fail(`${label}: QLT_Q6_TOOL_BOUNDARY_FAILED`);
+      }
+      turnRecords.at(-1).visibleReplyBytes = Buffer.byteLength(reply);
+      turnRecords.at(-1).providerRequests = requests.length;
       return {
         turnId: turn.turnId,
         streamId: turn.streamId,
@@ -733,7 +787,7 @@ export async function runQ6LiveMatrix(options) {
       { proposalId: commitment.id },
       'q6-live-confirm-1',
     );
-    if (replayConfirm.ok !== true) {
+    if (replayConfirm.ok !== true || replayConfirm.replayed !== true) {
       fail('the same-key confirmation replay was not truthfully replayed');
     }
     canonical = await canonicalTotals(composition.sharedWorld);
@@ -779,6 +833,7 @@ export async function runQ6LiveMatrix(options) {
     if (
       commitmentAfterRestart === undefined ||
       commitmentAfterRestart.status !== 'active' ||
+      commitmentAfterRestart.version !== canonicalCommitment.version ||
       JSON.stringify(commitmentAfterRestart.content) !== JSON.stringify(canonicalCommitment.content)
     ) {
       fail('restart did not preserve the confirmed commitment truthfully');
@@ -904,6 +959,27 @@ export async function runQ6LiveMatrix(options) {
       note('the conflict turn assembly still selected the standing commitment');
     }
 
+    const t6 = await runMatrixTurn(
+      composition2,
+      composition2.sharedWorld,
+      threadB.id,
+      convB.mastraThreadId,
+      QLT_Q6_T6_STATEMENT,
+      'q6-live-t6',
+      't6 (transient conversation)',
+    );
+    for (const finding of evaluateDiscretionaryNegative({
+      replyText: t6.reply,
+      newProposals: t6.newProposals,
+      invocationCount: t6.invocations.length,
+      newCanonicalRecords: t6.newCanonical,
+    }))
+      fail(`t6: ${finding}`);
+    const afterTransient = await composition2.sharedWorld.meaning.getCommitment(commitmentId);
+    if (JSON.stringify(afterTransient) !== JSON.stringify(commitmentAfterConflict)) {
+      fail('t6: the transient conversation changed the canonical commitment');
+    }
+
     // ---- transcript pollution + bounds + in-memory credential surfaces ------
     phase = 'transcript-and-bounds';
     const restoredA = await composition2.restoreThread(threadA.id).catch(() => {
@@ -936,7 +1012,14 @@ export async function runQ6LiveMatrix(options) {
       );
     }
     const allFramesText = [];
-    for (const streamId of [t1.streamId, t2.streamId, t3.streamId, t4.streamId, t5.streamId]) {
+    for (const streamId of [
+      t1.streamId,
+      t2.streamId,
+      t3.streamId,
+      t4.streamId,
+      t5.streamId,
+      t6.streamId,
+    ]) {
       if (streamId === undefined) {
         continue;
       }
@@ -959,7 +1042,7 @@ export async function runQ6LiveMatrix(options) {
       );
     } else {
       note(
-        `bounds: ${providerTurnCount} provider turns used of the planned five (<= ${QLT_Q6_LIVE_BOUNDS.maxProviderTurns}); one authoritative execution; zero retries; no fallback`,
+        `bounds: ${providerTurnCount} user turns used of the planned six (<= ${QLT_Q6_LIVE_BOUNDS.maxProviderTurns}); one authoritative execution; zero retries; no fallback`,
       );
     }
     phase = 'serialize';
@@ -967,7 +1050,7 @@ export async function runQ6LiveMatrix(options) {
       ok: findings.length === 0,
       findings,
       turns: turnRecords,
-      fixture: { byteLength: fixture.byteLength, sha256: fixture.sha256 },
+      fixture: { byteLength: fixture.byteLength },
       providerTurns: providerTurnCount,
     };
     await composition2.close();
@@ -987,13 +1070,20 @@ export async function runQ6LiveMatrix(options) {
       ok: false,
       findings,
       turns: turnRecords,
-      fixture: { byteLength: fixture.byteLength, sha256: fixture.sha256 },
+      fixture: { byteLength: fixture.byteLength },
       providerTurns: providerTurnCount,
     };
   } finally {
+    providerObserver?.restore();
     for (const composition of composed.splice(0)) {
       await composition.close().catch(() => undefined);
     }
+  }
+  result.providerRequests = providerObserver?.records ?? [];
+  result.refusedProviderRequests = providerObserver?.refused ?? 0;
+  if (result.refusedProviderRequests) {
+    fail('QLT_Q6_PROVIDER_REQUEST_BOUND');
+    result.ok = false;
   }
   return result;
 }

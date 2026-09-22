@@ -74,6 +74,7 @@ import {
   QLT_Q6_T3_STATEMENT,
   QLT_Q6_T4_STATEMENT,
   QLT_Q6_T5_STATEMENT,
+  QLT_Q6_T6_STATEMENT,
   QLT_Q6_COMMITMENT_ANCHORS,
 } from '../src/lib/sharedworld/q6-contract.ts';
 import {
@@ -284,9 +285,27 @@ console.log('\n[1] CONTRACT — frozen Q6 bounds, identity, envelope, status lan
 {
   check('the live provider-turn bound is 6', 'contract', QLT_Q6_LIVE_BOUNDS.maxProviderTurns === 6);
   check(
-    'the live output-token bound is 512 per turn (amended from 256 by D-Q6-6)',
+    'the live output-token bound is 2048 per request (D-Q6-15)',
     'contract',
-    QLT_Q6_LIVE_BOUNDS.maxOutputTokensPerTurn === 512,
+    QLT_Q6_LIVE_BOUNDS.maxOutputTokensPerRequest === 2048,
+  );
+  check(
+    'D-Q6-15 bounds HTTP requests as well as user turns',
+    'contract',
+    QLT_Q6_LIVE_BOUNDS.maxProviderRequests === 12 &&
+      QLT_Q6_LIVE_BOUNDS.maxProviderRequestsPerTurn === 3,
+  );
+  check(
+    'D-Q6-15 permanent provider-boundary regression suite exists',
+    'contract',
+    readFileSync('test/q6-provider-boundary.test.ts', 'utf8').includes(
+      'QLT_DIAGNOSTIC_REQUEST_CAP',
+    ),
+  );
+  check(
+    'the private fixture is compared without a content digest',
+    'contract',
+    !readFileSync('scripts/lib/q6-fixture-boundary.mjs', 'utf8').includes('createHash('),
   );
   check(
     'the amendment identity is declarative and cites the bounded-discretion amendment',
@@ -303,12 +322,13 @@ console.log('\n[1] CONTRACT — frozen Q6 bounds, identity, envelope, status lan
       QLT_Q6_NATURAL_FIXTURE_MAX_BYTES === 12_288,
   );
   check(
-    'the five-turn matrix statements and commitment anchors are the amended proof data',
+    'the six-turn matrix statements and commitment anchors are the amended proof data',
     'contract',
     QLT_Q6_T1_STATEMENT.startsWith('Remember this:') &&
       QLT_Q6_T3_STATEMENT.startsWith('The installer took eighteen minutes') &&
       QLT_Q6_T4_STATEMENT.startsWith('What constraint should guide') &&
       QLT_Q6_T5_STATEMENT.startsWith('For this thought experiment only') &&
+      QLT_Q6_T6_STATEMENT.startsWith('The delivery was late today') &&
       JSON.stringify(QLT_Q6_COMMITMENT_ANCHORS) ===
         JSON.stringify(['not leave', 'current job', 'clear pathway', 'established base']),
   );
@@ -357,8 +377,8 @@ console.log('\n[1] CONTRACT — frozen Q6 bounds, identity, envelope, status lan
       QLT_Q6_UNCHANGED_ENVELOPE.hostQuietWritePolicyIdentity ===
         QLT_HOST_QUIET_WRITE_POLICY_IDENTITY &&
       QLT_Q6_UNCHANGED_ENVELOPE.actionInventory === 21 &&
-      QLT_Q6_UNCHANGED_ENVELOPE.agentProfileRevision === '6' &&
-      QLT_Q6_UNCHANGED_ENVELOPE.conversationInstructionsRevision === '4' &&
+      QLT_Q6_UNCHANGED_ENVELOPE.agentProfileRevision === '7' &&
+      QLT_Q6_UNCHANGED_ENVELOPE.conversationInstructionsRevision === '5' &&
       QLT_Q6_UNCHANGED_ENVELOPE.maxToolCalls === 2,
   );
   check(
@@ -442,8 +462,8 @@ console.log('\n[2] ENVELOPE — exactly 21 actions, empty bindings, proposal-onl
   check(
     'the composition pins the agent profile revision 5 binding the revision-4 discretion instructions',
     'envelope',
-    compositionSource.includes("const PROFILE_REVISION = '6'") &&
-      compositionSource.includes("const INSTRUCTIONS_REVISION = '4'") &&
+    compositionSource.includes("const PROFILE_REVISION = '7'") &&
+      compositionSource.includes("const INSTRUCTIONS_REVISION = '5'") &&
       compositionSource.includes('maxToolCalls: 2, onLimit'),
   );
   check(
@@ -619,9 +639,9 @@ console.log('\n[3] LIVE-GATE — explicit double gate; never invoked by automati
     check(
       'the live harness bounds itself with the frozen (amended) bounds',
       'live-gate',
-      parentLibSource.includes('QLT_Q6_LIVE_BOUNDS.maxOutputTokensPerTurn') &&
+      parentLibSource.includes('QLT_Q6_LIVE_BOUNDS.maxOutputTokensPerRequest') &&
         parentLibSource.includes('QLT_Q6_LIVE_BOUNDS.turnDeadlineMs') &&
-        matrixSource.includes('QLT_Q6_LIVE_BOUNDS.maxOutputTokensPerTurn') &&
+        matrixSource.includes('QLT_Q6_LIVE_BOUNDS.maxOutputTokensPerRequest') &&
         matrixSource.includes('QLT_Q6_LIVE_BOUNDS.turnDeadlineMs'),
     );
     check(
