@@ -19,7 +19,7 @@
  *
  * Audit-remediation repin (2026-09-22): the recorded identity moved
  * mechanically from `0.3.1-rc.1` to the verification candidate
- * `0.3.1-rc.2` (VICT audit-remediation contract §5; publication run
+ * `0.3.1` (VICT audit-remediation contract §5; publication run
  * 35661159776 + the read-only successor evidence run 35662077320) — a
  * version-only repin: no product, ceremony, memory, authority, UI,
  * provider, fixture, or Q6 acceptance change.
@@ -28,13 +28,15 @@
 import { createHash } from 'node:crypto';
 
 /** The recorded, authoritative public release identity: the coordinated
- * verification candidate `0.3.1-rc.2` — the B-1..B-4 model-facing
- * capability-schema audit-remediation content, published under the
- * candidate tag `vict-0.3.1-rc` through the trusted-OIDC workflow (latest
- * remains `0.3.0`; stable `0.3.1` remains unpublished). */
-export const RELEASE_IDENTITY = 'vict-release-set@1/0.3.1-rc.2';
-export const CONTENT_ID = 'v1_55d1ad2eb0afaf0e487b3e0b457069e7cfe2ac0bdaed7d443a13287287f0e31f';
-export const EXPECTED_VERSION = '0.3.1-rc.2';
+ * STABLE release `0.3.1` — the independently verified B-1..B-4
+ * model-facing capability-schema remediation content (identical payloads
+ * to the audited `0.3.1-rc.2`, modulo version/pin metadata), published
+ * under `latest` through the trusted-OIDC workflow (publication run
+ * 35688234026; read-only evidence run 35689362749; the candidate tag
+ * `vict-0.3.1-rc` is RETAINED at `0.3.1-rc.2`). */
+export const RELEASE_IDENTITY = 'vict-release-set@1/0.3.1';
+export const CONTENT_ID = 'v1_1c695280d3afec5e91bfc75d3c99a5a85bc27f6d91127c4d0ce7bd51563c2583';
+export const EXPECTED_VERSION = '0.3.1';
 
 /** The exact 13-member coordinated release set (recorded identity). */
 export const RELEASE_SET_MEMBERS = Object.freeze([

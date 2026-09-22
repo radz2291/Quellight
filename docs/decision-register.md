@@ -1240,3 +1240,48 @@ provider change, no authority widening. The `0.3.1-rc.2` candidate is a
 verification candidate AWAITING FRESH INDEPENDENT RE-VERIFICATION; Q6
 remains NOT formally closed; **Phase Q7 remains BLOCKED — NOT BEGUN**;
 Stage 07 remains In Progress.
+
+## D-Q6-10 — Mechanical stable repin to the VICT STABLE release `0.3.1` (version-only; no live execution authorized)
+
+**Date:** 2026-09-22. **Trigger:** the fresh independent re-verification
+of the VICT audit-remediation candidate `0.3.1-rc.2` returned ZERO
+Blocking/High/Medium findings, so the owner-authorized conditional
+stable release proceeded: all 13 `@victframework/*` packages published
+at `0.3.1` under `latest` through the frozen trusted-OIDC workflow
+(publication run `35688234026`, source
+`446453fc4f6837e50a0bf3254b47d6a208f5b491`; the same-run registry
+verification failed on CDN propagation lag — terminal-`failure`, never
+relabelled — and the read-only evidence run `35689362749` under the
+stable evidence-recovery amendment concluded terminal-`success`).
+
+**Decision:** mechanically repin Quellight to the stable release:
+
+1. the ten exact `@victframework/*` dependency pins `0.3.1-rc.2` →
+   `0.3.1`;
+2. the lockfile regenerated SOLELY through the public registry;
+3. the central release-set identity
+   (`scripts/lib/release-set.mjs`) moved to
+   `vict-release-set@1/0.3.1`, content ID
+   `v1_1c695280d3afec5e91bfc75d3c99a5a85bc27f6d91127c4d0ce7bd51563c2583`,
+   `EXPECTED_VERSION = '0.3.1'`;
+4. every derived verification literal updated in the SAME commit
+   (`verify-stage7c`, `verify-q2`, `verify-q3`, `verify-governance`,
+   `verify-dev-start`, `verify-consumer`,
+   `test/governed-mutation.test.ts`) — a repo-wide sweep confirms the
+   0.3.0-era recorded-literal desynchronization class did not recur.
+
+**Verification:** the complete offline ladder on the final
+stable-pinned tree — `verify:consumer` PASS, `verify:quellight` (first
+run hit the known pre-existing `test:node` tmpdir-count isolation race,
+diagnosed Low and disclosed; the disclosed rerun PASSed the full
+offline ladder), `verify:stage7c` PASS, `npm audit --omit=dev` clean,
+`git diff --check` clean. Candidate tags RETAINED:
+`vict-0.3.1-rc → 0.3.1-rc.2`; 0.3.0/0.3.1-rc.1/0.3.1-rc.2 remain
+immutable and installable.
+
+**NOT adopted / NOT authorized:** no live-provider proof, no provider
+credential access, **no Execution 4**, no Q7 work, no product,
+Q6-harness, ceremony, memory, authority, UI, or Shared World change.
+Q6 remains NOT formally closed; **Phase Q7 remains BLOCKED — NOT
+BEGUN**; Stage 07 remains In Progress. Record:
+`docs/report/QUELLIGHT-STAGE-07C-STABLE-REPIN-0.3.1.md`.

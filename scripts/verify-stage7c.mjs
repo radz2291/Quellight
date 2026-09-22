@@ -278,7 +278,7 @@ console.log('\n[2] RELEASE IDENTITY — stale/mixed set detection from the lockf
       `release identity: ${RELEASE_IDENTITY} (content ${CONTENT_ID.slice(0, 16)}…) holds in the lockfile`,
     );
   }
-  if (EXPECTED_VERSION !== '0.3.1-rc.2' || !CONTENT_ID.startsWith('v1_55d1ad2e')) {
+  if (EXPECTED_VERSION !== '0.3.1' || !CONTENT_ID.startsWith('v1_1c695280')) {
     fail('release identity: the recorded constants are not the stable 0.3.0 set');
   } else {
     note('recorded constants match the stable 0.3.0 identity');

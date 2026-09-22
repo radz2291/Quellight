@@ -3,18 +3,18 @@
  * Quellight consumer verification — registry-only dependency proof (N-1)
  * and the unreachable-registry negative control (N-2). Stage 07C Phase
  * Q6 Execution-3 remediation: the adopted release identity is the
- * coordinated verification candidate `@victframework/*@0.3.1-rc.2`
- * (`vict-release-set@1/0.3.1-rc.2`, content ID
- * `v1_55d1ad2eb0afaf0e487b3e0b457069e7cfe2ac0bdaed7d443a13287287f0e31f`).
+ * coordinated verification candidate `@victframework/*@0.3.1`
+ * (`vict-release-set@1/0.3.1`, content ID
+ * `v1_1c695280d3afec5e91bfc75d3c99a5a85bc27f6d91127c4d0ce7bd51563c2583`).
  *
  * Passes ONLY when:
  *  1. every @victframework dependency in package.json is the exact public
- *     release pin (`@victframework/*@0.3.1-rc.2`) — no range, tag, workspace,
+ *     release pin (`@victframework/*@0.3.1`) — no range, tag, workspace,
  *     file, git, or local-path specifier;
  *  2. the lockfile contains no workspace:/file:/link:/git dependency and
  *     resolves @victframework packages from the public npm registry with
  *     integrity metadata — and NO installed VICT package version is
- *     anything but exactly 0.3.1-rc.2 (a mixed set fails);
+ *     anything but exactly 0.3.1 (a mixed set fails);
  *  3. the coordinated content identity re-derives from the PUBLIC
  *     REGISTRY's published versions of the full 13-member set;
  *  4. each package is actually fetchable from the registry right now
