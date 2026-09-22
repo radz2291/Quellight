@@ -409,10 +409,10 @@ export function createSharedWorldDeletionStore(
      * N-D2-8). Records from OTHER conversations and global records are
      * structurally out of scope (N-D2-5).
      */
-    executeMeaningRemoval(input: {
+    async executeMeaningRemoval(input: {
       readonly threadId: string;
       readonly requestedBy: string;
-    }): QltDeletionRow {
+    }): Promise<QltDeletionRow> {
       const threadId = assertId(input.threadId, 'thread id');
       const requestedBy = assertUserActor(input.requestedBy, 'remove originating meaning');
       const row = getDeletionRow(threadId);
@@ -488,7 +488,7 @@ export function createSharedWorldDeletionStore(
         if (target.retentionState !== 'currently-relevant') {
           continue;
         }
-        retention.removeRecord({
+        await retention.removeRecord({
           recordId: target.id,
           family: target.family,
           removedBy: requestedBy,
@@ -741,6 +741,9 @@ export function createSharedWorldDeletionStore(
           'The conversation tombstone is not present.',
         );
       }
+      // The recorded mode bounds the purge FOREVER (never broadened).
+      const fullPurge =
+        str(getDeletionRow(threadId)!, 'mode') === 'conversation-and-originating-meaning';
 
       const counts: Record<QltD2PurgeStep, number> = {
         challenges: 0,
@@ -800,26 +803,39 @@ export function createSharedWorldDeletionStore(
           threadId,
           threadId,
         );
-        // 5. proposals originating from the conversation.
-        counts.proposals = single('DELETE FROM qlt_proposal WHERE source_thread_id = ?;', threadId);
-        // 6. originating subject rows (tombstones by now).
-        for (const table of Object.values(SUBJECT_TABLES)) {
-          counts['originating-tombstones'] += single(
-            `DELETE FROM ${table} WHERE source_thread_id = ?;`,
+        // 5. proposals originating from the conversation (plus-meaning
+        // mode only — the recorded mode bounds the purge FOREVER; a
+        // conversation-only deletion PRESERVED its meaning by explicit
+        // user choice, so its purge removes only the conversation shell:
+        // the evidence rows and the link; the content-free thread
+        // tombstone row stays as the provenance FK anchor).
+        if (fullPurge) {
+          counts.proposals = single(
+            'DELETE FROM qlt_proposal WHERE source_thread_id = ?;',
             threadId,
           );
+          // 6. originating subject rows (tombstones by now).
+          for (const table of Object.values(SUBJECT_TABLES)) {
+            counts['originating-tombstones'] += single(
+              `DELETE FROM ${table} WHERE source_thread_id = ?;`,
+              threadId,
+            );
+          }
         }
         // 7. the thread's context-assembly evidence rows.
         counts['assembly-evidence'] = single(
           'DELETE FROM qlt_context_assembly WHERE thread_id = ?;',
           threadId,
         );
-        // 8. the conversation link; 9. the thread row itself.
+        // 8. the conversation link; 9. the thread row itself (plus-meaning
+        // mode only — see above).
         counts['conversation-link'] = single(
           'DELETE FROM qlt_thread_conversation WHERE thread_id = ?;',
           threadId,
         );
-        counts.thread = single('DELETE FROM qlt_thread WHERE id = ?;', threadId);
+        if (fullPurge) {
+          counts.thread = single('DELETE FROM qlt_thread WHERE id = ?;', threadId);
+        }
 
         db.prepare(
           `INSERT INTO qlt_conversation_purge

@@ -14,7 +14,9 @@ export const GET: RequestHandler = async () => {
   try {
     const app = getAppServer();
     const composition = await app.composition();
-    const document = await composition.conversationLifecycle.buildExport();
+    const document = await composition.conversationLifecycle.buildExport({
+      actorId: composition.actorId,
+    });
     const body = JSON.stringify(document);
     return new Response(body, {
       headers: {

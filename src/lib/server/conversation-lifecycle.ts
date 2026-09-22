@@ -54,6 +54,12 @@ export interface ConversationLifecycleDeps {
   readonly coordinator: ConversationDeletionCoordinator;
   readonly exportService: ConversationExportService;
   /**
+   * The one-shot post-deletion fence across restart (VICT-owned
+   * `fenceCompletedDeletions`): fence EVERY conversation whose deletion
+   * durably completed, so deleted conversations refuse new turns.
+   */
+  readonly fenceCompleted: () => Promise<{ readonly fenced: number }>;
+  /**
    * Serialize the deletion against turns of the same conversation (the
    * race-safe per-conversation critical section). Absent for
    * store-level compositions (pure unit tests).
@@ -152,17 +158,29 @@ export function createConversationLifecycle(deps: ConversationLifecycleDeps) {
 
       const run = async (): Promise<void> => {
         if (input.mode === 'conversation-and-originating-meaning') {
-          deletion.executeMeaningRemoval({ threadId, requestedBy: actorId });
+          await deletion.executeMeaningRemoval({ threadId, requestedBy: actorId });
         }
-        if (mastraThreadId !== undefined) {
-          const conversationId = conversationIdForThreadId(mastraThreadId);
-          if (conversationId === undefined) {
-            throw new Error('conversation identity derivation failed');
+        // The governed VICT conversation identity is resolved from the
+        // live link OR from the durably recorded intent id — a resumed
+        // (partial) deletion MUST keep driving the ORIGINAL intent even
+        // after the link row is gone (receipts make it idempotent).
+        const recordedIntentId = deletion.getDeletion(threadId)?.victIntentId ?? null;
+        const conversationId =
+          mastraThreadId !== undefined
+            ? conversationIdForThreadId(mastraThreadId)
+            : recordedIntentId !== null
+              ? recordedIntentId.slice('vict-del-'.length)
+              : null;
+        if (conversationId !== null && conversationId !== undefined) {
+          if (recordedIntentId === null) {
+            deletion.recordVictIntentId({
+              threadId,
+              victIntentId: coordinator.intentIdFor(conversationId),
+            });
           }
-          deletion.recordVictIntentId({
-            threadId,
-            victIntentId: coordinator.intentIdFor(conversationId),
-          });
+          // The product-side domain duty is idempotent; the coordinator
+          // receipts remain authoritative for the VICT steps.
+          deletion.tombstoneThread({ threadId });
           const outcome = await coordinator.deleteConversation({
             conversationId,
             actorId: LOCAL_ACTOR_ID,
@@ -279,28 +297,32 @@ export function createConversationLifecycle(deps: ConversationLifecycleDeps) {
     }> {
       let resumed = 0;
       let completed = 0;
+      await deps.fenceCompleted();
       for (const row of deletion.listOpenDeletions()) {
         resumed += 1;
         try {
           if (row.mode === 'conversation-and-originating-meaning') {
             // Idempotent convergence: already-removed records and
             // already-terminal proposals are skipped by the store.
-            deletion.executeMeaningRemoval({
+            await deletion.executeMeaningRemoval({
               threadId: row.threadId,
               requestedBy: row.requestedBy,
             });
           }
           const linkRow = await sharedWorld.getConversationLink(row.threadId);
-          if (linkRow !== undefined) {
-            const conversationId = conversationIdForThreadId(linkRow.mastraThreadId);
-            if (conversationId !== undefined) {
-              const outcome = await coordinator.deleteConversation({
-                conversationId,
-                actorId: LOCAL_ACTOR_ID,
-              });
-              if (outcome.status !== 'completed') {
-                continue; // stays truthfully open; the next boot resumes
-              }
+          const conversationId =
+            linkRow !== undefined
+              ? conversationIdForThreadId(linkRow.mastraThreadId)
+              : row.victIntentId !== null
+                ? row.victIntentId.slice('vict-del-'.length)
+                : null;
+          if (conversationId !== null && conversationId !== undefined) {
+            const outcome = await coordinator.deleteConversation({
+              conversationId,
+              actorId: LOCAL_ACTOR_ID,
+            });
+            if (outcome.status !== 'completed') {
+              continue; // stays truthfully open; the next boot resumes
             }
           } else {
             deletion.tombstoneThread({ threadId: row.threadId });
@@ -311,151 +333,201 @@ export function createConversationLifecycle(deps: ConversationLifecycleDeps) {
           // Truthful: the row stays open; nothing is fabricated.
         }
       }
-      return { resumed, completed, fenced: 0 };
+      const fenced = (await deps.fenceCompleted()).fenced;
+      return { resumed, completed, fenced };
     },
 
     /**
      * The deterministic, versioned, bounded user export (safety
-     * contract §6). Fails closed: any governed port failure produces NO
-     * document. The export is handed to the requestor and not retained.
+     * contract §6). USER authority only. Fails closed: any governed
+     * port failure produces NO document. The export is handed to the
+     * requestor and not retained.
      */
-    async buildExport(): Promise<Record<string, unknown>> {
-      const limits = QLT_D2_EXPORT_LIMITS;
-      let failureCode: string | undefined;
+    async buildExport(input: { readonly actorId: string }): Promise<Record<string, unknown>> {
+      requireUserActor(input.actorId, 'QLT_EXPORT_IDENTITY_REFUSED');
+      const build = async (): Promise<Record<string, unknown>> => {
+        const limits = QLT_D2_EXPORT_LIMITS;
+        let failureCode: string | undefined;
 
-      // Threads (current and content-free tombstones, distinguished).
-      const threadsPage = await sharedWorld.listThreads({ limit: limits.conversations });
-      const threads = threadsPage.threads.map((thread) => ({
-        id: thread.id,
-        title: thread.title,
-        state: thread.state,
-        retentionState: thread.retentionState,
-        provenance: thread.provenance,
-        createdAtMs: thread.createdAtMs,
-        updatedAtMs: thread.updatedAtMs,
-      }));
+        // Threads (current and content-free tombstones, distinguished).
+        const threadsPage = await sharedWorld.listThreads({ limit: limits.conversations });
+        const threads = threadsPage.threads.map((thread) => ({
+          id: thread.id,
+          title: thread.title,
+          state: thread.state,
+          retentionState: thread.retentionState,
+          provenance: thread.provenance,
+          createdAtMs: thread.createdAtMs,
+          updatedAtMs: thread.updatedAtMs,
+        }));
 
-      // Governed per-conversation message exports (VICT-owned transcript).
-      const conversations: Array<Record<string, unknown>> = [];
-      for (const thread of threadsPage.threads) {
-        if (conversations.length >= limits.conversations) {
-          break;
-        }
-        const linkRow = await sharedWorld.getConversationLink(thread.id);
-        if (linkRow === undefined) {
-          continue;
-        }
-        const conversationId = conversationIdForThreadId(linkRow.mastraThreadId);
-        if (conversationId === undefined) {
-          failureCode = 'QLT_EXPORT_FAILED';
-          break;
-        }
-        const governed = await exportService
-          .export({ conversationId, actorId: LOCAL_ACTOR_ID })
-          .then(
-            (result) => result.export,
-            () => undefined,
-          );
-        if (governed === undefined) {
-          // A deleted conversation has no memory to export — the
-          // tombstone is the truthful record; a genuine port failure is
-          // detected below by the fail-closed scan.
+        // Governed per-conversation message exports (VICT-owned transcript).
+        const conversations: Array<Record<string, unknown>> = [];
+        for (const thread of threadsPage.threads) {
+          if (conversations.length >= limits.conversations) {
+            break;
+          }
+          const linkRow = await sharedWorld.getConversationLink(thread.id);
+          if (linkRow === undefined) {
+            continue;
+          }
+          const conversationId = conversationIdForThreadId(linkRow.mastraThreadId);
+          if (conversationId === undefined) {
+            failureCode = 'QLT_EXPORT_FAILED';
+            break;
+          }
+          // Fail closed: a genuine governed-port error propagates (no
+          // document). A deleted conversation is the ONE truthful absence:
+          // the governed service signals it with the stable NOT_FOUND code,
+          // which becomes an empty, explicitly-marked section.
+          let governed;
+          try {
+            governed = (await exportService.export({ conversationId, actorId: LOCAL_ACTOR_ID }))
+              .export;
+          } catch (cause) {
+            if (
+              cause instanceof Error &&
+              'code' in cause &&
+              (cause as { code?: string }).code === 'VICT_AGENT_EXPORT_NOT_FOUND'
+            ) {
+              conversations.push({
+                threadId: thread.id,
+                conversationDeleted: true,
+                messages: [],
+              });
+              continue;
+            }
+            throw cause;
+          }
+          if (governed === undefined) {
+            conversations.push({
+              threadId: thread.id,
+              conversationDeleted: true,
+              messages: [],
+            });
+            continue;
+          }
           conversations.push({
             threadId: thread.id,
-            conversationDeleted: true,
-            messages: [],
+            conversationDeleted: false,
+            threadCreatedAt: governed.threadCreatedAt,
+            messages: governed.messages.map((message) => ({
+              seq: message.seq,
+              role: message.role,
+              createdAt: message.createdAt,
+              text: message.text,
+            })),
           });
-          continue;
         }
-        conversations.push({
-          threadId: thread.id,
-          conversationDeleted: false,
-          threadCreatedAt: governed.threadCreatedAt,
-          messages: governed.messages.map((message) => ({
-            seq: message.seq,
-            role: message.role,
-            createdAt: message.createdAt,
-            text: message.text,
-          })),
-        });
-      }
 
-      // Meaning sections (every state; bounded per the declared scope).
-      const perFamily = limits.perFamily;
-      const claims = await sharedWorld.meaning.listClaims({ limit: perFamily });
-      const commitments = await sharedWorld.meaning.listCommitments({ limit: perFamily });
-      const openLoops = await sharedWorld.meaning.listOpenLoops({ limit: perFamily });
-      const proposals = await sharedWorld.meaning.listProposals({ limit: perFamily });
-      const corrections = sharedWorld.deletion.listCorrectionsForExport({ limit: perFamily });
-      const challenges = sharedWorld.conflict.listChallenges(undefined);
-      const passes = await sharedWorld.retention.listRetentionPasses({ limit: limits.passes });
-      const deletionReceipts = deletion.listDeletions({ limit: limits.deletions });
-      const purgeReceipts = deletion.listPurgeReceipts({ limit: limits.deletions });
-      const policyRow = sharedWorld.memoryPolicy.peekPolicyRow();
+        // Meaning sections (every state; bounded per the declared scope).
+        // The frozen meaning-store list verbs page at most 200 rows, so the
+        // export pages deterministically up to its declared per-family cap.
+        const perFamily = limits.perFamily;
+        const pageAll = async <T>(
+          page: (query: { readonly limit: number; readonly offset: number }) => Promise<{
+            readonly rows: readonly T[];
+            readonly total: number;
+          }>,
+        ): Promise<{ readonly rows: readonly T[]; readonly total: number }> => {
+          const collected: T[] = [];
+          let offset = 0;
+          let total = 0;
+          while (collected.length < perFamily) {
+            const result = await page({ limit: 200, offset });
+            total = result.total;
+            collected.push(...result.rows);
+            offset += result.rows.length;
+            if (result.rows.length < 200 || offset >= total) {
+              break;
+            }
+          }
+          return { rows: collected.slice(0, perFamily), total };
+        };
+        const claims = await pageAll((query) => sharedWorld.meaning.listClaims(query));
+        const commitments = await pageAll((query) => sharedWorld.meaning.listCommitments(query));
+        const openLoops = await pageAll((query) => sharedWorld.meaning.listOpenLoops(query));
+        const proposals = await pageAll((query) => sharedWorld.meaning.listProposals(query));
+        const corrections = sharedWorld.deletion.listCorrectionsForExport({ limit: perFamily });
+        const challenges = sharedWorld.conflict.listChallenges(undefined);
+        const passes = await sharedWorld.retention.listRetentionPasses({ limit: limits.passes });
+        const deletionReceipts = deletion.listDeletions({ limit: limits.deletions });
+        const purgeReceipts = deletion.listPurgeReceipts({ limit: limits.deletions });
+        const policyRow = sharedWorld.memoryPolicy.peekPolicyRow();
 
-      if (failureCode !== undefined) {
+        if (failureCode !== undefined) {
+          // Fail closed: NO document (never a falsely complete export).
+          throw new QuellightLifecycleError('QLT_EXPORT_FAILED');
+        }
+
+        const evidenceCommitmentIds = new Set(
+          commitments.rows.slice(0, limits.perFamily).map((commitment) => commitment.id),
+        );
+        const amendments = [];
+        for (const commitment of commitments.rows) {
+          if (!evidenceCommitmentIds.has(commitment.id)) {
+            continue;
+          }
+          for (const amendment of sharedWorld.conflict.listAmendments({
+            commitmentId: commitment.id,
+          })) {
+            amendments.push(amendment);
+          }
+        }
+
+        return {
+          schema: QLT_D2_EXPORT_SCHEMA_ID,
+          disclosure: {
+            included: [
+              'threads (current and content-free tombstones)',
+              'conversation transcripts through the governed VICT export ports',
+              'meaning records in all states (current, historical, expired, removed)',
+              'proposals, corrections, challenges, amendments',
+              'retention-pass, deletion, and purge evidence (content-free)',
+              'the memory-mode policy',
+            ],
+            excluded: QLT_D2_EXPORT_EXCLUDED_CATEGORIES,
+            forbiddenClaims: QLT_D2_FORBIDDEN_CLAIMS,
+            residue: QLT_D2_RESIDUE_DISCLOSURE,
+            bounds: { ...limits },
+          },
+          threads,
+          conversations,
+          meaning: {
+            claims: claims.rows,
+            claimTotal: claims.total,
+            commitments: commitments.rows,
+            commitmentTotal: commitments.total,
+            openLoops: openLoops.rows,
+            openLoopTotal: openLoops.total,
+            proposals: proposals.rows,
+            proposalTotal: proposals.total,
+            corrections,
+          },
+          conflicts: {
+            challenges: challenges.rows,
+            challengeTotal: challenges.total,
+            amendments,
+          },
+          retention: {
+            passes,
+          },
+          deletions: {
+            rows: deletionReceipts,
+            purges: purgeReceipts,
+          },
+          memoryPolicy: policyRow ?? null,
+        };
+      };
+      try {
+        return await build();
+      } catch (cause) {
+        if (cause instanceof QuellightLifecycleError) {
+          throw cause;
+        }
         // Fail closed: NO document (never a falsely complete export).
         throw new QuellightLifecycleError('QLT_EXPORT_FAILED');
       }
-
-      const evidenceCommitmentIds = new Set(
-        commitments.rows.slice(0, limits.perFamily).map((commitment) => commitment.id),
-      );
-      const amendments = [];
-      for (const commitment of commitments.rows) {
-        if (!evidenceCommitmentIds.has(commitment.id)) {
-          continue;
-        }
-        for (const amendment of sharedWorld.conflict.listAmendments({
-          commitmentId: commitment.id,
-        })) {
-          amendments.push(amendment);
-        }
-      }
-
-      return {
-        schema: QLT_D2_EXPORT_SCHEMA_ID,
-        disclosure: {
-          included: [
-            'threads (current and content-free tombstones)',
-            'conversation transcripts through the governed VICT export ports',
-            'meaning records in all states (current, historical, expired, removed)',
-            'proposals, corrections, challenges, amendments',
-            'retention-pass, deletion, and purge evidence (content-free)',
-            'the memory-mode policy',
-          ],
-          excluded: QLT_D2_EXPORT_EXCLUDED_CATEGORIES,
-          forbiddenClaims: QLT_D2_FORBIDDEN_CLAIMS,
-          residue: QLT_D2_RESIDUE_DISCLOSURE,
-          bounds: { ...limits },
-        },
-        threads,
-        conversations,
-        meaning: {
-          claims: claims.rows,
-          claimTotal: claims.total,
-          commitments: commitments.rows,
-          commitmentTotal: commitments.total,
-          openLoops: openLoops.rows,
-          openLoopTotal: openLoops.total,
-          proposals: proposals.rows,
-          proposalTotal: proposals.total,
-          corrections,
-        },
-        conflicts: {
-          challenges: challenges.rows,
-          challengeTotal: challenges.total,
-          amendments,
-        },
-        retention: {
-          passes,
-        },
-        deletions: {
-          rows: deletionReceipts,
-          purges: purgeReceipts,
-        },
-        memoryPolicy: policyRow ?? null,
-      };
     },
   };
 }

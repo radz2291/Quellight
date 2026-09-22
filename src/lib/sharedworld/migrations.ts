@@ -689,9 +689,12 @@ const MIGRATION_0006_DELETION_FOUNDATIONS: QuellightMigration = {
 
       -- Durable product deletion operation row (closed lifecycle; the
       -- recorded mode/scope is NEVER broadened; same-key replay converges).
+      -- NOTE: no FK on thread_id — the receipt is the PRESERVED MINIMUM
+      -- evidence (safety contract §5) and must be able to outlive the
+      -- purged thread row of a plus-meaning deep purge.
       CREATE TABLE qlt_conversation_deletion (
         id TEXT NOT NULL PRIMARY KEY,
-        thread_id TEXT NOT NULL REFERENCES qlt_thread (id),
+        thread_id TEXT NOT NULL,
         mode TEXT NOT NULL CHECK (mode IN ('conversation-only','conversation-and-originating-meaning')),
         status TEXT NOT NULL CHECK (status IN ('planned','completed','canceled','incomplete')),
         requested_by TEXT NOT NULL CHECK (requested_by GLOB 'actor-*'),

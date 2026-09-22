@@ -50,6 +50,7 @@ import {
   composeMastraTurnExecutor,
   MastraThreadCoordinator,
 } from '@victframework/mastra';
+import { fenceCompletedDeletions } from '@victframework/mastra';
 import { ConversationDeletionCoordinator, ConversationExportService } from '@victframework/runtime';
 import { createSqliteAgentGovernanceStore } from '@victframework/store-sqlite';
 import { createConversationLifecycle, type ConversationLifecycle } from './conversation-lifecycle';
@@ -352,6 +353,12 @@ export interface QuellightComposition {
    * `quellight.stage07d.d2.safety-contract@1`).
    */
   readonly conversationLifecycle: ConversationLifecycle;
+  /**
+   * D2: the shared process-local thread coordinator (the SAME instance
+   * the agent and the governed deletion port use). Exposed ONLY for
+   * truthful fence probes in data-safety evidence (`isFenced`).
+   */
+  readonly threadCoordinator: MastraThreadCoordinator;
   readonly hub: AgentStreamHub;
   readonly turnService: AgentTurnService;
   readonly commandService: VictCommandService;
@@ -604,6 +611,8 @@ export async function createQuellightComposition(
     sharedWorld,
     coordinator: deletionCoordinator,
     exportService: conversationExportService,
+    fenceCompleted: () =>
+      fenceCompletedDeletions({ coordinator: threadCoordinator, governance: governanceStore }),
     admitTurn: async (input) => {
       const result = await turnAdmission.admitTurn(input, async () => undefined);
       return result.refused ? { ok: false as const, code: result.code } : { ok: true as const };
@@ -1193,6 +1202,7 @@ export async function createQuellightComposition(
     mastraStore,
     sharedWorld,
     conversationLifecycle,
+    threadCoordinator,
     hub,
     turnService,
     commandService,
