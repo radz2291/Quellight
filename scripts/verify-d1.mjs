@@ -10,7 +10,7 @@
  * gate is per-phase SELF-verification (owner decision OD-D6) — the
  * combined independent audit remains D5 scope.
  *
- *   1. SCHEMA      — migration bookkeeping [1,2,3,4,5]; the amended
+ *   1. SCHEMA      — migration bookkeeping [1,2,3,4,5,6]; the amended
  *                    meaning-family inventories (3-state retention CHECK,
  *                    content-free tombstone CHECKs, expiry/removal
  *                    columns); the three new D1 families vs the frozen
@@ -79,14 +79,15 @@ const tempDir = () => {
     .all()
     .map((row) => row.version);
   check(
-    'migration bookkeeping is [1, 2, 3, 4, 5]',
+    // D2 bounded re-pin: migration 6 applied on top (identity unchanged).
+    'migration bookkeeping is [1, 2, 3, 4, 5, 6]',
     'schema',
-    JSON.stringify(bookkeeping) === JSON.stringify([1, 2, 3, 4, 5]),
+    JSON.stringify(bookkeeping) === JSON.stringify([1, 2, 3, 4, 5, 6]),
   );
   check(
-    'QLT_SHARED_WORLD_SCHEMA_VERSION === 5 (D1a migration)',
+    'QLT_SHARED_WORLD_SCHEMA_VERSION === 6 (D2 migration)',
     'schema',
-    QLT_SHARED_WORLD_SCHEMA_VERSION === 5,
+    QLT_SHARED_WORLD_SCHEMA_VERSION === 6,
   );
 
   for (const table of QLT_MEANING_TABLES) {

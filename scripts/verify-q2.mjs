@@ -193,21 +193,22 @@ console.log('\n[1] SCHEMA — frozen inventory introspection, bookkeeping, resta
       // (qlt-memory-mode-policy) is applied on top of the frozen Q4
       // schema; the bookkeeping assertion is re-pinned to the full applied
       // list. The frozen Q2 inventory checks above are unchanged.
-      // D1a bounded re-pin: migration 5 (qlt-retention-conflict-foundations)
-      // rebuilds the meaning tables and adds the three D1 families; the
-      // bookkeeping assertion follows the full applied list (the Q4/Q5
-      // reconciliation precedent). The frozen Q2 INVENTORY checks above
-      // consume the amended inventory data and are unchanged in method.
+      // D1a/D2 bounded re-pins: migrations 5 (qlt-retention-conflict-
+      // foundations) and 6 (qlt-conversation-deletion-foundations) are on
+      // top; the bookkeeping assertion follows the full applied list (the
+      // Q4/Q5 reconciliation precedent). The frozen Q2 INVENTORY checks
+      // above consume the amended inventory data and are unchanged in
+      // method.
       check(
-        `migration bookkeeping is [1, 2, 3, 4, ${QLT_SHARED_WORLD_SCHEMA_VERSION}]`,
+        `migration bookkeeping is [1, 2, 3, 4, 5, ${QLT_SHARED_WORLD_SCHEMA_VERSION}]`,
         'schema',
         JSON.stringify(bookkeeping) ===
-          JSON.stringify([1, 2, 3, 4, QLT_SHARED_WORLD_SCHEMA_VERSION]),
+          JSON.stringify([1, 2, 3, 4, 5, QLT_SHARED_WORLD_SCHEMA_VERSION]),
       );
       check(
-        `QLT_SHARED_WORLD_SCHEMA_VERSION === 5 (D1a retention/conflict migration)`,
+        `QLT_SHARED_WORLD_SCHEMA_VERSION === 6 (D2 conversation-deletion migration)`,
         'schema',
-        QLT_SHARED_WORLD_SCHEMA_VERSION === 5,
+        QLT_SHARED_WORLD_SCHEMA_VERSION === 6,
       );
       check(
         'PRAGMA foreign_keys enforced on the connection',

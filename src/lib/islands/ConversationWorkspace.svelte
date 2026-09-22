@@ -855,8 +855,6 @@
       }
     } catch {
       deletionError = 'QLT_DELETION_INCOMPLETE';
-    } finally {
-      deleting = false;
     }
   }
 
@@ -1334,6 +1332,9 @@
       }
       memoryError = result.code ?? 'ACTION_FAILED';
       announcement = `The memory action did not complete (${memoryError}). Nothing was changed by it.`;
+      // D3: a refused conflicting confirmation records a challenge —
+      // refresh the quiet Data safety rows so it becomes visible.
+      await refreshChallenges();
       return false;
     } catch {
       memoryError = 'MEMORY_ACTION_UNDELIVERED';
@@ -1772,7 +1773,10 @@
               <button type="button" class="qlt-btn" disabled={deletionBusy} onclick={() => void confirmDeletion()} data-testid="confirm-deletion">
                 Confirm delete
               </button>
-              <button type="button" class="qlt-btn" disabled={deletionBusy} onclick={() => void cancelDeletionOperation()}>
+              <!-- Closing the chooser is a pure UI cancel: no deletion row
+                   exists yet (the preview is pure), so there is nothing to
+                   cancel server-side and the effect is exactly zero. -->
+              <button type="button" class="qlt-btn" onclick={closeDeletionChooser}>
                 Cancel
               </button>
             </div>

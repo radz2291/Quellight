@@ -1315,6 +1315,9 @@ export async function createQuellightComposition(
       await victStores.dispose();
       agentStores.close();
       sharedWorld.close();
+      // D2: release the governed-store handle (its receipt database is
+      // closed last so every durable deletion receipt is already flushed).
+      governanceStore.close();
       await victServer.close().catch(() => undefined);
     },
   };

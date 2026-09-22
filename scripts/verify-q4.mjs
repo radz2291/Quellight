@@ -244,16 +244,15 @@ console.log('\n[2] SCHEMA — live migration-3 introspection vs the frozen inven
     check(
       // Q5 reconciliation (Q5 freeze §14): migration 4 exists on top of the
       // frozen Q4 bookkeeping [1, 2, 3] (additive forward-only).
-      // D1a bounded re-pin: migration 5 (qlt-retention-conflict-
-      // foundations) is applied on top; the frozen Q4 identity is
-      // unchanged in the applied list.
-      'migration bookkeeping is [1, 2, 3, 4, 5] (additive forward-only)',
+      // D1a/D2 bounded re-pins: migrations 5 and 6 are applied on top;
+      // the frozen Q4 identity is unchanged in the applied list.
+      'migration bookkeeping is [1, 2, 3, 4, 5, 6] (additive forward-only)',
       'schema',
-      JSON.stringify(bookkeeping) === JSON.stringify([1, 2, 3, 4, 5]),
+      JSON.stringify(bookkeeping) === JSON.stringify([1, 2, 3, 4, 5, 6]),
     );
-    // D1a bounded re-pin: the schema version advanced to the D1a
+    // D1a/D2 bounded re-pins: the schema version advanced to the D2
     // migration; the frozen Q4 migration identity is unchanged.
-    check('QLT_SHARED_WORLD_SCHEMA_VERSION === 5', 'schema', QLT_SHARED_WORLD_SCHEMA_VERSION === 5);
+    check('QLT_SHARED_WORLD_SCHEMA_VERSION === 6', 'schema', QLT_SHARED_WORLD_SCHEMA_VERSION === 6);
 
     const columns = raw.prepare(`PRAGMA table_info(${QLT_CONTEXT_ASSEMBLY_TABLE});`).all();
     const actualColumns = columns.map((column) => ({

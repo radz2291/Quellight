@@ -309,10 +309,11 @@ console.log('\n[3] SCHEMA — migration 4 introspection vs the frozen inventory'
       .all()
       .map((row) => row.version);
     check(
-      // D1a bounded re-pin: migration 5 applied on top (identity unchanged).
-      'migration bookkeeping is exactly [1, 2, 3, 4, 5] (additive forward-only)',
+      // D1a/D2 bounded re-pins: migrations 5 and 6 applied on top
+      // (identity unchanged).
+      'migration bookkeeping is exactly [1, 2, 3, 4, 5, 6] (additive forward-only)',
       'schema',
-      JSON.stringify(bookkeeping) === JSON.stringify([1, 2, 3, 4, 5]),
+      JSON.stringify(bookkeeping) === JSON.stringify([1, 2, 3, 4, 5, 6]),
     );
 
     for (const [table, inventory, pk] of [

@@ -608,7 +608,7 @@ try {
 }
 
 // 6. Store isolation proof: the task-owned directory must contain the
-// initialized stores, and the Shared World migration chain (1..4) must
+// initialized stores, and the Shared World migration chain (1..6) must
 // have run THERE — read-only, after the server has been stopped.
 try {
   const sharedDbPath = join(taskDataRoot, 'shared-world.db');
@@ -626,8 +626,10 @@ try {
         .prepare('SELECT version, name FROM quellight_shared_world_migrations ORDER BY version;')
         .all();
       const versions = rows.map((r) => r.version);
+      // D1a/D2 bounded re-pins: the chain now runs 1..6 (migrations 5 and
+      // 6 exist on top; the frozen isolation property is unchanged).
       if (
-        JSON.stringify(versions) !== JSON.stringify([1, 2, 3, 4]) ||
+        JSON.stringify(versions) !== JSON.stringify([1, 2, 3, 4, 5, 6]) ||
         rows.find((r) => r.version === 4)?.name !== 'qlt-memory-mode-policy'
       ) {
         fail(
@@ -654,7 +656,7 @@ if (failures.length === 0) {
   console.log(`  real repository vite.config.ts; http://127.0.0.1:${freePort}/ → 200`);
   console.log(`  isolated task-owned data dir used and removed: ${taskDataRoot}`);
   console.log(
-    '  task-owned store initialized with the migration chain 1..4 (incl. qlt-memory-mode-policy); default operator store untouched by this gate.',
+    '  task-owned store initialized with the migration chain 1..6 (incl. qlt-memory-mode-policy); default operator store untouched by this gate.',
   );
   console.log(
     '  isolation guard verified in-process (refuses missing / operator / repository paths) and through the real boundary (guard control refused, no store written).',
