@@ -87,11 +87,13 @@ describe('Quellight Shared World store (Quellight-owned; §6)', () => {
     // assertion is re-pinned to the amended frozen reality, never weakened.
     // Q5 bounded re-pin (assertion-neutral): migration 4 exists on top of
     // the frozen Q4 bookkeeping [1, 2, 3].
+    // D2 bounded re-pin: migration 6 exists on top of migrations 1–5.
     expect(bookkeeping.map((row) => row.version)).toEqual([
       1,
       2,
       3,
       4,
+      5,
       QLT_SHARED_WORLD_SCHEMA_VERSION,
     ]);
     store.close();

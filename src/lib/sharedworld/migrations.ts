@@ -789,20 +789,34 @@ export function runSharedWorldMigrations(
       `the Shared World store was written by schema version ${newestApplied}, newer than this build's version ${QLT_SHARED_WORLD_SCHEMA_VERSION}; refusing the open (forward-only discipline).`,
     );
   }
-  for (const migration of QLT_SHARED_WORLD_MIGRATIONS) {
-    if (applied.has(migration.version)) {
-      continue;
+  // Migrations run with FK enforcement DISABLED (the standard SQLite
+  // schema-rebuild discipline): migrations 5 and 6 rebuild tables that
+  // are FK PARENTS, and parent rebuilds cannot execute (or commit a
+  // deferred check against a mid-transaction dropped name) with
+  // enforcement on. Each migration remains ONE atomic transaction
+  // (BEGIN/COMMIT/ROLLBACK unchanged), every rebuild copies all rows,
+  // and runtime enforcement is restored immediately after the loop (the
+  // open path turns it on and the frozen schema inventory + the
+  // preservation tests enforce data truth).
+  db.exec('PRAGMA foreign_keys = OFF;');
+  try {
+    for (const migration of QLT_SHARED_WORLD_MIGRATIONS) {
+      if (applied.has(migration.version)) {
+        continue;
+      }
+      db.exec('BEGIN IMMEDIATE;');
+      try {
+        migration.up(db);
+        db.prepare(
+          'INSERT INTO quellight_shared_world_migrations (version, name, applied_at) VALUES (?, ?, ?);',
+        ).run(migration.version, migration.name, now());
+        db.exec('COMMIT;');
+      } catch (cause) {
+        db.exec('ROLLBACK;');
+        throw cause;
+      }
     }
-    db.exec('BEGIN IMMEDIATE;');
-    try {
-      migration.up(db);
-      db.prepare(
-        'INSERT INTO quellight_shared_world_migrations (version, name, applied_at) VALUES (?, ?, ?);',
-      ).run(migration.version, migration.name, now());
-      db.exec('COMMIT;');
-    } catch (cause) {
-      db.exec('ROLLBACK;');
-      throw cause;
-    }
+  } finally {
+    db.exec('PRAGMA foreign_keys = ON;');
   }
 }

@@ -771,8 +771,13 @@ describe('A-13: version-based staleness (never time) refuses confirmation', () =
     });
     await store.meaning.markProposalAwaitingDecision(sourceProposal.id);
     const rawD = new DatabaseSync(dbPath);
+    // D2 reconciliation: the migration-6 storage CHECK requires the FULL
+    // content-free thread tombstone (user-removed ⇒ title NULL), so the
+    // direct-SQL removal simulation writes both columns.
     rawD
-      .prepare("UPDATE qlt_thread SET retention_state = 'user-removed' WHERE id = ?;")
+      .prepare(
+        "UPDATE qlt_thread SET retention_state = 'user-removed', title = NULL WHERE id = ?;",
+      )
       .run(threadId);
     rawD.close();
     await expect(

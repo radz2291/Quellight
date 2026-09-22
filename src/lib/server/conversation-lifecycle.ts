@@ -106,7 +106,11 @@ export function createConversationLifecycle(deps: ConversationLifecycleDeps) {
         threadId: input.threadId,
         mode: input.mode,
       });
-      return preview;
+      return {
+        ...preview,
+        deletion: deletion.getDeletion(input.threadId),
+        purged: deletion.getPurgeReceipt(input.threadId) !== undefined,
+      };
     },
 
     /**

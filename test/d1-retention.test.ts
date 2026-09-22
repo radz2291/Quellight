@@ -535,7 +535,8 @@ describe('D1 Lane A: dependency re-evaluation, authority fence, durability', () 
     raw.close();
     reopened.close();
     expect(bookkeeping).toEqual(QLT_SHARED_WORLD_MIGRATIONS.map((migration) => migration.version));
-    expect(bookkeeping).toEqual([1, 2, 3, 4, 5]);
+    // D2 bounded re-pin: migration 6 (conversation deletion foundations).
+    expect(bookkeeping).toEqual([1, 2, 3, 4, 5, 6]);
     expect(QLT_D1_NEW_TABLES).toHaveLength(3);
   });
 });

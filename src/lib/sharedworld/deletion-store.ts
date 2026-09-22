@@ -74,6 +74,10 @@ export interface QltDeletionPreview {
   };
   readonly pendingProposals: number;
   readonly pendingCorrections: number;
+  /** The existing durable deletion row, if any (truthful UI state). */
+  readonly deletion?: QltDeletionRow;
+  /** Whether the conversation was already deep-purged. */
+  readonly purged?: boolean;
 }
 
 /** One durable conversation-deletion operation row (content-free). */

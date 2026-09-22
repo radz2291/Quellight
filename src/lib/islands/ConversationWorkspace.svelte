@@ -192,6 +192,7 @@
     await refreshMemory();
     await refreshAssembly();
     await refreshInspection();
+    await refreshChallenges();
     const composer = document.getElementById('qlt-composer');
     composer?.focus();
   }
@@ -684,6 +685,302 @@
   ] as const;
   let memoryModeChoice = $state<string>('across-conversations');
   let memoryModeCurrent = $state<string | undefined>(undefined);
+
+  // ---- Stage 07D D1/D3/D2 data-safety controls (quiet; user-opened) ------
+  // Retention (remove/expiry/pass), conflict challenges, conversation
+  // deletion, export, and deep purge. Nothing here opens, focuses, or
+  // announces itself: every control lives inside the USER-OPENED memory
+  // tray or the thread header, and every destructive confirmation is
+  // shown only after an intentional click. Conversation-only deletion is
+  // the DEFAULT choice; deep purge exists only for an already deleted
+  // conversation and requires typing the confirmation word.
+  interface ChallengeRow {
+    challengeId: string;
+    status: string;
+    classification: string;
+    resolution: string | null;
+    threadId: string;
+    createdAtMs: number;
+  }
+  interface DeletionPreview {
+    threadId: string;
+    originating: { current: number; alreadyExpired: number; alreadyRemoved: number };
+    pendingProposals: number;
+    pendingCorrections: number;
+    deletion?: { status: string; mode: string; errorCode: string | null } | undefined;
+    purged?: boolean;
+  }
+  let challenges = $state<ChallengeRow[]>([]);
+  let resolvingChallengeId = $state<string | undefined>(undefined);
+  let resolveStatement = $state('');
+  let dataSafetyOpen = $state(false);
+  let deleting = $state(false);
+  let deletionPreview = $state<DeletionPreview | undefined>(undefined);
+  let deletionMode = $state<'conversation-only' | 'conversation-and-originating-meaning'>(
+    'conversation-only',
+  );
+  let deletionBusy = $state(false);
+  let deletionNotice = $state('');
+  let deletionError = $state('');
+  let purgeOpen = $state(false);
+  let purgeWord = $state('');
+  let purgeBusy = $state(false);
+  let expiringId = $state<string | undefined>(undefined);
+
+  const deletedConversation = $derived(
+    selectedThread !== undefined && selectedThread.retentionState === 'user-removed',
+  );
+
+  async function refreshChallenges(): Promise<void> {
+    if (selectedThreadId === undefined) {
+      challenges = [];
+      return;
+    }
+    try {
+      const { body } = await fetchJson('/api/act', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          actionId: 'act.queryConflict',
+          input: { filters: { threadId: selectedThreadId } },
+        }),
+      });
+      const result = body as { ok: boolean; value?: { rows?: ChallengeRow[] } };
+      if (result.ok && result.value && Array.isArray(result.value.rows)) {
+        challenges = result.value.rows.filter(
+          (row) => row !== null && typeof row === 'object' && typeof row.challengeId === 'string',
+        );
+      }
+    } catch {
+      // Truthful and quiet: the last known state stands.
+    }
+  }
+
+  function openChallenges(): ChallengeRow[] {
+    return challenges.filter((row) => row.status === 'open');
+  }
+
+  async function dismissChallenge(row: ChallengeRow): Promise<void> {
+    await memoryAction(
+      'act.dismissChallenge',
+      { challengeId: row.challengeId },
+      'The challenge was dismissed. Nothing was changed about your memory.',
+    );
+    await refreshChallenges();
+  }
+
+  function startResolveChallenge(row: ChallengeRow): void {
+    resolvingChallengeId = row.challengeId;
+    resolveStatement = '';
+  }
+
+  async function commitResolveChallenge(): Promise<void> {
+    if (resolvingChallengeId === undefined || resolveStatement.trim().length === 0) {
+      return;
+    }
+    const done = await memoryAction(
+      'act.resolveChallengeWithAmendment',
+      { challengeId: resolvingChallengeId, statement: resolveStatement.trim() },
+      'Resolved by amendment: the existing commitment was amended and stays in force.',
+    );
+    if (done) {
+      resolvingChallengeId = undefined;
+      resolveStatement = '';
+      await refreshChallenges();
+      await refreshMemory();
+    }
+  }
+
+  async function removeRecord(row: RecordRowView): Promise<void> {
+    const done = await memoryAction(
+      'act.removeRecord',
+      { recordId: row.id, recordKind: row.kind },
+      'Removed. The content is now a content-free tombstone and is excluded from your context. History keeps the truthful lifecycle record.',
+    );
+    if (done) {
+      await refreshMemory();
+      await refreshInspection();
+    }
+  }
+
+  function startExpiry(row: RecordRowView): void {
+    expiringId = row.id;
+  }
+
+  async function setExpiry(row: RecordRowView, days: number | null): Promise<void> {
+    const expiresAtMs = days === null ? 0 : Date.now() + days * 24 * 60 * 60 * 1000;
+    const done = await memoryAction(
+      'act.setClaimExpiry',
+      { claimId: row.id, expiresAtMs, expectedVersion: row.version },
+      days === null
+        ? 'Expiry cleared. The claim stays active until you remove or retire it.'
+        : 'Expiry set. Nothing changes until you run the retention pass; the claim stays in force until then.',
+    );
+    if (done) {
+      expiringId = undefined;
+      await refreshMemory();
+      await refreshInspection();
+    }
+  }
+
+  async function runRetentionPass(): Promise<void> {
+    await memoryAction(
+      'act.runRetentionPass',
+      {},
+      'The retention pass ran: due claims are now expired and excluded from your context. Durable evidence was recorded.',
+    );
+    await refreshMemory();
+    await refreshInspection();
+  }
+
+  async function openDeletionChooser(): Promise<void> {
+    if (selectedThreadId === undefined) {
+      return;
+    }
+    deleting = true;
+    deletionMode = 'conversation-only';
+    deletionError = '';
+    deletionNotice = '';
+    purgeOpen = false;
+    purgeWord = '';
+    try {
+      const { body } = await fetchJson(
+        `/api/threads/${encodeURIComponent(selectedThreadId)}/deletion?mode=conversation-only`,
+      );
+      const result = body as { ok: boolean; value?: DeletionPreview; code?: string };
+      if (result.ok && result.value) {
+        deletionPreview = result.value;
+      } else {
+        deletionError = result.code ?? 'QLT_DELETION_INCOMPLETE';
+      }
+    } catch {
+      deletionError = 'QLT_DELETION_INCOMPLETE';
+    } finally {
+      deleting = false;
+    }
+  }
+
+  function closeDeletionChooser(): void {
+    deleting = false;
+    deletionPreview = undefined;
+    purgeOpen = false;
+    purgeWord = '';
+  }
+
+  async function confirmDeletion(): Promise<void> {
+    if (selectedThreadId === undefined) {
+      return;
+    }
+    deletionBusy = true;
+    deletionError = '';
+    try {
+      const { body } = await fetchJson(
+        `/api/threads/${encodeURIComponent(selectedThreadId)}/deletion`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            mode: deletionMode,
+            confirmed: true,
+            key: `deletion-${crypto.randomUUID()}`,
+          }),
+        },
+      );
+      const result = body as {
+        ok: boolean;
+        value?: { row?: { status: string } };
+        code?: string;
+      };
+      if (result.ok && result.value?.row) {
+        deletionNotice =
+          result.value.row.status === 'completed'
+            ? deletionMode === 'conversation-only'
+              ? 'The conversation was deleted. Your saved meaning from other places is untouched and stays in force.'
+              : 'The conversation and the meaning that started in it were deleted. Other conversations’ meaning is untouched.'
+            : `The deletion is not fully complete yet (status: ${result.value.row.status}). Nothing is hidden; you can retry.`;
+        if (result.value.row.status !== 'completed') {
+          deletionError = 'QLT_DELETION_INCOMPLETE';
+        }
+        await refreshThreads();
+        closeDeletionChooser();
+      } else {
+        deletionError = result.code ?? 'QLT_DELETION_INCOMPLETE';
+      }
+    } catch {
+      deletionError = 'QLT_DELETION_INCOMPLETE';
+    } finally {
+      deletionBusy = false;
+    }
+  }
+
+  async function cancelDeletionOperation(): Promise<void> {
+    if (selectedThreadId === undefined) {
+      return;
+    }
+    deletionBusy = true;
+    try {
+      await fetchJson(`/api/threads/${encodeURIComponent(selectedThreadId)}/deletion`, {
+        method: 'DELETE',
+      });
+      deletionNotice = 'The deletion was canceled before it ran. Nothing was changed.';
+      closeDeletionChooser();
+    } finally {
+      deletionBusy = false;
+    }
+  }
+
+  async function confirmPurge(): Promise<void> {
+    if (selectedThreadId === undefined || purgeWord !== 'purge') {
+      return;
+    }
+    purgeBusy = true;
+    deletionError = '';
+    try {
+      const { body } = await fetchJson(
+        `/api/threads/${encodeURIComponent(selectedThreadId)}/purge`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ confirmation: purgeWord }),
+        },
+      );
+      const result = body as { ok: boolean; code?: string };
+      if (result.ok) {
+        deletionNotice =
+          'The deep purge finished inside this application’s stores. Content may still exist in Git history, operating-system backups, external copies, or provider systems; this is not secure erasure.';
+        await refreshThreads();
+        closeDeletionChooser();
+      } else {
+        deletionError = result.code ?? 'QLT_PURGE_INCOMPLETE';
+      }
+    } catch {
+      deletionError = 'QLT_PURGE_INCOMPLETE';
+    } finally {
+      purgeBusy = false;
+    }
+  }
+
+  async function exportUserData(): Promise<void> {
+    deletionError = '';
+    try {
+      const response = await fetch('/api/export');
+      if (!response.ok) {
+        deletionError = 'QLT_EXPORT_FAILED';
+        return;
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = 'quellight-user-export.json';
+      anchor.click();
+      URL.revokeObjectURL(url);
+      deletionNotice =
+        'The export was generated and handed to you. It is not stored by the application.';
+    } catch {
+      deletionError = 'QLT_EXPORT_FAILED';
+    }
+  }
 
   // ---- Q4 quiet context-usage line (frozen contract §9; D-Q4-6) ----------
   // One quiet, non-interruptive line inside the USER-OPENED tray only,
@@ -1424,8 +1721,113 @@
                 >Archive</button
               >
             {/if}
+            {#if !archived && !deletedConversation}
+              <!-- D2: the conversation-deletion chooser (conversation-only
+                   is the DEFAULT; nothing destructive is preselected beyond
+                   that default; the confirmation appears only after this
+                   intentional click) -->
+              <button
+                type="button"
+                class="qlt-btn"
+                data-testid="delete-conversation"
+                onclick={() => void openDeletionChooser()}
+              >
+                Delete
+              </button>
+            {/if}
           {/if}
         </div>
+
+        {#if deletedConversation}
+          <!-- D2: truthful deleted state (content-free tombstone) -->
+          <p class="qlt-banner" role="status" data-testid="deleted-banner">
+            This conversation was deleted. Its content is gone from this application's stores;
+            only a content-free record remains. Saved meaning from other conversations is
+            untouched.
+          </p>
+        {/if}
+        {#if deleting && deletionPreview}
+          <section class="qlt-banner" aria-label="Delete this conversation" data-testid="deletion-chooser">
+            <p><strong>Delete this conversation?</strong></p>
+            <label class="qlt-deletion-option">
+              <input type="radio" name="qlt-deletion-mode" value="conversation-only" bind:group={deletionMode} />
+              <span>
+                <strong>Delete conversation only</strong> (default). The messages and the assistant's
+                memory of this conversation are deleted through the governed boundary. Your saved
+                Shared World meaning is preserved and stays in force.
+              </span>
+            </label>
+            <label class="qlt-deletion-option">
+              <input type="radio" name="qlt-deletion-mode" value="conversation-and-originating-meaning" bind:group={deletionMode} />
+              <span>
+                <strong>Also delete the meaning that started in this conversation.</strong> Only
+                records proven to originate here are removed (content-free tombstones; deterministic
+                dependency rules). Meaning from other conversations and global records are never
+                touched.{deletionPreview.originating.current > 0
+                  ? ` This will remove ${deletionPreview.originating.current} record${deletionPreview.originating.current === 1 ? '' : 's'} and withdraw ${deletionPreview.pendingProposals} pending proposal${deletionPreview.pendingProposals === 1 ? '' : 's'}.`
+                  : ' No originating records exist.'}
+              </span>
+            </label>
+            <div class="qlt-memory-actions">
+              <button type="button" class="qlt-btn" disabled={deletionBusy} onclick={() => void confirmDeletion()} data-testid="confirm-deletion">
+                Confirm delete
+              </button>
+              <button type="button" class="qlt-btn" disabled={deletionBusy} onclick={() => void cancelDeletionOperation()}>
+                Cancel
+              </button>
+            </div>
+          </section>
+        {/if}
+        {#if deletedConversation && !purgeOpen}
+          <!-- D2: deep purge — separate, explicit, never default, never
+               combined with ordinary removal; only for an already deleted
+               conversation -->
+          <div class="qlt-memory-actions">
+            <button type="button" class="qlt-btn" onclick={() => (purgeOpen = true)} data-testid="open-purge">
+              Deep purge remaining records
+            </button>
+          </div>
+        {/if}
+        {#if deletedConversation && purgeOpen}
+          <section class="qlt-banner" aria-label="Deep purge this conversation">
+            <p>
+              Deep purge removes the remaining rows of this deleted conversation from this
+              application's stores and reclaims freed space. This is not secure erasure: content
+              may remain in Git history, operating-system backups, external copies, and provider
+              systems.
+            </p>
+            <label class="qlt-visually-hidden" for="qlt-purge-word">Type purge to confirm</label>
+            <input
+              id="qlt-purge-word"
+              class="qlt-input"
+              placeholder="Type purge to confirm"
+              bind:value={purgeWord}
+            />
+            <div class="qlt-memory-actions">
+              <button
+                type="button"
+                class="qlt-btn"
+                disabled={purgeBusy || purgeWord !== 'purge'}
+                onclick={() => void confirmPurge()}
+                data-testid="confirm-purge"
+              >
+                Deep purge
+              </button>
+              <button type="button" class="qlt-btn" onclick={() => ((purgeOpen = false), (purgeWord = ''))}>
+                Cancel
+              </button>
+            </div>
+          </section>
+        {/if}
+        {#if deletionNotice !== ''}
+          <p class="qlt-banner" role="status" data-testid="deletion-notice">{deletionNotice}</p>
+        {/if}
+        {#if deletionError !== ''}
+          <p class="qlt-banner qlt-banner--warn" role="status">
+            The last deletion/export action did not complete ({deletionError}). Nothing is hidden;
+            you can retry.
+          </p>
+        {/if}
 
         {#if archived}
           <p class="qlt-banner" role="status">
@@ -1549,6 +1951,83 @@
                 </span>
               {/if}
             </fieldset>
+
+            <!-- Stage 07D D1/D3/D2: the quiet data-safety area (USER
+                 authority only). Conflict challenges surface here as plain
+                 list rows with quiet dismiss/resolve paths; the retention
+                 pass is a visible user action; the export is one explicit
+                 button. Nothing interrupts: no modal, tray, or focus
+                 change exists behind this section. -->
+            <section class="qlt-memory-mode" aria-label="Data safety" data-testid="data-safety">
+              <legend class="qlt-memory-mode-legend">Data safety</legend>
+              {#if openChallenges().length > 0}
+                <p class="qlt-memory-area-hint">
+                  {openChallenges().length} saved-item conflict{openChallenges().length === 1 ? '' : 's'} need{openChallenges().length === 1 ? 's' : ''} your
+                  decision (nothing is decided for you).
+                </p>
+                <ul class="qlt-memory-list">
+                  {#each openChallenges() as row (row.challengeId)}
+                    <li class="qlt-memory-item" data-testid="challenge-row">
+                      <div class="qlt-memory-item-head">
+                        <span class="qlt-memory-kind">Saved-item conflict</span>
+                        <span class="qlt-memory-status">open</span>
+                      </div>
+                      <p class="qlt-memory-text">
+                        A confirmation would clash with an existing commitment. Your existing
+                        commitment stays in force until you decide.
+                      </p>
+                      {#if resolvingChallengeId === row.challengeId}
+                        <label class="qlt-visually-hidden" for="qlt-resolve-{row.challengeId}">Amended commitment text</label>
+                        <textarea
+                          id="qlt-resolve-{row.challengeId}"
+                          class="qlt-input qlt-memory-input"
+                          rows="2"
+                          placeholder="The amended commitment text"
+                          bind:value={resolveStatement}
+                        ></textarea>
+                        <div class="qlt-memory-actions">
+                          <button type="button" class="qlt-btn" disabled={memoryBusy} onclick={() => void commitResolveChallenge()}>
+                            Amend and resolve
+                          </button>
+                          <button type="button" class="qlt-btn" onclick={() => (resolvingChallengeId = undefined)}>
+                            Cancel
+                          </button>
+                        </div>
+                      {:else}
+                        <div class="qlt-memory-actions">
+                          <button type="button" class="qlt-btn" disabled={memoryBusy} onclick={() => void dismissChallenge(row)} data-testid="dismiss-challenge">
+                            Keep existing, dismiss
+                          </button>
+                          <button type="button" class="qlt-btn" disabled={memoryBusy} onclick={() => startResolveChallenge(row)}>
+                            Amend existing…
+                          </button>
+                        </div>
+                      {/if}
+                    </li>
+                  {/each}
+                </ul>
+              {:else}
+                <p class="qlt-memory-area-hint">No saved-item conflicts are waiting for you.</p>
+              {/if}
+              <div class="qlt-memory-actions">
+                <button
+                  type="button"
+                  class="qlt-btn"
+                  disabled={memoryBusy}
+                  onclick={() => void runRetentionPass()}
+                  data-testid="run-retention-pass"
+                >
+                  Run retention pass
+                </button>
+                <button type="button" class="qlt-btn" disabled={memoryBusy} onclick={() => void exportUserData()} data-testid="export-data">
+                  Export my data
+                </button>
+              </div>
+              <p class="qlt-memory-mode-scope">
+                The retention pass expires due claims only after you run it. The export is generated
+                fresh, handed to you, and not stored.
+              </p>
+            </section>
 
             <!-- Q5 four areas -->
             <div class="qlt-memory-tabs" role="group" aria-label="Memory areas">
@@ -1734,11 +2213,42 @@
                       </div>
                     {:else}
                       <p class="qlt-memory-text">{row.text}</p>
+                      {#if expiringId === row.id}
+                        <div class="qlt-memory-actions">
+                          <button type="button" class="qlt-btn" disabled={memoryBusy} onclick={() => void setExpiry(row, 1)}>
+                            Expire in 1 day
+                          </button>
+                          <button type="button" class="qlt-btn" disabled={memoryBusy} onclick={() => void setExpiry(row, 7)}>
+                            In 7 days
+                          </button>
+                          <button type="button" class="qlt-btn" disabled={memoryBusy} onclick={() => void setExpiry(row, 30)}>
+                            In 30 days
+                          </button>
+                          <button type="button" class="qlt-btn" disabled={memoryBusy} onclick={() => void setExpiry(row, null)}>
+                            Clear expiry
+                          </button>
+                          <button type="button" class="qlt-btn" onclick={() => (expiringId = undefined)}>
+                            Cancel
+                          </button>
+                        </div>
+                      {/if}
                       <div class="qlt-memory-actions">
                         <button type="button" class="qlt-btn" disabled={memoryBusy} onclick={() => startCorrect(row)}>
                           Correct
                         </button>
+                        <button
+                          type="button"
+                          class="qlt-btn"
+                          disabled={memoryBusy}
+                          onclick={() => void removeRecord(row)}
+                          data-testid="remove-record"
+                        >
+                          Remove
+                        </button>
                         {#if row.kind === 'claim'}
+                          <button type="button" class="qlt-btn" disabled={memoryBusy} onclick={() => startExpiry(row)}>
+                            Expire…
+                          </button>
                           <button type="button" class="qlt-btn" disabled={memoryBusy} onclick={() => startExit(row, 'retire')}>
                             Retire claim
                           </button>
@@ -2168,6 +2678,16 @@
     font-size: 0.72rem;
     color: var(--vict-color-muted, #575757);
   }
+  .qlt-deletion-option {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    margin: 0.5rem 0;
+  }
+  .qlt-deletion-option input {
+    margin-top: 0.3rem;
+  }
+
   .qlt-memory-tabs {
     display: flex;
     flex-wrap: wrap;

@@ -93,12 +93,14 @@ describe('Q4 migration 3: the immutable per-turn context-assembly family', () =>
     // (qlt-memory-mode-policy) is applied on top of the frozen Q4 schema.
     // D1a bounded re-pin: migration 5 (qlt-retention-conflict-foundations)
     // is applied on top; the frozen Q4 migration identity is unchanged.
-    expect(applied.map((migration) => migration.version)).toEqual([1, 2, 3, 4, 5]);
+    // D2 bounded re-pin: migration 6 applied on top (identity unchanged).
+    expect(applied.map((migration) => migration.version)).toEqual([1, 2, 3, 4, 5, 6]);
     // Q5/D1a bounded re-pin: the schema version advanced; the frozen Q4
     // migration identity is unchanged in the applied list.
-    expect(QLT_SHARED_WORLD_SCHEMA_VERSION).toBe(5);
+    expect(QLT_SHARED_WORLD_SCHEMA_VERSION).toBe(6);
     expect(applied.map((migration) => migration.name)).toContain(QLT_CONTEXT_MIGRATION.name);
-    expect(applied.at(-1)?.name).toBe('qlt-retention-conflict-foundations');
+    // D2 bounded re-pin: migration 6 is the newest applied migration.
+    expect(applied.at(-1)?.name).toBe('qlt-conversation-deletion-foundations');
     const table = raw
       .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?;")
       .get(QLT_CONTEXT_ASSEMBLY_TABLE) as { sql: string };
