@@ -407,6 +407,10 @@ describe('Q6 hostile-memory containment and authority (real composition, offline
         'act.removeRecord',
         'act.setClaimExpiry',
         'act.runRetentionPass',
+        'act.queryConflict',
+        'act.amendCommitment',
+        'act.dismissChallenge',
+        'act.resolveChallengeWithAmendment',
       ].sort(),
     );
     // The declared product bindings stay EMPTY (the agent envelope is the

@@ -71,10 +71,7 @@ import {
   createRetentionSurface,
   type RetentionSurfaceDeps,
 } from '../sharedworld/retention-surface';
-import {
-  QLT_CONFLICT_RESOURCE_ID,
-  QLT_RETENTION_RESOURCE_ID,
-} from '../sharedworld/d1-contract';
+import { QLT_CONFLICT_RESOURCE_ID, QLT_RETENTION_RESOURCE_ID } from '../sharedworld/d1-contract';
 import {
   createConflictSurface,
   detectCommitmentConflict,
@@ -809,7 +806,6 @@ export async function createQuellightComposition(
     retention: sharedWorld.retention,
     userActorId: LOCAL_ACTOR_ID,
   } satisfies RetentionSurfaceDeps);
-
 
   // ---- Q5 inspection and Memory Mode surfaces (one bounded read surface;
   // ONE user-attributed Memory Mode mutation; both routed by resourceId

@@ -114,7 +114,10 @@ function projectionOfChallenge(view: QltChallengeView): Record<string, unknown> 
     existingCommitmentId: view.existingCommitmentId,
     // Truthful CURRENT state of the referenced rows (a removed commitment
     // renders its tombstone state, never its content).
-    existingStatus: view.existingState === null ? 'missing' : `${view.existingState.status}/${view.existingState.retentionState}`,
+    existingStatus:
+      view.existingState === null
+        ? 'missing'
+        : `${view.existingState.status}/${view.existingState.retentionState}`,
     incomingProposalId: view.incomingProposalId,
     incomingStatus: view.incomingState === null ? 'missing' : view.incomingState.status,
     resolution: view.resolution ?? '',
@@ -227,7 +230,8 @@ export function createConflictSurface(deps: ConflictSurfaceDeps): {
         message: 'Access was requested with an effect that does not match the operation.',
       } as ApplicationDataResult;
     }
-    const required = effect === 'read' ? QLT_CONFLICT_READ_PERMISSION : QLT_CONFLICT_WRITE_PERMISSION;
+    const required =
+      effect === 'read' ? QLT_CONFLICT_READ_PERMISSION : QLT_CONFLICT_WRITE_PERMISSION;
     if (!context.permissions.includes(required)) {
       return {
         ok: false,
@@ -261,7 +265,10 @@ export function createConflictSurface(deps: ConflictSurfaceDeps): {
     }
     try {
       const page = deps.conflict.listChallenges({
-        status: typeof filters['status'] === 'string' ? (filters['status'] as QltChallengeStatus) : undefined,
+        status:
+          typeof filters['status'] === 'string'
+            ? (filters['status'] as QltChallengeStatus)
+            : undefined,
         threadId: typeof filters['threadId'] === 'string' ? filters['threadId'] : undefined,
         ...(typeof request.limit === 'number' ? { limit: request.limit } : {}),
         ...(typeof request.offset === 'number' ? { offset: request.offset } : {}),

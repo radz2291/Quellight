@@ -1679,9 +1679,13 @@ describe('A-29: no production path reaches the meaning repository outside the go
         'act.removeRecord',
         'act.setClaimExpiry',
         'act.runRetentionPass',
+        'act.queryConflict',
+        'act.amendCommitment',
+        'act.dismissChallenge',
+        'act.resolveChallengeWithAmendment',
       ].sort(),
     );
-    expect(actionIds).toHaveLength(25);
+    expect(actionIds).toHaveLength(29);
     const threadActionIds = actionIds.filter(
       (id) => (plan.actions[id] as { resourceId?: string }).resourceId === 'qlt.threads',
     );

@@ -167,7 +167,10 @@ export function createSharedWorldConflictStore(
 
   // ---- keyed idempotency (the shared application-layer table) ----------------
 
-  function lookupKey(scope: string, key: string): { rowIdentity: string; fingerprint: string } | undefined {
+  function lookupKey(
+    scope: string,
+    key: string,
+  ): { rowIdentity: string; fingerprint: string } | undefined {
     const row = db
       .prepare('SELECT row_identity, fingerprint FROM qlt_adapter_idempotency WHERE scope_key = ?;')
       .get(`${scope}::${key}`) as { row_identity: string; fingerprint: string } | undefined;
@@ -207,8 +210,7 @@ export function createSharedWorldConflictStore(
 
   function getChallengeRow(id: string): RawRow | undefined {
     return db.prepare('SELECT * FROM qlt_conflict_challenge WHERE id = ?;').get(id) as
-      | RawRow
-      | undefined;
+      RawRow | undefined;
   }
   function getCommitmentRow(id: string): RawRow | undefined {
     return db.prepare('SELECT * FROM qlt_commitment WHERE id = ?;').get(id) as RawRow | undefined;
@@ -380,7 +382,10 @@ export function createSharedWorldConflictStore(
       // The detector's frozen precondition: the referenced commitment is
       // ACTIVE and currently-relevant, and the incoming proposal carries
       // the SAME commitment key.
-      if (str(existing, 'status') !== 'active' || str(existing, 'retention_state') !== 'currently-relevant') {
+      if (
+        str(existing, 'status') !== 'active' ||
+        str(existing, 'retention_state') !== 'currently-relevant'
+      ) {
         throw new QltMeaningError(
           'QLT_COMMITMENT_CONFLICT',
           'The referenced commitment is not active and currently-relevant.',
@@ -560,7 +565,10 @@ export function createSharedWorldConflictStore(
         const amendmentRow = db
           .prepare('SELECT * FROM qlt_amendment WHERE id = ?;')
           .get(applied.amendmentId) as RawRow;
-        return { challenge: challengeToView(getChallengeRow(challengeId)!), amendment: amendmentToView(amendmentRow) };
+        return {
+          challenge: challengeToView(getChallengeRow(challengeId)!),
+          amendment: amendmentToView(amendmentRow),
+        };
       } catch (cause) {
         db.exec('ROLLBACK;');
         throw cause;

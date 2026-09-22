@@ -215,9 +215,13 @@ describe('B-01/B-02/B-12: the single pinned capability drafts inert, correlated 
         'act.removeRecord',
         'act.setClaimExpiry',
         'act.runRetentionPass',
+        'act.queryConflict',
+        'act.amendCommitment',
+        'act.dismissChallenge',
+        'act.resolveChallengeWithAmendment',
       ].sort(),
     );
-    expect(Object.keys(plan.actions)).toHaveLength(25);
+    expect(Object.keys(plan.actions)).toHaveLength(29);
   });
 });
 

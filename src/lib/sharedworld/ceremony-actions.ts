@@ -230,9 +230,7 @@ export interface MemorySurfaceDeps {
    * `QLT_COMMITMENT_CONFLICT` refusal (quiet; zero mutation). Absent in
    * legacy test compositions — the 07C behavior is unchanged then.
    */
-  readonly conflictHook?: (
-    proposal: QltProposal,
-  ) => Promise<ApplicationDataResult | undefined>;
+  readonly conflictHook?: (proposal: QltProposal) => Promise<ApplicationDataResult | undefined>;
   /** A-AMEND-1 read-only thread-scoped record listing (same connection). */
   readonly listRecordRows: (
     options: QltMemoryListOptions,

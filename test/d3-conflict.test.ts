@@ -14,7 +14,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { createSharedWorldSqlite, type SharedWorldSqlite } from '../src/lib/sharedworld/sqlite';
-import { createMemorySurface, type MemorySurfaceDeps } from '../src/lib/sharedworld/ceremony-actions';
+import {
+  createMemorySurface,
+  type MemorySurfaceDeps,
+} from '../src/lib/sharedworld/ceremony-actions';
 import { detectCommitmentConflict } from '../src/lib/sharedworld/conflict-surface';
 
 const tempDirs: string[] = [];
@@ -99,11 +102,26 @@ async function seedCommitmentProposal(world: World, key: string, statement: stri
 
 const WRITE = { permissions: ['qlt.memory.read', 'qlt.memory.write'], effect: 'write' } as const;
 
+/** The conflict-store mutations are synchronous; assert their thrown codes. */
+function expectCode(fn: () => unknown, code: string): void {
+  try {
+    fn();
+  } catch (cause) {
+    expect((cause as { code?: string }).code).toBe(code);
+    return;
+  }
+  throw new Error(`expected the call to throw ${code}`);
+}
+
 describe('D3 Lane B: deterministic conflict identification (challenge judgment records)', () => {
   it('N-D3-1: a conflicting confirmation is refused, the challenge is recorded, and NOTHING is mutated', async () => {
     const world = await openWorld();
     const existing = await seedCommitment(world, 'conflict-key', 'the standing commitment');
-    const proposal = await seedCommitmentProposal(world, 'conflict-key', 'a contradicting duplicate');
+    const proposal = await seedCommitmentProposal(
+      world,
+      'conflict-key',
+      'a contradicting duplicate',
+    );
 
     const refusal = await world.surface.mutate(
       {
@@ -121,10 +139,9 @@ describe('D3 Lane B: deterministic conflict identification (challenge judgment r
 
     // The existing commitment keeps content, key, status, and version.
     const raw = new DatabaseSync(world.dbPath, { readOnly: true });
-    const row = raw.prepare('SELECT * FROM qlt_commitment WHERE id = ?;').get(existing.id) as Record<
-      string,
-      unknown
-    >;
+    const row = raw
+      .prepare('SELECT * FROM qlt_commitment WHERE id = ?;')
+      .get(existing.id) as Record<string, unknown>;
     raw.close();
     expect(row['status']).toBe('active');
     expect(row['version']).toBe(1);
@@ -184,7 +201,10 @@ describe('D3 Lane B: deterministic conflict identification (challenge judgment r
       {
         resourceId: 'qlt.memory',
         op: 'confirmProposal',
-        input: { proposalId: (await world.store.conflict.listChallenges({ status: 'open' })).rows[0]?.incomingProposalId },
+        input: {
+          proposalId: (await world.store.conflict.listChallenges({ status: 'open' })).rows[0]
+            ?.incomingProposalId,
+        },
         idempotencyKey: 'inert-confirm',
       },
       WRITE,
@@ -212,7 +232,18 @@ describe('D3 Lane B: deterministic conflict identification (challenge judgment r
   it('N-D3-6: agent attempts to amend, dismiss, resolve, or ensure challenges fail closed', async () => {
     const world = await openWorld();
     const existing = await seedCommitment(world, 'fence-key', 'standing');
-    await seedCommitmentProposal(world, 'fence-key', 'duplicate');
+    const proposal = await seedCommitmentProposal(world, 'fence-key', 'duplicate');
+    // The detector (a confirm attempt) creates the challenge first.
+    const refusal = await world.surface.mutate(
+      {
+        resourceId: 'qlt.memory',
+        op: 'confirmProposal',
+        input: { proposalId: proposal.id },
+        idempotencyKey: `confirm-${proposal.id}`,
+      },
+      WRITE,
+    );
+    expect(refusal.ok).toBe(false);
     const challenge = world.store.conflict.listChallenges({ status: 'open' }).rows[0];
     expect(challenge).toBeDefined();
     for (const attempt of [
@@ -273,13 +304,15 @@ describe('D3 Lane B: deterministic conflict identification (challenge judgment r
     });
     expect(dismissed).toMatchObject({ status: 'dismissed', resolution: 'incoming-abandoned' });
     // A decided challenge refuses further transitions.
-    await expect(
-      world.store.conflict.dismissChallenge({
-        challengeId: challengeA,
-        dismissedBy: USER,
-        now: world.now.value,
-      }),
-    ).rejects.toMatchObject({ code: 'QLT_CHALLENGE_NOT_OPEN' });
+    expectCode(
+      () =>
+        world.store.conflict.dismissChallenge({
+          challengeId: challengeA,
+          dismissedBy: USER,
+          now: world.now.value,
+        }),
+      'QLT_CHALLENGE_NOT_OPEN',
+    );
 
     // Resolve-with-amendment: amendment + challenge resolution together.
     const proposalB = await seedCommitmentProposal(world, 'lifecycle-key', 'duplicate B');
@@ -299,17 +332,33 @@ describe('D3 Lane B: deterministic conflict identification (challenge judgment r
       resolvedBy: USER,
       now: world.now.value,
     });
-    expect(resolved.challenge).toMatchObject({ status: 'resolved', resolution: 'existing-amended' });
+    expect(resolved.challenge).toMatchObject({
+      status: 'resolved',
+      resolution: 'existing-amended',
+    });
     // The amendment mechanics ran: predecessor amended, successor active.
     const predecessor = await world.store.meaning.getCommitment(resolved.amendment.commitmentId);
     expect(predecessor?.status).toBe('amended');
     const successor = await world.store.meaning.getCommitment(resolved.amendment.successorId);
-    expect(successor).toMatchObject({ status: 'active', supersedesId: resolved.amendment.commitmentId });
-    const amendments = world.store.conflict.listAmendments({ commitmentId: resolved.amendment.commitmentId });
-    expect(amendments.map((amendment) => amendment.amendmentId)).toContain(resolved.amendment.amendmentId);
+    expect(successor).toMatchObject({
+      status: 'active',
+      supersedesId: resolved.amendment.commitmentId,
+    });
+    const amendments = world.store.conflict.listAmendments({
+      commitmentId: resolved.amendment.commitmentId,
+    });
+    expect(amendments.map((amendment) => amendment.amendmentId)).toContain(
+      resolved.amendment.amendmentId,
+    );
     // The lineage link exists (successor --amends--> predecessor).
-    const links = await world.store.meaning.listSourceLinks({ fromRecordId: resolved.amendment.successorId });
-    expect(links.some((link) => link.relation === 'amends' && link.toRef === resolved.amendment.commitmentId)).toBe(true);
+    const links = await world.store.meaning.listSourceLinks({
+      fromRecordId: resolved.amendment.successorId,
+    });
+    expect(
+      links.some(
+        (link) => link.relation === 'amends' && link.toRef === resolved.amendment.commitmentId,
+      ),
+    ).toBe(true);
   });
 });
 
@@ -344,15 +393,17 @@ describe('D3 Lane B: amendment-versus-execution (structural distinction)', () =>
   it('N-D3-3: stale-version amendments (and removed/expired predecessors) fail with zero effect', async () => {
     const world = await openWorld();
     const commitment = await seedCommitment(world, 'stale-amend-key', 'original');
-    await expect(
-      world.store.conflict.amendCommitment({
-        commitmentId: commitment.id,
-        statement: 'revised',
-        expectedVersion: commitment.version + 9,
-        amendedBy: USER,
-        now: world.now.value,
-      }),
-    ).rejects.toMatchObject({ code: 'QLT_VERSION_CONFLICT' });
+    expectCode(
+      () =>
+        world.store.conflict.amendCommitment({
+          commitmentId: commitment.id,
+          statement: 'revised',
+          expectedVersion: commitment.version + 9,
+          amendedBy: USER,
+          now: world.now.value,
+        }),
+      'QLT_VERSION_CONFLICT',
+    );
     // A REMOVED commitment can never be amended.
     await world.store.retention.removeRecord({
       recordId: commitment.id,
@@ -360,14 +411,16 @@ describe('D3 Lane B: amendment-versus-execution (structural distinction)', () =>
       removedBy: USER,
       now: world.now.value,
     });
-    await expect(
-      world.store.conflict.amendCommitment({
-        commitmentId: commitment.id,
-        statement: 'revised',
-        amendedBy: USER,
-        now: world.now.value,
-      }),
-    ).rejects.toMatchObject({ code: 'QLT_RECORD_NOT_CURRENT' });
+    expectCode(
+      () =>
+        world.store.conflict.amendCommitment({
+          commitmentId: commitment.id,
+          statement: 'revised',
+          amendedBy: USER,
+          now: world.now.value,
+        }),
+      'QLT_RECORD_NOT_CURRENT',
+    );
     // An EXPIRED claim path is a claim; an expired COMMITMENT cannot
     // exist (no expiry metadata for commitments), so the guard above is
     // the complete refusal surface. Zero amendment rows exist.
@@ -395,8 +448,16 @@ describe('D3 Lane B: amendment-versus-execution (structural distinction)', () =>
       sourceThreadId: world.threadId,
       now: world.now.value,
     });
-    await world.store.meaning.retireClaim({ recordId: claim.id, exitedBy: USER, now: world.now.value });
-    await world.store.meaning.resolveLoop({ loopId: loop.id, exitedBy: USER, now: world.now.value });
+    await world.store.meaning.retireClaim({
+      recordId: claim.id,
+      exitedBy: USER,
+      now: world.now.value,
+    });
+    await world.store.meaning.resolveLoop({
+      loopId: loop.id,
+      exitedBy: USER,
+      now: world.now.value,
+    });
     await world.store.meaning.applyCorrection({
       subjectRecordId: (
         await world.store.meaning.createClaim({
@@ -463,7 +524,11 @@ describe('D3 Lane B: quiet presentation and challenge convergence under concurre
     // The projection is plain data: identifiers, states, timestamps. No
     // presentation verb, priority, or interruption flag exists at all.
     for (const key of Object.keys(view)) {
-      expect(['modal', 'focus', 'tray', 'interrupt', 'priority', 'urgent'].some((banned) => key.toLowerCase().includes(banned))).toBe(false);
+      expect(
+        ['modal', 'focus', 'tray', 'interrupt', 'priority', 'urgent'].some((banned) =>
+          key.toLowerCase().includes(banned),
+        ),
+      ).toBe(false);
     }
   });
 
