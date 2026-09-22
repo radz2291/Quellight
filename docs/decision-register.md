@@ -1622,3 +1622,63 @@ authorization shape; audit shape). Nothing is frozen, implemented, verified,
 or closed by this entry.
 
 Record: [the D0 planning document](report/QUELLIGHT-STAGE-07D-PHASE-D0-PLANNING-AND-OWNER-DECISIONS.md). **Stage 07D planning is COMPLETE; owner decisions are PENDING; Stage 07D implementation has NOT begun; Stage 07E has NOT begun; Stage 07 remains In Progress.**
+
+## D-07D-1 — Stage 07D owner decisions APPROVED and BINDING (recorded at the D1a freeze)
+
+**Date:** 2026-09-22. **Trigger:** the D0 planning document's six pending
+decisions. The owner approved all six with the recommended defaults; they
+are now BINDING Stage 07D decisions and are codified by the D1a contract
+freeze:
+
+1. **Expiry:** none automatic by default; user-assigned expiry on
+   individual CLAIMS only; commitments and open loops never expire
+   automatically; expiry is applied only by a visible deterministic
+   enforcement pass, never silently from elapsed time during ordinary
+   reads.
+2. **Removal depth:** normal removal immediately makes content ineligible
+   everywhere; only a content-free tombstone and truthful residue
+   disclosure remain; a separate explicit deep-purge for eligible
+   remaining content is D2 scope; deletion is never claimed against
+   storage, evidence, backups, or external systems unless proven.
+3. **Conversation deletion (D2):** always ask — conversation only
+   (default) or conversation plus Shared World meaning originating from
+   it; never a silent cascade.
+4. **Conflicts:** a conflict with an active commitment produces a visible,
+   dismissible, quiet, non-blocking challenge proposal; never a silent
+   overwrite, harmonization, reinterpretation, or execution against the
+   commitment; no modal, focus theft, tray auto-open, interruption, or
+   forced decision.
+5. **Real-use proof:** D4 uses one bounded owner-authorized structured
+   session plus a short organic-use observation window; D4 is not
+   executed before its phase and no provider is accessed in D1.
+6. **Audit:** per-phase self-verification and one combined independent
+   audit after D4; before D4, D2 deletion/export/reconciliation passes a
+   focused data-safety gate (not a duplicate full audit).
+
+## D-07D-2 — Stage 07D Phase D1a joint contract freeze (declarative; committed alone)
+
+**Date:** 2026-09-22. The joint D1/D3 foundation contract is FROZEN in
+`src/lib/sharedworld/d1-contract.ts` and the freeze report, including: the
+3-state meaning-family retention vocabulary with its closed transition
+table (the 07B thread family keeps its 2-state vocabulary); content-free
+tombstone column rules as STORAGE CHECKs; claim-only expiry metadata;
+enforcement-pass rules with append-only pass evidence; the bounded
+dependency re-evaluation; the single deterministic conflict classification
+(`commitment-key-conflict`) with quiet dismissible challenge judgment
+records; the structural amendment-versus-execution distinction with the
+`qlt_amendment` judgment family; the clarification boundary (no durable
+clarification artifact, no agent-surface change in D1); the eight new
+governed actions on two new resources (`qlt.retention`, `qlt.conflict`);
+the UI truthfulness/non-interruption rules; the durability rules; migration
+5 (`qlt-retention-conflict-foundations`) with its rebuild/copy rules and
+new-family inventories; the N-D1/N-D3 negative-control matrix; lane
+ownership and integration order; D2-facing interfaces; and the explicit
+exclusions (deep purge, export, thread deletion, cross-store
+reconciliation, D4/D5/07E, agent-surface widening).
+
+Explicit data amendments to the frozen Q2 module `meaning-contract.ts`
+(retention vocabulary, nullable content columns, expiry/removal columns,
+amended inventory) are recorded in its header and the freeze report §3.
+The freeze commit contains NO executable behavior change.
+
+Record: [the D1a freeze report](report/QUELLIGHT-STAGE-07D-PHASE-D1A-CONTRACT-FREEZE.md). **Stage 07D foundations are FROZEN; implementation lanes are next; nothing is implemented, verified, or closed by this entry.**

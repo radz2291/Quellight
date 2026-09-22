@@ -1,6 +1,13 @@
 /**
  * QLTLIGHT STAGE 07C PHASE Q2 — DURABLE SHARED WORLD SCHEMA CONTRACT
- * (FROZEN in docs/report/QUELLIGHT-STAGE-07C-PHASE-Q2-CONTRACT-FREEZE.md).
+ * (FROZEN in docs/report/QUELLIGHT-STAGE-07C-PHASE-Q2-CONTRACT-FREEZE.md;
+ * DATA-AMENDED by the STAGE 07D PHASE D1a freeze — see
+ * docs/report/QUELLIGHT-STAGE-07D-PHASE-D1A-CONTRACT-FREEZE.md and
+ * `d1-contract.ts`: the meaning-family retention vocabulary gains
+ * `expired`, the three subject-family content columns become nullable
+ * for the content-free tombstone, and claims gain expiry metadata plus
+ * removal bookkeeping; migration 5 rebuilds the six meaning tables to
+ * this exact shape).
  *
  * This module is the FROZEN, declarative Q2 contract shared by every Q2
  * lane. It contains contract DATA and TYPES only (plus the deterministic
@@ -96,8 +103,15 @@ export type QltConfidence = (typeof QLT_CONFIDENCE_LEVELS)[number];
 export const QLT_LOOP_KINDS = ['pending_action', 'undecided_question', 'expected_event'] as const;
 export type QltLoopKind = (typeof QLT_LOOP_KINDS)[number];
 
-/** The closed 07B/07C retention vocabulary (07D adds tombstone semantics). */
-export const QLT_RETENTION_STATES = ['currently-relevant', 'user-removed'] as const;
+/**
+ * The meaning-family retention vocabulary. STAGE 07D PHASE D1a FREEZE
+ * AMENDMENT: extends the 07C two-state list with `expired` (the
+ * enforcement-pass state for user-assigned claim expiry; write paths are
+ * frozen in `d1-contract.ts`). The 07B `qlt_thread` family keeps its
+ * closed 2-state vocabulary (`currently-relevant` | `user-removed`;
+ * thread removal arrives with D2, never D1).
+ */
+export const QLT_RETENTION_STATES = ['currently-relevant', 'expired', 'user-removed'] as const;
 export type QltRetentionState = (typeof QLT_RETENTION_STATES)[number];
 
 /** Source-link relation vocabulary (closed; append-only links). */
@@ -863,11 +877,36 @@ const SOURCE_THREAD_COLUMN: QltColumnSpec = {
   notNull: false,
 };
 const SOURCE_TURN_COLUMN: QltColumnSpec = { name: 'source_turn_ref', type: 'TEXT', notNull: false };
-const RETENTION_CHECK = "retention_state IN ('currently-relevant','user-removed')";
+/** D1a freeze amendment: the 3-state meaning-family retention CHECK. */
+const RETENTION_CHECK = "retention_state IN ('currently-relevant','expired','user-removed')";
 const CONTENT_CHECK = 'length(CAST(content AS BLOB)) <= 4096';
 const FINGERPRINT_CHECK = 'length(content_fingerprint) = 64';
 const CREATED_BY_CHECK = "created_by GLOB 'actor-*'";
 const SUPERSEDES_CHECK = '(supersedes_id IS NULL) OR (supersedes_id <> id)';
+/**
+ * D1a freeze amendment fragments (nullable content fields for the
+ * content-free tombstone; expiry metadata on claims; removal
+ * bookkeeping). The migration-5 rebuild DDL is the byte-exact source;
+ * these fragment expressions appear verbatim in it and in the amended
+ * per-table inventory below.
+ */
+const NULLABLE_ENUM_CHECK = (column: string, values: string) =>
+  `((${column} IS NULL) OR (${column} IN (${values})))`;
+const TOMBSTONE_CLAIM_CHECK =
+  "(retention_state <> 'user-removed') OR (subject IS NULL AND epistemic_type IS NULL AND honesty_state IS NULL AND confidence IS NULL AND content IS NULL AND content_fingerprint IS NULL)";
+const TOMBSTONE_COMMITMENT_CHECK =
+  "(retention_state <> 'user-removed') OR (commitment_key IS NULL AND content IS NULL AND content_fingerprint IS NULL)";
+const TOMBSTONE_OPEN_LOOP_CHECK =
+  "(retention_state <> 'user-removed') OR (subject IS NULL AND loop_kind IS NULL AND exit_reason IS NULL AND content IS NULL AND content_fingerprint IS NULL)";
+const REMOVAL_BOOKKEEPING_CHECK =
+  "((removed_by IS NULL) = (removed_at_ms IS NULL)) AND ((removed_at_ms IS NULL) = (retention_state <> 'user-removed'))";
+const EXPIRY_BOUNDS_CHECK = '(expires_at_ms IS NULL) OR (expires_at_ms >= 0)';
+const EXPIRY_STATE_CHECK =
+  "(expires_at_ms IS NULL) OR (retention_state IN ('currently-relevant','expired'))";
+/** Removal bookkeeping columns (identical shape on all three families). */
+const REMOVED_AT_COLUMN: QltColumnSpec = { name: 'removed_at_ms', type: 'INTEGER', notNull: false };
+const REMOVED_BY_COLUMN: QltColumnSpec = { name: 'removed_by', type: 'TEXT', notNull: false };
+const EXPIRES_AT_COLUMN: QltColumnSpec = { name: 'expires_at_ms', type: 'INTEGER', notNull: false };
 
 export const QLT_MEANING_SCHEMA_INVENTORY: Readonly<
   Record<(typeof QLT_MEANING_TABLES)[number], QltTableSpec>
@@ -926,12 +965,15 @@ export const QLT_MEANING_SCHEMA_INVENTORY: Readonly<
       { name: 'id', type: 'TEXT', notNull: true },
       VERSION_COLUMN,
       { name: 'status', type: 'TEXT', notNull: true },
-      { name: 'epistemic_type', type: 'TEXT', notNull: true },
-      { name: 'honesty_state', type: 'TEXT', notNull: true },
-      { name: 'confidence', type: 'TEXT', notNull: true },
-      { name: 'subject', type: 'TEXT', notNull: true },
-      CONTENT_COLUMN,
-      CONTENT_FINGERPRINT_COLUMN,
+      // D1a amendment: content-bearing columns are NULLABLE so a removal
+      // can null them (the content-free tombstone; enforced by the
+      // TOMBSTONE_CLAIM_CHECK below, not by convention).
+      { name: 'epistemic_type', type: 'TEXT', notNull: false },
+      { name: 'honesty_state', type: 'TEXT', notNull: false },
+      { name: 'confidence', type: 'TEXT', notNull: false },
+      { name: 'subject', type: 'TEXT', notNull: false },
+      { name: 'content', type: 'TEXT', notNull: false },
+      { name: 'content_fingerprint', type: 'TEXT', notNull: false },
       { name: 'proposal_id', type: 'TEXT', notNull: false },
       { name: 'created_by', type: 'TEXT', notNull: true },
       { name: 'supersedes_id', type: 'TEXT', notNull: false },
@@ -940,6 +982,9 @@ export const QLT_MEANING_SCHEMA_INVENTORY: Readonly<
       CREATED_AT_COLUMN,
       UPDATED_AT_COLUMN,
       EFFECTIVE_AT_COLUMN,
+      EXPIRES_AT_COLUMN,
+      REMOVED_AT_COLUMN,
+      REMOVED_BY_COLUMN,
       RETENTION_COLUMN,
     ],
     indexes: [
@@ -949,6 +994,12 @@ export const QLT_MEANING_SCHEMA_INVENTORY: Readonly<
         columns: ['status', 'retention_state', 'effective_at_ms'],
         unique: false,
       },
+      {
+        name: 'idx_qlt_claim_due_expiry',
+        columns: ['expires_at_ms'],
+        unique: false,
+        partialWhere: "status = 'active' AND retention_state = 'currently-relevant'",
+      },
     ],
     foreignKeys: [
       { column: 'proposal_id', targetTable: 'qlt_proposal', targetColumn: 'id' },
@@ -957,14 +1008,19 @@ export const QLT_MEANING_SCHEMA_INVENTORY: Readonly<
     ],
     requiredCheckFragments: [
       "status IN ('active','superseded','retired')",
-      "epistemic_type IN ('E1','E2','E3','E4','E5','E6','E7')",
-      "honesty_state IN ('known','likely','uncertain','stale','conflicted')",
-      "confidence IN ('stated','qualified','uncertain')",
-      CONTENT_CHECK,
-      FINGERPRINT_CHECK,
+      NULLABLE_ENUM_CHECK('epistemic_type', "'E1','E2','E3','E4','E5','E6','E7'"),
+      NULLABLE_ENUM_CHECK('honesty_state', "'known','likely','uncertain','stale','conflicted'"),
+      NULLABLE_ENUM_CHECK('confidence', "'stated','qualified','uncertain'"),
+      '(content IS NULL) OR (length(CAST(content AS BLOB)) > 0 AND length(CAST(content AS BLOB)) <= 4096)',
+      '(content_fingerprint IS NULL) OR (length(content_fingerprint) = 64)',
+      '((subject IS NULL) OR (length(subject) > 0 AND length(subject) <= 200))',
       CREATED_BY_CHECK,
       SUPERSEDES_CHECK,
       RETENTION_CHECK,
+      TOMBSTONE_CLAIM_CHECK,
+      REMOVAL_BOOKKEEPING_CHECK,
+      EXPIRY_BOUNDS_CHECK,
+      EXPIRY_STATE_CHECK,
     ],
   },
   qlt_commitment: {
@@ -972,9 +1028,10 @@ export const QLT_MEANING_SCHEMA_INVENTORY: Readonly<
       { name: 'id', type: 'TEXT', notNull: true },
       VERSION_COLUMN,
       { name: 'status', type: 'TEXT', notNull: true },
-      { name: 'commitment_key', type: 'TEXT', notNull: true },
-      CONTENT_COLUMN,
-      CONTENT_FINGERPRINT_COLUMN,
+      // D1a amendment: nullable for the content-free tombstone.
+      { name: 'commitment_key', type: 'TEXT', notNull: false },
+      { name: 'content', type: 'TEXT', notNull: false },
+      { name: 'content_fingerprint', type: 'TEXT', notNull: false },
       { name: 'normative_basis_proposal_id', type: 'TEXT', notNull: false },
       { name: 'proposal_id', type: 'TEXT', notNull: false },
       { name: 'created_by', type: 'TEXT', notNull: true },
@@ -984,6 +1041,8 @@ export const QLT_MEANING_SCHEMA_INVENTORY: Readonly<
       CREATED_AT_COLUMN,
       UPDATED_AT_COLUMN,
       EFFECTIVE_AT_COLUMN,
+      REMOVED_AT_COLUMN,
+      REMOVED_BY_COLUMN,
       RETENTION_COLUMN,
     ],
     indexes: [
@@ -1012,11 +1071,14 @@ export const QLT_MEANING_SCHEMA_INVENTORY: Readonly<
     ],
     requiredCheckFragments: [
       "status IN ('active','released','superseded','amended')",
-      CONTENT_CHECK,
-      FINGERPRINT_CHECK,
+      '(content IS NULL) OR (length(CAST(content AS BLOB)) > 0 AND length(CAST(content AS BLOB)) <= 4096)',
+      '(content_fingerprint IS NULL) OR (length(content_fingerprint) = 64)',
+      '((commitment_key IS NULL) OR (length(commitment_key) > 0 AND length(commitment_key) <= 200))',
       CREATED_BY_CHECK,
       SUPERSEDES_CHECK,
       RETENTION_CHECK,
+      TOMBSTONE_COMMITMENT_CHECK,
+      REMOVAL_BOOKKEEPING_CHECK,
     ],
   },
   qlt_open_loop: {
@@ -1024,13 +1086,13 @@ export const QLT_MEANING_SCHEMA_INVENTORY: Readonly<
       { name: 'id', type: 'TEXT', notNull: true },
       VERSION_COLUMN,
       { name: 'status', type: 'TEXT', notNull: true },
-      { name: 'loop_kind', type: 'TEXT', notNull: true },
-      { name: 'subject', type: 'TEXT', notNull: true },
+      { name: 'loop_kind', type: 'TEXT', notNull: false },
+      { name: 'subject', type: 'TEXT', notNull: false },
       { name: 'exit_reason', type: 'TEXT', notNull: false },
       { name: 'exit_by', type: 'TEXT', notNull: false },
       { name: 'exited_at_ms', type: 'INTEGER', notNull: false },
-      CONTENT_COLUMN,
-      CONTENT_FINGERPRINT_COLUMN,
+      { name: 'content', type: 'TEXT', notNull: false },
+      { name: 'content_fingerprint', type: 'TEXT', notNull: false },
       { name: 'proposal_id', type: 'TEXT', notNull: false },
       { name: 'created_by', type: 'TEXT', notNull: true },
       { name: 'supersedes_id', type: 'TEXT', notNull: false },
@@ -1039,6 +1101,8 @@ export const QLT_MEANING_SCHEMA_INVENTORY: Readonly<
       CREATED_AT_COLUMN,
       UPDATED_AT_COLUMN,
       EFFECTIVE_AT_COLUMN,
+      REMOVED_AT_COLUMN,
+      REMOVED_BY_COLUMN,
       RETENTION_COLUMN,
     ],
     indexes: [
@@ -1057,14 +1121,18 @@ export const QLT_MEANING_SCHEMA_INVENTORY: Readonly<
     ],
     requiredCheckFragments: [
       "status IN ('open','resolved','superseded','abandoned','transformed')",
-      "loop_kind IN ('pending_action','undecided_question','expected_event')",
-      CONTENT_CHECK,
-      FINGERPRINT_CHECK,
-      CREATED_BY_CHECK,
+      NULLABLE_ENUM_CHECK('loop_kind', "'pending_action','undecided_question','expected_event'"),
+      '((exit_reason IS NULL) OR (length(exit_reason) <= 500))',
       "((exit_by IS NULL) OR (exit_by GLOB 'actor-*'))",
       "((status = 'open') OR ((exit_by IS NOT NULL) AND (exited_at_ms IS NOT NULL)))",
+      '(content IS NULL) OR (length(CAST(content AS BLOB)) > 0 AND length(CAST(content AS BLOB)) <= 4096)',
+      '(content_fingerprint IS NULL) OR (length(content_fingerprint) = 64)',
+      '((subject IS NULL) OR (length(subject) > 0 AND length(subject) <= 200))',
+      CREATED_BY_CHECK,
       SUPERSEDES_CHECK,
       RETENTION_CHECK,
+      TOMBSTONE_OPEN_LOOP_CHECK,
+      REMOVAL_BOOKKEEPING_CHECK,
     ],
   },
   qlt_correction: {
