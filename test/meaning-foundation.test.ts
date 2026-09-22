@@ -220,9 +220,7 @@ function buildQ1EraStore(dbPath: string): void {
   // the downgrade simulation removes its bookkeeping entry too; the
   // reopen then re-applies migrations 2 and 5 and lands on the same
   // frozen post-migration-5 shapes (forward-only discipline unchanged).
-  db.prepare(
-    'DELETE FROM quellight_shared_world_migrations WHERE version IN (2, 5, 6);',
-  ).run();
+  db.prepare('DELETE FROM quellight_shared_world_migrations WHERE version IN (2, 5, 6);').run();
   db.close();
 }
 
