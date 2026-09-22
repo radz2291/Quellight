@@ -42,10 +42,7 @@ import {
   createSharedWorldRetentionStore,
   type SharedWorldRetentionStore,
 } from './retention-store.js';
-import {
-  createSharedWorldConflictStore,
-  type SharedWorldConflictStore,
-} from './conflict-store.js';
+import { createSharedWorldConflictStore, type SharedWorldConflictStore } from './conflict-store.js';
 import { runSharedWorldMigrations } from './migrations.js';
 import type { ContextCandidateRow, QltContextAssemblyRecord } from './context-assembler.js';
 import { QLT_CONTEXT_MAX_RECORDS, QLT_CONTEXT_SCAN_LIMIT_PER_FAMILY } from './context-contract.js';
