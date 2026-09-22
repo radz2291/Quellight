@@ -1709,3 +1709,31 @@ integration point and the D5 audit freeze). No provider access; no
 operator data or credentials touched; VICT unmodified.
 
 Record: [the implementation report](report/QUELLIGHT-STAGE-07D-PHASE-D1-D3-FOUNDATIONS-IMPLEMENTATION.md). **Stage 07D D1/D3 foundations are IMPLEMENTED — AWAITING D2 INTEGRATION; deep purge, export, and cross-store reconciliation are NOT implemented; Stage 07D is NOT verified or formally closed; Stage 07E has NOT begun.**
+
+## D-07D-4 — Stage 07D Phase D2 implemented: governed deletion, export, and cross-store reconciliation (D4 next)
+
+**Date:** 2026-09-22. Following the standalone D2 safety contract
+(`quellight.stage07d.d2.safety-contract@1`, `396eb5c0`), Phase D2
+delivered: governed conversation deletion with the two explicit user
+choices (conversation-only default preserving meaning byte-identically;
+plus-originating-meaning bounded by recorded provenance), content-free
+thread tombstones enforced at the storage layer, a word-gated mode-bounded
+deep purge with content-free receipts and best-effort VACUUM, the
+deterministic versioned user export (`quellight.user-export@1`) through
+the released VICT governed export ports, and receipt-driven cross-store
+reconciliation with boot recovery and restart fencing — all through the
+pinned VICT 0.3.1 governed surface (no GOV-007 stop; no ungoverned local
+substitute). The agent plan/capability envelope is unchanged (29-action
+plan, proposal-only).
+
+Verification at delivery: verify:d2 (74 checks), verify:d1 (49),
+verify:d3 (35), verify:q2–q6, verify:governance, the consolidated
+real-browser D1/D3/D2 pass, full node suite 351/351, UI suites 20/20;
+typecheck/format/diff-check clean. Implementation decisions of record
+(purge scope bounded by the recorded deletion mode; deletion receipts
+outlive purged thread rows; the runner's parent-rebuild FK discipline; two
+gate-found lifecycle defects fixed and pinned) are documented in the
+[implementation report](report/QUELLIGHT-STAGE-07D-PHASE-D2-IMPLEMENTATION.md).
+**D4 real-use proof has NOT begun and requires its own owner
+authorization; Stage 07D is NOT verified or formally closed; Stage 07E has
+NOT begun.**
