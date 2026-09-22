@@ -91,6 +91,7 @@ describe('Quellight Shared World store (Quellight-owned; §6)', () => {
       1,
       2,
       3,
+      4,
       QLT_SHARED_WORLD_SCHEMA_VERSION,
     ]);
     store.close();

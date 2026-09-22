@@ -746,7 +746,13 @@ describe('A-13: version-based staleness (never time) refuses confirmation', () =
     await store.meaning.markProposalAwaitingDecision(removedTargetProposal.id);
     const rawC = new DatabaseSync(dbPath);
     rawC
-      .prepare("UPDATE qlt_claim SET retention_state = 'user-removed' WHERE id = ?;")
+      // D1a reconciliation: the frozen tombstone CHECKs require the
+      // content-free shape and removal bookkeeping, so the simulated
+      // legacy removal writes the full tombstone (the SQL-level truth
+      // the D1 removal verb now enforces).
+      .prepare(
+        "UPDATE qlt_claim SET retention_state = 'user-removed', subject = NULL, epistemic_type = NULL, honesty_state = NULL, confidence = NULL, content = NULL, content_fingerprint = NULL, expires_at_ms = NULL, removed_at_ms = 1, removed_by = 'actor-legacy' WHERE id = ?;",
+      )
       .run(claimC.id);
     rawC.close();
     await expect(
@@ -1237,7 +1243,13 @@ describe('A-23: eligibility — only confirmed, current, retention-relevant mate
     });
     const raw = new DatabaseSync(dbPath);
     raw
-      .prepare("UPDATE qlt_claim SET retention_state = 'user-removed' WHERE id = ?;")
+      // D1a reconciliation: the frozen tombstone CHECKs require the
+      // content-free shape and removal bookkeeping, so the simulated
+      // legacy removal writes the full tombstone (the SQL-level truth
+      // the D1 removal verb now enforces).
+      .prepare(
+        "UPDATE qlt_claim SET retention_state = 'user-removed', subject = NULL, epistemic_type = NULL, honesty_state = NULL, confidence = NULL, content = NULL, content_fingerprint = NULL, expires_at_ms = NULL, removed_at_ms = 1, removed_by = 'actor-legacy' WHERE id = ?;",
+      )
       .run(removed.id);
     raw.close();
     const removedRow = (await store.meaning.getClaim(removed.id))!;
