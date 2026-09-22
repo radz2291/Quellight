@@ -1338,3 +1338,83 @@ remains.
 closed. **NO FIFTH LIVE EXECUTION IS AUTHORIZED.** **Phase Q7 remains
 BLOCKED — NOT BEGUN.** Stage 07 remains In Progress. Record:
 `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-LIVE-PROOF-EXECUTION-4.md`.
+
+## D-Q6-12 — Phase Q6 empty-reply boundary investigation (Execution 4 root cause): the offline boundary matrix plus ONE instrumented diagnostic provider request localized the first loss boundary to the generation step — classification B (reasoning consumed the output budget); every downstream layer exonerated; a secondary real-model tool-call rejection finding recorded (owner-decision input; no repair, no contract change, no rerun)
+
+**Date:** 2026-09-22. **Trigger:** the owner's offline investigation order
+(additively recording the consumed Execution-4 record D-Q6-11 as input) and
+the owner's conditional addendum authorizing exactly ONE narrowly
+instrumented diagnostic provider request if — and only if — the offline
+boundary matrix could not conclusively locate the first loss boundary.
+
+**Investigation (offline; entirely read-only/additive):** starting tip
+`5e43aba7…` (`HEAD == origin/main`, clean tracked tree; VICT
+`fd0c1f7…` untouched). Lane A mapped exactly what Execution 4 directly
+observed (restored reply empty through `restoreThread()`; 0 invocations; 0
+proposals; completed statuses) versus inferred (the raw provider response was
+never captured) — recorded as the additive truthfulness correction: the
+end-to-end Quellight path produced an empty restored assistant message; the
+raw provider response was not captured, so its original contents remain
+unknown. Lane B traced the installed pipeline exactly
+(`@mastra/core@1.64.0` → bundled `@ai-sdk/openai-compatible@2.0.62` chat
+parser → `ModelRouterLanguageModel` → loop/agent → VICT adapter → durable
+ledger → transcript store → `restoreThread()`), including the parser's
+strip-mode delta schema (`role`, `content`, `reasoning_content`, `reasoning`,
+`tool_calls` only; a `thinking` field would be stripped — LATENT, not actual)
+and the finish-reason/usage normalization. Lane C (12 synthetic scenarios
+through the REAL router with a loopback transport and a canary; 0 network
+escapes) proved every supported field translates correctly; Lane D (9 clean
+passive end-to-end scenarios through the REAL composition) proved text,
+tool calls, reasoning+text, and reasoning+tool-call all survive to
+proposals/effects and the restored transcript; reasoning-only streams
+(finish `stop` or `length`) map EXACTLY to the Execution-4 observable
+(completed turn, empty restored reply, 0 invocations, 0 proposals); wrapper
+variants (base / +context / +deadline / production order) preserve parts
+identically.
+
+**Diagnostic request (the ONE conditional authorization; truthful
+accounting):** exactly ONE provider request was sent to
+`ollama-cloud/glm-5.3-flash` at `https://ollama.com/v1` — HTTP 200, 141 SSE
+events, 33,787 body bytes — carrying **`delta.reasoning` 1,885 bytes,
+`delta.content` 0 bytes, one valid `qlt_proposal_draft` tool-call delta,
+finish `tool_calls`, no usage chunk** — with the REAL Quellight capability
+schema and ONE synthetic non-personal explicit-memory prompt. The same
+response was observed at every boundary: router parts preserved everything
+(reasoning ×138 → reasoning parts; tool call → tool-call part); the VICT
+adapter durably recorded `tool.requested` → `tool.started` → **`tool.failed`**
+(0 durable invocations — the Execution-3 contract-rejection class REPRODUCES
+with real model output); the restored assistant message existed with 0 text.
+The loop's automatic post-tool follow-up request was REFUSED by the
+structural one-request cap before any network byte (not a retry; no provider
+capacity consumed). Turn elapsed ≈6.7 s — matching Execution-4's 6.4–7.8 s.
+Bounds: `max_tokens: 512`, 120 s deadline, zero retries, no fallback; the
+request controls NO reasoning parameter (field set exactly `{model,
+max_tokens, messages, tools, tool_choice, stream}`).
+
+**Classification: B — reasoning consumed the available output budget** (the
+model streams reasoning via `delta.reasoning` with zero visible content under
+the uncontrolled 512-token `max_tokens` path; downstream preserves
+everything; the restored reply is the assistant TEXT, which is empty).
+Smallest recommended remediation (NOT implemented): a bounded freeze
+amendment adding explicit reasoning control for the pinned model path, OR an
+evidence-based token-ceiling amendment — one of the two. Secondary owner
+decision: the real-model tool-call rejection class. No VICT release, Mastra
+upgrade, or node_modules change is required for either.
+
+**Safety (all verified):** the credential was read ONCE from the
+owner-designated `auth.json` (`ollama` entry, `key` field only), passed in
+memory only, never printed, hashed, serialized, persisted, or placed in
+command arguments; the diagnostic's disposable store was byte-scanned for
+the credential (7 files, 0 occurrences) and then deleted (absence verified);
+all probe scripts, logs, stores, and fixtures were removed (verified
+absent); `.quellight-data` never accessed (mtime unchanged); VICT never
+modified; no historical report modified; no code, test, script, manifest,
+lockfile, frozen contract, prompt, instruction, schema, or bound changed;
+pre-existing OS-temp `qlt-q6-compose-*`/`discretion-*`/`fixture-*`/
+`fresh-*`/`hostile-*`/`offline-restore-*` gate-fixture directories from
+earlier runs were left untouched. Record:
+`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-EMPTY-REPLY-BOUNDARY-INVESTIGATION.md`.
+
+**Disposition:** Q6 is NOT independently verified and NOT formally closed.
+**NO FIFTH LIVE EXECUTION IS AUTHORIZED.** **Phase Q7 remains BLOCKED — NOT
+BEGUN.** Stage 07 remains In Progress.
