@@ -1574,3 +1574,13 @@ Record:
 **Disposition:** Q6 is NOT independently verified and NOT formally closed.
 **NO FIFTH LIVE EXECUTION IS AUTHORIZED.** **Phase Q7 remains BLOCKED — NOT
 BEGUN.** Stage 07 remains In Progress.
+
+## D-Q6-15 — Root-cause recovery: corrected generation guidance/bounds; one final live ceremony passed
+
+**Date:** 2026-09-22. New owner recovery authorization supersedes earlier no-further-execution dispositions for this single recovery. Three standalone additive amendments preceded their executable changes: bounds/encoding guidance, fixture identity without hashing, and labeled synthetic naturalistic fixture provenance. Historical decisions remain unchanged.
+
+Real diagnostics established generation truncation at insufficient bounds and generated claim enum violations rejected correctly at Mastra validation. Quellight now supplies existing closed enum encodings and a bounded 2,048-token allowance with default reasoning, unchanged capability schema and authority. VICT 0.3.1 remains exact-pinned and unchanged; no release was needed.
+
+The authoritative offline ladder passed once. Exactly five diagnostic HTTP requests preceded exactly one final live ceremony, which passed six turns/eight HTTP requests with zero findings, three valid pending proposals and exactly one governed user-confirmed canonical record. Idempotency, stale-version refusal, restart, fresh-thread continuity, conflict non-mutation, privacy and cleanup passed. The original private fixture wording remains untested. No additional live run is authorized.
+
+Record: [Q6 root-cause recovery](report/QUELLIGHT-STAGE-07C-PHASE-Q6-ROOT-CAUSE-RECOVERY.md), including implementation and verification identities and structural evidence. **Q6 is ready for fresh independent Q7 verification, not formally closed. Q7 has not begun. Stage 07 remains In Progress.**

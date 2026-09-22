@@ -17,9 +17,9 @@ Stage 07C Phase Q3: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (gover
 Stage 07C Phase Q4: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (deterministic Shared World context assembly; H-1 remediated and independently re-verified closed)
 Stage 07C Phase Q5: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (Shared World inspection, user memory control, one durable global Memory Mode; B-1/H-1 remediated and independently re-verified closed)
 VICT-M-1: INDEPENDENTLY VERIFIED AND FORMALLY CLOSED (truthful write-effect capability `qlt.proposal.draft@2/write`; Quellight exact-pinned to the STABLE `@victframework/*@0.3.0` = `vict-release-set@1/0.3.0`, content ID `v1_5f3a074a…`; `latest` = 0.3.0; the `0.3.0-rc.1` candidate and its recovered evidence chain remain immutable historical record)
-Stage 07C Phase Q6: IMPLEMENTED — AWAITING INDEPENDENT Q7 VERIFICATION (deterministic final verification: the offline gates and the aggregate N-C25 are green; the live proof has now executed FOUR times (three on 2026-09-21, one on 2026-09-22) — each under its own owner authorization — and ALL FOUR FAILED TRUTHFULLY (Execution 1 at `8d1273b…`: HTTP 401 from an unresolved credential-environment reference — the credential itself verified valid; Execution 2 at `a32bba5…`: the provider turn succeeded but the model never invoked `qlt.proposal.draft@2` — the frozen missing-proposal class; Execution 3 at `e0f2797…`, the prepared bounded-discretion five-turn matrix: turn t1 completed in 18,567 ms but every capability attempt was rejected at the frozen proposal-row contract boundary — 0 invocations, 0 proposals — and the matrix then crashed at the fresh-thread boundary on a worker API defect, `sharedWorld.restoreThread` not being a function; 1 of 6 turns used; fixture byte-identical; credential scan complete and clean; workspace disposed after worker exit — the parent/worker lifecycle held; Execution 4 at `1fae9f3…` on 2026-09-22, the final authorized run on the remediated parent/worker harness: three of the six ceiling turns completed — each inside every frozen bound (≤ 512 tokens, ≤ 120 s) — but EVERY completed reply was EMPTY: 0 invocations, 0 proposals, 0 durable effects, and the matrix aborted at the ceremony boundary (`QLT_Q6_LIVE_MATRIX_FAILED`); 3 of 6 turns used; fixture byte-identical; credential scan complete and clean; workspace disposed; no fixture, credential, or provider payload entered any record). The bounded-memory-discretion amendment D-Q6-6 (`365259f…`) remains adopted (instructions revision 4, profile revision 5, 512-token live ceiling, five-turn matrix, parent/worker lifecycle). Q6 is NOT independently verified and NOT formally closed; NO FIFTH live execution is authorized. Zero durable effects, zero retries, no fallback across all runs; the freeze has one amendment; records: `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-LIVE-PROOF-FAILURE.md`, `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-LIVE-PROOF-EXECUTION-3.md`, `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-LIVE-PROOF-EXECUTION-4.md`, `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-EXECUTION-3-PREPARATION.md`, and the additively recorded empty-reply boundary investigation `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-EMPTY-REPLY-BOUNDARY-INVESTIGATION.md` (offline boundary matrix + ONE instrumented diagnostic provider request under the owner's conditional addendum; classification B: reasoning consumed the output budget — the provider streams reasoning via `delta.reasoning` with ZERO visible content under the uncontrolled 512-token `max_tokens` path, and every downstream layer preserves every supported field; secondary finding: a real-model tool call translated correctly and crossed the governed bridge but was rejected — `tool.failed`, 0 invocations — the Execution-3 contract-rejection class reproducing with real model output; NOTE — the follow-up real-model tool-argument diagnostic (D-Q6-13) DISPOSED OF the reasoning-budget conclusion: the earlier diagnostic response ended `tool_calls` (not `length`), so budget exhaustion was NOT proven and is now recorded as an unevidenced hypothesis; the tool-call rejection boundary remains UNIDENTIFIED; FINAL TOOL-ARGUMENT DIAGNOSTIC COMPLETION (D-Q6-14): two authorized provider requests — the model emitted NO tool call in either response, its reasoning phase consuming the full 512-token output budget (provider-reported `finish_reason: length`, 0 content bytes, 0 tool-call deltas) — the tool-argument capture is therefore unreachable at the frozen bounds (classification F), the Execution-4 empty-reply mechanism is now DIRECTLY EVIDENCED, and the corrected capture/replay machinery is fully validated offline)
-Stage 07C Phase Q7: BLOCKED — NOT BEGUN (the independent audit is permitted only after the live proof has executed and passed; the live proof failed four times, so Q7 remains blocked)
-Stage 07:  IN PROGRESS (07A closed; 07B closed; Q1 closed; Q2 closed; Q3 closed; Q4 closed; Q5 closed; M-1 CLOSED — stable 0.3.0 adopted; Q6 implemented — live proof failed four times: credential wiring, missing proposal, contract-shape rejections plus a worker API crash, then empty replies on every completed turn; bounded-discretion amendment adopted; no fifth execution authorized; Q7, 07D, 07E remaining)
+Stage 07C Phase Q6: ROOT CAUSE REMEDIATED — ONE RECOVERY LIVE CEREMONY PASSED (2026-09-22; six turns, eight HTTP requests, zero findings; exact stable VICT 0.3.1; instructions 5/profile 7; see docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-ROOT-CAUSE-RECOVERY.md). Ready for fresh independent Q7 verification; NOT formally closed.
+Stage 07C Phase Q7: READY FOR FRESH INDEPENDENT VERIFICATION — NOT BEGUN
+Stage 07:  IN PROGRESS (Q5 closed; Q6 recovery live proof passed; Q6 formal closure and Q7, 07D, 07E remain)
 ```
 
 **VICT-M-1 remediation (2026-09-21; superseded 2026-09-21 by the
@@ -335,33 +335,7 @@ explicit double gate — now plus the external natural-fixture boundary
 gate, and must run EXACTLY ONCE per owner authorization. The live
 harness is a parent/worker lifecycle: the worker runs every provider
 turn; the parent scans and cleans up only after the worker exits. The
-five-turn matrix (explicit positive, discretionary positive via the
-external private fixture, discretionary negative, governed ceremony +
-restart, fresh-thread continuity, hypothetical conflict) is PREPARED
-was EXECUTED ONCE under its own owner authorization and FAILED
-truthfully (t1 completed within bounds but produced 0 invocations and
-0 proposals — capability attempts rejected at the frozen contract
-boundary — and the matrix crashed at the fresh-thread boundary on a
-worker API defect; 1 of 6 turns used; fixture byte-identical; scans
-clean; workspace disposed). NOT rerun; no fourth execution is
-authorized. See
-`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-LIVE-PROOF-EXECUTION-3.md`.
-Execution 4 — the fourth and final owner-authorized run (2026-09-22,
-at `1fae9f3…`) was then executed exactly once on the remediated
-parent/worker harness and FAILED truthfully: three of the six ceiling
-provider turns completed, each inside every frozen bound, but every
-completed reply was EMPTY — 0 invocations, 0 proposals, 0 durable
-effects — and the matrix aborted at the governed-ceremony boundary
-(`QLT_Q6_LIVE_MATRIX_FAILED`, phase: ceremony); 3 of 6 turns used; the
-external fixture survived byte-identical; the credential scan completed
-clean; the owned workspace was disposed after the worker exit. NOT
-rerun; **NO FIFTH LIVE EXECUTION IS AUTHORIZED**; Q7 remains BLOCKED —
-NOT BEGUN. See
-`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-LIVE-PROOF-EXECUTION-4.md`.
-See `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-EXECUTION-3-PREPARATION.md`,
-`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-BOUNDED-DISCRETION-AMENDMENT.md`,
-`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-LIVE-PROOF-FAILURE.md`, and the
-frozen `docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-CONTRACT-FREEZE.md`.
+six-turn recovery matrix PASSED exactly once on 2026-09-22 under the new owner authorization: eight HTTP requests, three pending proposals, exactly one user-confirmed canonical record, zero findings, clean scans and cleanup. The one-shot authorization is consumed. See [the final recovery report](docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-ROOT-CAUSE-RECOVERY.md) for request accounting, additive amendments, historical failures, fixture provenance and remaining limitations.
 
 ## License
 
