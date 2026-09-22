@@ -1285,3 +1285,56 @@ Q6-harness, ceremony, memory, authority, UI, or Shared World change.
 Q6 remains NOT formally closed; **Phase Q7 remains BLOCKED — NOT
 BEGUN**; Stage 07 remains In Progress. Record:
 `docs/report/QUELLIGHT-STAGE-07C-STABLE-REPIN-0.3.1.md`.
+
+## D-Q6-11 — Phase Q6 live proof Execution 4: the final authorized run executed exactly once on the remediated parent/worker harness and FAILED truthfully on the empty-reply class; no fifth execution authorized (owner-authorized execution; truthful-result decision)
+
+**Date:** 2026-09-22. **Trigger:** the owner authorization dated
+2026-09-22 permitting EXACTLY ONE live execution on the execution tree
+`1fae9f3c8fe1de206ce9f58c6dc0d97512d260ec` (`HEAD == origin/main`,
+clean tracked tree, exact-pinned `@victframework/*@0.3.1`, release-set
+`vict-release-set@1/0.3.1` / `v1_1c695280…63c2583`), after the
+Execution-3 remediation was implemented and independently verified
+offline (D-Q6-8/D-Q6-9/D-Q6-10; no other tree change).
+
+**Execution:** `QUELLIGHT_LIVE_PROOF=1 npm run verify:q6:live` invoked
+EXACTLY ONCE on 2026-09-22 (launch 06:16:25.627Z → exit 06:16:56.482Z;
+true process exit **1**, captured unmasked). Provider
+`ollama-cloud/glm-5.3-flash` at `https://ollama.com/v1`; LIVE
+composition confirmed; zero retries, zero fallback, zero diagnostic
+provider requests. Credential resolved in memory from the
+owner-designated store and exposed to the live child only as
+`OLLAMA_API_KEY`; never printed, tested, or persisted.
+
+**Result — FAILED:** 3 of 6 ceiling turns completed (t1 6,453 ms; t2
+6,489 ms; t3 7,777 ms — every frozen bound respected), but EVERY
+completed reply was EMPTY: 0 durable capability invocations, 0
+proposals, 0 canonical effects on all turns; the t1 same-key retry
+replayed the idempotent receipt; the matrix aborted at the
+governed-ceremony boundary (`QLT_Q6_LIVE_MATRIX_FAILED`, phase:
+ceremony) with 10 findings. T1/T2 structural requirements NOT MET; T3's
+zero-effect held trivially while its natural-flow requirement failed;
+ceremony, replay, staleness, restart, fresh-thread, and conflict
+controls NOT REACHED. Failure class: provider-response content
+(empty completed replies) — distinct from Execution 3's tool-contract
+rejection class.
+
+**Safety (all verified):** the external fixture (3,137 bytes, SHA-256
+`9cc76c36…3170da`, byte-identical to the owner-approved Execution-3
+identity) survived the proof byte-identical and was deleted only after
+evidence handling; the byte-level credential scan over every persisted
+workspace byte COMPLETED with the credential ABSENT, and an independent
+scan of all 157 tracked files found 0 credential and 0 fixture-path
+occurrences; lifecycle ordering held
+(workspace-allocated → fixture-validated → worker-exited → result-read
+→ fixture-reverified → credential-scanned → workspace-disposed); the
+owned disposable workspace was removed and verified absent; the
+operator `.quellight-data` directory was never accessed (mtime
+unchanged: 2026-09-20 03:43:59 +0800); VICT was never modified
+(`fd0c1f7…`, pre-existing untracked `.pi/` never read); no child
+process, listener, launcher, fixture, or `qlt-q6-live-*` directory
+remains.
+
+**Disposition:** Q6 is NOT independently verified and NOT formally
+closed. **NO FIFTH LIVE EXECUTION IS AUTHORIZED.** **Phase Q7 remains
+BLOCKED — NOT BEGUN.** Stage 07 remains In Progress. Record:
+`docs/report/QUELLIGHT-STAGE-07C-PHASE-Q6-LIVE-PROOF-EXECUTION-4.md`.
