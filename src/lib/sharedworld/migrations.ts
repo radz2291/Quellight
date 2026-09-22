@@ -645,6 +645,92 @@ const MIGRATION_0005_RETENTION_CONFLICT_FOUNDATIONS: QuellightMigration = {
   },
 };
 
+/**
+ * Migration 6: the D2 governed conversation-deletion foundations
+ * (safety contract `quellight.stage07d.d2.safety-contract@1`).
+ *
+ * - Rebuilds `qlt_thread` so the content-free thread tombstone is
+ *   enforceable at the storage layer: the title becomes nullable with a
+ *   CHECK requiring `user-removed ⇒ title IS NULL`. All other columns
+ *   and every value are preserved unchanged.
+ * - Adds `qlt_conversation_deletion` (the durable product deletion
+ *   operation row: recorded mode/scope, closed status lifecycle,
+ *   step receipts) and `qlt_conversation_purge` (the content-free
+ *   deep-purge receipt). Both are append-only evidence for their row
+ *   identity: the deletion row is updated only through its closed
+ *   status transitions; the purge receipt is never updated.
+ */
+const MIGRATION_0006_DELETION_FOUNDATIONS: QuellightMigration = {
+  version: 6,
+  name: 'qlt-conversation-deletion-foundations',
+  up: (db) => {
+    // Rebuilding the qlt_thread PARENT table requires deferred FK
+    // enforcement (same discipline as migration 5): children keep their
+    // REFERENCES clauses and the COMMIT-time recheck validates the copy.
+    db.exec('PRAGMA defer_foreign_keys = ON;');
+    db.exec(`
+      -- Rebuild: qlt_thread (nullable title + tombstone CHECK; else unchanged)
+      CREATE TABLE qlt_thread_v6 (
+        id TEXT PRIMARY KEY,
+        title TEXT NULL CHECK ((title IS NULL) OR (length(CAST(title AS BLOB)) > 0 AND length(CAST(title AS BLOB)) <= 200)),
+        state TEXT NOT NULL CHECK (state IN ('active', 'dormant')),
+        retention_state TEXT NOT NULL CHECK (retention_state IN ('currently-relevant', 'user-removed')),
+        provenance TEXT NOT NULL CHECK (provenance = 'user'),
+        created_at_ms INTEGER NOT NULL,
+        updated_at_ms INTEGER NOT NULL,
+        CHECK ((retention_state = 'user-removed') = (title IS NULL))
+      );
+      INSERT INTO qlt_thread_v6 (id, title, state, retention_state, provenance, created_at_ms, updated_at_ms)
+        SELECT id, title, state, retention_state, provenance, created_at_ms, updated_at_ms FROM qlt_thread;
+      DROP TABLE qlt_thread;
+      ALTER TABLE qlt_thread_v6 RENAME TO qlt_thread;
+      CREATE INDEX idx_qlt_thread_updated_at ON qlt_thread (updated_at_ms DESC);
+      CREATE INDEX idx_qlt_thread_state ON qlt_thread (state);
+
+      -- Durable product deletion operation row (closed lifecycle; the
+      -- recorded mode/scope is NEVER broadened; same-key replay converges).
+      CREATE TABLE qlt_conversation_deletion (
+        id TEXT NOT NULL PRIMARY KEY,
+        thread_id TEXT NOT NULL REFERENCES qlt_thread (id),
+        mode TEXT NOT NULL CHECK (mode IN ('conversation-only','conversation-and-originating-meaning')),
+        status TEXT NOT NULL CHECK (status IN ('planned','completed','canceled','incomplete')),
+        requested_by TEXT NOT NULL CHECK (requested_by GLOB 'actor-*'),
+        key TEXT NOT NULL UNIQUE,
+        vict_intent_id TEXT NULL,
+        meaning_removed_claims INTEGER NOT NULL DEFAULT 0 CHECK (meaning_removed_claims >= 0),
+        meaning_removed_commitments INTEGER NOT NULL DEFAULT 0 CHECK (meaning_removed_commitments >= 0),
+        meaning_removed_open_loops INTEGER NOT NULL DEFAULT 0 CHECK (meaning_removed_open_loops >= 0),
+        meaning_withdrawn_proposals INTEGER NOT NULL DEFAULT 0 CHECK (meaning_withdrawn_proposals >= 0),
+        meaning_withdrawn_corrections INTEGER NOT NULL DEFAULT 0 CHECK (meaning_withdrawn_corrections >= 0),
+        version INTEGER NOT NULL DEFAULT 1 CHECK (version >= 1),
+        error_code TEXT NULL,
+        requested_at_ms INTEGER NOT NULL,
+        terminal_at_ms INTEGER NULL,
+        updated_at_ms INTEGER NOT NULL
+      );
+      CREATE UNIQUE INDEX uq_qlt_conversation_deletion_thread ON qlt_conversation_deletion (thread_id);
+      CREATE INDEX idx_qlt_conversation_deletion_status ON qlt_conversation_deletion (status);
+
+      -- Content-free deep-purge receipt (append-only; identifiers and
+      -- counts only; written in the purge transaction).
+      CREATE TABLE qlt_conversation_purge (
+        id TEXT NOT NULL PRIMARY KEY,
+        thread_id TEXT NOT NULL,
+        purged_by TEXT NOT NULL CHECK (purged_by GLOB 'actor-*'),
+        challenges INTEGER NOT NULL CHECK (challenges >= 0),
+        amendments INTEGER NOT NULL CHECK (amendments >= 0),
+        corrections INTEGER NOT NULL CHECK (corrections >= 0),
+        source_links INTEGER NOT NULL CHECK (source_links >= 0),
+        proposals INTEGER NOT NULL CHECK (proposals >= 0),
+        originating_tombstones INTEGER NOT NULL CHECK (originating_tombstones >= 0),
+        assembly_rows INTEGER NOT NULL CHECK (assembly_rows >= 0),
+        vacuumed INTEGER NOT NULL CHECK (vacuumed IN (0, 1)),
+        created_at_ms INTEGER NOT NULL
+      );
+    `);
+  },
+};
+
 /** The ordered, forward-only migration list. */
 export const QLT_SHARED_WORLD_MIGRATIONS: readonly QuellightMigration[] = [
   MIGRATION_0001_FOUNDATION,
@@ -652,6 +738,7 @@ export const QLT_SHARED_WORLD_MIGRATIONS: readonly QuellightMigration[] = [
   MIGRATION_0003_CONTEXT_ASSEMBLY,
   MIGRATION_0004_MEMORY_MODE_POLICY,
   MIGRATION_0005_RETENTION_CONFLICT_FOUNDATIONS,
+  MIGRATION_0006_DELETION_FOUNDATIONS,
 ];
 
 /** The current schema version of this build. */

@@ -32,10 +32,16 @@ export type QltRetentionState = (typeof QLT_RETENTION_STATES)[number];
 /** Provenance is closed: every 07B Shared World record is USER-created. */
 export const QLT_THREAD_PROVENANCE = 'user' as const;
 
-/** One durable Shared World thread record. */
+/** One durable Shared World thread record.
+ *
+ * D2 (safety contract `quellight.stage07d.d2.safety-contract@1`): a
+ * governed-deleted thread keeps a CONTENT-FREE tombstone — `title` is
+ * null exactly when `retentionState` is `user-removed` (enforced by the
+ * migration-6 storage CHECK).
+ */
 export interface QltThread {
   readonly id: string;
-  readonly title: string;
+  readonly title: string | null;
   readonly state: QltThreadState;
   readonly retentionState: QltRetentionState;
   readonly provenance: typeof QLT_THREAD_PROVENANCE;

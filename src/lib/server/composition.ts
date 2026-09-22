@@ -40,12 +40,19 @@ import {
 } from '@victframework/runtime';
 import {
   MASTRA_ADAPTER_COMPATIBILITY,
+  MastraConversationExportPort,
   createDeterministicOfflineModel,
   createDedicatedMastraStore,
+  createGovernedMemoryDeletionPort,
+  conversationIdForThreadId,
+  mastraThreadIdForConversation,
   resolveProtectedStoreDir,
   composeMastraTurnExecutor,
   MastraThreadCoordinator,
 } from '@victframework/mastra';
+import { ConversationDeletionCoordinator, ConversationExportService } from '@victframework/runtime';
+import { createSqliteAgentGovernanceStore } from '@victframework/store-sqlite';
+import { createConversationLifecycle, type ConversationLifecycle } from './conversation-lifecycle';
 import type { DedicatedMastraStore, MastraTurnComposition } from '@victframework/mastra';
 import { AgentTurnService, ControlPlaneService } from '@victframework/control';
 import {
@@ -338,6 +345,13 @@ export interface QuellightComposition {
   readonly stores: AgentControlStores;
   readonly mastraStore: DedicatedMastraStore;
   readonly sharedWorld: SharedWorldSqlite;
+  /**
+   * D2: the governed conversation lifecycle (deletion, deep purge,
+   * export, cross-store reconciliation) over the released VICT 0.3.1
+   * governed surface. User authority only (safety contract
+   * `quellight.stage07d.d2.safety-contract@1`).
+   */
+  readonly conversationLifecycle: ConversationLifecycle;
   readonly hub: AgentStreamHub;
   readonly turnService: AgentTurnService;
   readonly commandService: VictCommandService;
@@ -498,6 +512,22 @@ export async function createQuellightComposition(
     },
   });
 
+  // ---- D2 governed conversation lifecycle (safety contract
+  // `quellight.stage07d.d2.safety-contract@1`): ONE process-local thread
+  // coordinator shared by the agent AND the governed deletion port (the
+  // unfenced-composition guard), the durable VICT governance store, and
+  // the governed deletion/export ports. VICT-backed stores are touched
+  // ONLY through this released 0.3.1 governed surface.
+  const threadCoordinator = new MastraThreadCoordinator();
+  const governanceStore = createSqliteAgentGovernanceStore({
+    path: join(dataDir, 'governance.db'),
+  });
+  const governedMemory = createGovernedMemoryDeletionPort({
+    store: mastraStore.store,
+    actorId: LOCAL_ACTOR_ID,
+    threadCoordinator,
+  });
+
   const sharedWorld = createSharedWorldSqlite({
     path: join(dataDir, 'shared-world.db'),
     clock,
@@ -538,6 +568,46 @@ export async function createQuellightComposition(
     getReceipt: (name) => agentStores.commandIdempotency.getReceipt(name),
     localActorId: LOCAL_ACTOR_ID,
     turnCommand: 'agent.turn.start',
+  });
+
+  // ---- D2 governed deletion coordinator, export service, and lifecycle
+  // (the product domain port is the content-free thread tombstone; the
+  // memory port is the governed, fenced Mastra deletion) ---------------
+  const deletionCoordinator = new ConversationDeletionCoordinator({
+    governance: governanceStore,
+    domain: {
+      async deleteConversation(conversationId: string): Promise<{ readonly deleted: boolean }> {
+        const mastraThreadId = mastraThreadIdForConversation(conversationId);
+        const threadId = await sharedWorld.getThreadIdByConversation(mastraThreadId);
+        if (threadId === undefined) {
+          return { deleted: false };
+        }
+        const thread = await sharedWorld.getThread(threadId);
+        if (thread === undefined || thread.retentionState === 'user-removed') {
+          return { deleted: false };
+        }
+        sharedWorld.deletion.tombstoneThread({ threadId });
+        return { deleted: true };
+      },
+    },
+    memory: governedMemory.deletionPort,
+    clock,
+  });
+  const conversationExportService = new ConversationExportService({
+    memory: new MastraConversationExportPort({
+      store: mastraStore.store,
+      actorId: LOCAL_ACTOR_ID,
+      threadCoordinator,
+    }),
+  });
+  const conversationLifecycle: ConversationLifecycle = createConversationLifecycle({
+    sharedWorld,
+    coordinator: deletionCoordinator,
+    exportService: conversationExportService,
+    admitTurn: async (input) => {
+      const result = await turnAdmission.admitTurn(input, async () => undefined);
+      return result.refused ? { ok: false as const, code: result.code } : { ok: true as const };
+    },
   });
 
   // ---- Actor boundary (single local actor) ----------------------------------
@@ -684,7 +754,9 @@ export async function createQuellightComposition(
     },
     agentConfig: {
       store: mastraStore.store,
-      threadCoordinator: new MastraThreadCoordinator(),
+      // D2: the SAME coordinator instance coordinates turns and governed
+      // deletion (the released supported composition; never unfenced).
+      threadCoordinator,
       modelFactory,
     },
     capabilityBridge: {
@@ -1103,6 +1175,9 @@ export async function createQuellightComposition(
 
   if (options.reconcileOnStart !== false) {
     await turnService.reconcileAfterRestart();
+    // D2 boot reconciliation (receipt-driven; never broadens scope) and
+    // the post-deletion fence across restart.
+    await conversationLifecycle.recoverOnBoot();
   }
 
   const composition: QuellightComposition = {
@@ -1117,6 +1192,7 @@ export async function createQuellightComposition(
     stores: agentStores,
     mastraStore,
     sharedWorld,
+    conversationLifecycle,
     hub,
     turnService,
     commandService,

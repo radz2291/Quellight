@@ -43,6 +43,7 @@ import {
   type SharedWorldRetentionStore,
 } from './retention-store.js';
 import { createSharedWorldConflictStore, type SharedWorldConflictStore } from './conflict-store.js';
+import { createSharedWorldDeletionStore, type SharedWorldDeletionStore } from './deletion-store.js';
 import { runSharedWorldMigrations } from './migrations.js';
 import type { ContextCandidateRow, QltContextAssemblyRecord } from './context-assembler.js';
 import { QLT_CONTEXT_MAX_RECORDS, QLT_CONTEXT_SCAN_LIMIT_PER_FAMILY } from './context-contract.js';
@@ -53,7 +54,7 @@ const MAX_ID_LENGTH = 128;
 
 interface ThreadRow {
   readonly id: string;
-  readonly title: string;
+  readonly title: string | null;
   readonly state: string;
   readonly retention_state: string;
   readonly provenance: string;
@@ -359,6 +360,15 @@ export interface SharedWorldSqlite extends SharedWorldPort {
    */
   readonly conflict: SharedWorldConflictStore;
   /**
+   * Stage 07D Phase D2 (safety contract
+   * `quellight.stage07d.d2.safety-contract@1`): the governed
+   * conversation-deletion, deep-purge, and reconciliation repository
+   * over the SAME connection (durable product deletion rows, the
+   * FK-driven purge with its content-free receipt). User authority only;
+   * composes the frozen D1 retention machinery unchanged.
+   */
+  readonly deletion: SharedWorldDeletionStore;
+  /**
    * A-AMEND-1 (Q3): ONE bounded READ-ONLY thread-scoped listing over the
    * same connection (SELECT only; no write/effect path). Serves the user
    * presentation read of claims/commitments/open loops for a thread.
@@ -483,6 +493,9 @@ export function createSharedWorldSqlite(options: SharedWorldSqliteOptions): Shar
   const conflict = createSharedWorldConflictStore(db, {
     clock,
     ids: { recordId: options.ids?.recordId },
+  });
+  const deletion = createSharedWorldDeletionStore(db, meaning, retention, conflict, {
+    clock,
   });
 
   function getThreadRow(threadIdValue: string): ThreadRow | undefined {
@@ -1958,6 +1971,7 @@ export function createSharedWorldSqlite(options: SharedWorldSqliteOptions): Shar
     meaning,
     retention,
     conflict,
+    deletion,
     memoryPolicy,
     listMemoryRows,
     getThreadIdByConversation,
