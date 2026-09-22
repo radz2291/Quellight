@@ -38,6 +38,10 @@ import {
 } from './port.js';
 import type { SharedWorldMeaningStore } from './meaning-contract.js';
 import { createSharedWorldMeaningStore } from './meaning-store.js';
+import {
+  createSharedWorldRetentionStore,
+  type SharedWorldRetentionStore,
+} from './retention-store.js';
 import { runSharedWorldMigrations } from './migrations.js';
 import type { ContextCandidateRow, QltContextAssemblyRecord } from './context-assembler.js';
 import { QLT_CONTEXT_MAX_RECORDS, QLT_CONTEXT_SCAN_LIMIT_PER_FAMILY } from './context-contract.js';
@@ -341,6 +345,13 @@ export interface SharedWorldSqlite extends SharedWorldPort {
    */
   readonly meaning: SharedWorldMeaningStore;
   /**
+   * Stage 07D Lane A (D1a freeze): the governed retention and
+   * user-removal repository over the SAME connection (content-free
+   * tombstones, claim expiry metadata, the enforcement pass). User
+   * authority only; the agent envelope has no path here.
+   */
+  readonly retention: SharedWorldRetentionStore;
+  /**
    * A-AMEND-1 (Q3): ONE bounded READ-ONLY thread-scoped listing over the
    * same connection (SELECT only; no write/effect path). Serves the user
    * presentation read of claims/commitments/open loops for a thread.
@@ -460,6 +471,8 @@ export function createSharedWorldSqlite(options: SharedWorldSqliteOptions): Shar
       linkId: options.ids?.linkId,
     },
   });
+
+  const retention = createSharedWorldRetentionStore(db, { clock });
 
   function getThreadRow(threadIdValue: string): ThreadRow | undefined {
     return db.prepare('SELECT * FROM qlt_thread WHERE id = ?;').get(threadIdValue) as
@@ -1932,6 +1945,7 @@ export function createSharedWorldSqlite(options: SharedWorldSqliteOptions): Shar
     resource: sharedWorldThreadResource,
     contracts: sharedWorldContracts,
     meaning,
+    retention,
     memoryPolicy,
     listMemoryRows,
     getThreadIdByConversation,

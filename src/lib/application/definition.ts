@@ -12,6 +12,11 @@ import {
   memoryResource,
 } from '$lib/sharedworld/ceremony-actions';
 import { inspectionResource } from '$lib/sharedworld/inspection-surface';
+import {
+  retentionContracts,
+  retentionContractRegistry,
+  retentionResource,
+} from '$lib/sharedworld/retention-surface';
 import { memoryPolicyResource } from '$lib/sharedworld/memory-policy-surface';
 import { QLT_MEMORY_POLICY_SET_MODE_CONTRACT_ID } from '$lib/sharedworld/policy-contract';
 import { QLT_INSPECTION_RESOURCE_ID } from '$lib/sharedworld/inspection-contract';
@@ -154,6 +159,23 @@ export const application = defineApplication({
       fields: ['query'],
     },
     {
+      viewId: 'v.retention',
+      resourceId: 'qlt.retention',
+      resourceRevision: '1',
+      fields: [
+        'recordId',
+        'family',
+        'status',
+        'retentionState',
+        'version',
+        'expiresAt',
+        'removedAt',
+        'removedBy',
+        'threadId',
+        'updatedAt',
+      ],
+    },
+    {
       viewId: 'v.memoryPolicy',
       resourceId: 'qlt.memory-policy',
       resourceRevision: '1',
@@ -251,6 +273,30 @@ export const application = defineApplication({
       resourceId: 'qlt.inspection',
       resourceRevision: '1',
     },
+    // ---- Stage 07D Phase D1 Lane A: the governed retention surface
+    // (user removal, claim expiry, the enforcement pass; USER authority
+    // only; the agent envelope is UNCHANGED — D1a freeze §10) -----------
+    {
+      kind: 'query',
+      id: 'act.queryRetention',
+      revision: '1',
+      resourceId: 'qlt.retention',
+      resourceRevision: '1',
+    },
+    ...[
+      ['act.removeRecord', 'removeRecord', 'qlt.retention.remove.input'],
+      ['act.setClaimExpiry', 'setClaimExpiry', 'qlt.retention.claimExpiry.input'],
+      ['act.runRetentionPass', 'runRetentionPass', 'qlt.retention.pass.input'],
+    ].map(([id, op, contractId]) => ({
+      kind: 'mutation' as const,
+      id,
+      revision: '1',
+      resourceId: 'qlt.retention',
+      resourceRevision: '1',
+      op,
+      inputContractId: contractId,
+      inputContractRevision: '1',
+    })),
     {
       kind: 'mutation',
       id: 'act.setMemoryMode',
@@ -266,6 +312,7 @@ export const application = defineApplication({
     { resourceId: 'qlt.threads', revision: '1' },
     { resourceId: 'qlt.memory', revision: '1' },
     { resourceId: QLT_INSPECTION_RESOURCE_ID, revision: '1' },
+    { resourceId: 'qlt.retention', revision: '1' },
     { resourceId: 'qlt.memory-policy', revision: '1' },
   ],
   components: [{ componentId: 'qlt.conversation-workspace', revision: '1' }],
@@ -360,6 +407,10 @@ export const inputContractImplementations = [
   // The Q3 ceremony contracts (executable implementations live in the
   // memory surface module; the same frozen field specs).
   ...memoryContracts,
+  // The Stage 07D D1 Lane A retention contracts (closed field sets frozen
+  // in the D1a contract data; the surface re-validates as the second
+  // fence).
+  ...retentionContracts,
   // The Q5 Memory Mode contract (closed single field; the surface
   // re-validates the closed vocabulary as the second fence).
   closedStringContract(QLT_MEMORY_POLICY_SET_MODE_CONTRACT_ID, { mode: 32 }, ['mode']),
@@ -372,6 +423,7 @@ export const inputContracts = [
   { id: 'qlt.threads.archive.input', revision: '1' },
   { id: 'qlt.threads.reopen.input', revision: '1' },
   ...memoryContractRegistry,
+  ...retentionContractRegistry,
   { id: QLT_MEMORY_POLICY_SET_MODE_CONTRACT_ID, revision: '1' },
 ] as const;
 
@@ -385,7 +437,13 @@ export const bindings = {
 export function compileAppPlan(): ApplicationPlan {
   const result = compileApplication({
     application,
-    resources: [threadResource, memoryResource, inspectionResource, memoryPolicyResource],
+    resources: [
+      threadResource,
+      memoryResource,
+      inspectionResource,
+      retentionResource,
+      memoryPolicyResource,
+    ],
     contracts: bindings.contracts,
     capabilities: bindings.capabilities,
     components: bindings.components,

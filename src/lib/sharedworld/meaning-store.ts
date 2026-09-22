@@ -373,7 +373,10 @@ export function createSharedWorldMeaningStore(
 
   function rowToClaim(row: RawRow): QltClaim {
     const id = str(row, 'id');
-    const content = parseStoredContent<QltClaimContent>(str(row, 'content'), id);
+    // D1a: a tombstone row carries NULL content/typed columns by frozen
+    // design; the legacy Q2 mapper shapes stay intact and map the
+    // truthfully-empty fields (reads never throw on a tombstone).
+    const content = parseStoredContent<QltClaimContent>(str(row, 'content') || '{}', id);
     return {
       id,
       version: num(row, 'version'),
@@ -398,7 +401,8 @@ export function createSharedWorldMeaningStore(
 
   function rowToCommitment(row: RawRow): QltCommitment {
     const id = str(row, 'id');
-    const content = parseStoredContent<QltCommitmentContent>(str(row, 'content'), id);
+    // D1a: tombstone-tolerant content parse (see rowToClaim above).
+    const content = parseStoredContent<QltCommitmentContent>(str(row, 'content') || '{}', id);
     return {
       id,
       version: num(row, 'version'),
@@ -421,7 +425,8 @@ export function createSharedWorldMeaningStore(
 
   function rowToOpenLoop(row: RawRow): QltOpenLoop {
     const id = str(row, 'id');
-    const content = parseStoredContent<QltOpenLoopContent>(str(row, 'content'), id);
+    // D1a: tombstone-tolerant content parse (see rowToClaim above).
+    const content = parseStoredContent<QltOpenLoopContent>(str(row, 'content') || '{}', id);
     return {
       id,
       version: num(row, 'version'),
@@ -688,6 +693,16 @@ export function createSharedWorldMeaningStore(
           reason: 'target-ineligible',
         });
       }
+      // D1a dependency re-evaluation (freeze §7): an EXPIRED target is
+      // structurally stale too — no ghost derivative may confirm against
+      // non-currently-relevant material (the 07C rule covered only the
+      // user-removed state; the frozen D1a rule covers the whole
+      // non-currently-relevant set).
+      if (target.retentionState !== 'currently-relevant') {
+        throw new QltMeaningError('QLT_PROPOSAL_STALE', 'The proposal is stale.', {
+          reason: 'target-ineligible',
+        });
+      }
       const eligibleStatuses = QLT_CANONICAL_ELIGIBLE_STATUSES[family];
       if (!eligibleStatuses.includes(target.status as never)) {
         throw new QltMeaningError('QLT_PROPOSAL_STALE', 'The proposal is stale.', {
@@ -890,6 +905,17 @@ export function createSharedWorldMeaningStore(
         'QLT_RECORD_NOT_CURRENT',
         'The correction target is no longer current-effective; duplicate successors fail closed.',
         { currentStatus: subjectStatus },
+      );
+    }
+    // D1a dependency re-evaluation (freeze §7): the DIRECT correction path
+    // gains the same retention guard the proposal path already applies —
+    // a removed or expired subject can never be the basis of a fresh
+    // record (no ghost derivatives; no resurrection).
+    if (str(subjectRow, 'retention_state') !== 'currently-relevant') {
+      throw new QltMeaningError(
+        'QLT_RECORD_NOT_CURRENT',
+        'The correction target is not currently-relevant; removed or expired material is never corrected.',
+        { currentRetentionState: str(subjectRow, 'retention_state') },
       );
     }
     if (

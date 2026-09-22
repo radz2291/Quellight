@@ -399,7 +399,15 @@ describe('Q6 hostile-memory containment and authority (real composition, offline
     const plan = getCompiledPlan();
     const actionIds = Object.keys(plan.actions).sort();
     expect(actionIds).toEqual(
-      [...QLT_PLAN_ACTION_INVENTORY, 'act.queryInspection', 'act.setMemoryMode'].sort(),
+      [
+        ...QLT_PLAN_ACTION_INVENTORY,
+        'act.queryInspection',
+        'act.setMemoryMode',
+        'act.queryRetention',
+        'act.removeRecord',
+        'act.setClaimExpiry',
+        'act.runRetentionPass',
+      ].sort(),
     );
     // The declared product bindings stay EMPTY (the agent envelope is the
     // composition-pinned capability only; hostile memory cannot add one).

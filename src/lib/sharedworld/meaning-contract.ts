@@ -218,6 +218,13 @@ export type QltStoreErrorCode =
   | 'QLT_CONFIRMER_INVALID'
   | 'QLT_IDEMPOTENCY_CONFLICT'
   | 'QLT_VERSION_CONFLICT'
+  // D1a freeze codes (the code DATA is frozen in `d1-contract.ts` §5 and
+  // the D1a freeze report §10; the Lane implementation commits widen this
+  // typed union — the code vocabulary itself is unchanged by them).
+  | 'QLT_COMMITMENT_CONFLICT'
+  | 'QLT_RETENTION_INVALID_TRANSITION'
+  | 'QLT_RETENTION_EXPIRY_INVALID'
+  | 'QLT_CHALLENGE_NOT_OPEN'
   | 'QLT_STORE_ERROR';
 
 export type QltMeaningErrorCode = QltInputErrorCode | QltStoreErrorCode;

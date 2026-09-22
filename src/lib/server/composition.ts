@@ -68,6 +68,12 @@ import { createSharedWorldSqlite } from '../sharedworld/sqlite';
 import type { SharedWorldSqlite } from '../sharedworld/sqlite';
 import { createMemorySurface, type MemorySurfaceDeps } from '../sharedworld/ceremony-actions';
 import {
+  createRetentionSurface,
+  type RetentionSurfaceDeps,
+} from '../sharedworld/retention-surface';
+import { QLT_RETENTION_RESOURCE_ID } from '../sharedworld/d1-contract';
+import { QLT_CONFLICT_RESOURCE_ID } from '../sharedworld/d1-contract';
+import {
   createInspectionSurface,
   type InspectionSurfaceDeps,
 } from '../sharedworld/inspection-surface';
@@ -767,6 +773,15 @@ export async function createQuellightComposition(
     userActorId: LOCAL_ACTOR_ID,
   } satisfies MemorySurfaceDeps);
 
+  // ---- Stage 07D Phase D1 Lane A: the governed retention surface
+  // (user removal / claim expiry / the enforcement pass; USER-attributed
+  // through the server-derived local actor; routed by resourceId inside
+  // the ONE application-data port) ------------------------------------
+  const retentionSurface = createRetentionSurface({
+    retention: sharedWorld.retention,
+    userActorId: LOCAL_ACTOR_ID,
+  } satisfies RetentionSurfaceDeps);
+
   // ---- Q5 inspection and Memory Mode surfaces (one bounded read surface;
   // ONE user-attributed Memory Mode mutation; both routed by resourceId
   // inside the ONE application-data port) ----------------------------
@@ -886,6 +901,22 @@ export async function createQuellightComposition(
           { permissions: ['qlt.memory.read'], effect: 'read' },
         );
       }
+      if (request['resourceId'] === QLT_RETENTION_RESOURCE_ID) {
+        // Stage 07D D1: the retention surface answers qlt.retention reads
+        // (user-only; bounded, deterministic).
+        return retentionSurface.query(
+          {
+            op: 'list',
+            resourceId: QLT_RETENTION_RESOURCE_ID,
+            ...(filters !== undefined ? { filters } : {}),
+            ...(Array.isArray(request['sort']) ? { sort: request['sort'] } : {}),
+            ...(typeof request['limit'] === 'number' ? { limit: request['limit'] } : {}),
+            ...(typeof request['offset'] === 'number' ? { offset: request['offset'] } : {}),
+            ...(Array.isArray(request['projection']) ? { projection: request['projection'] } : {}),
+          },
+          { permissions: ['qlt.retention.read'], effect: 'read' },
+        );
+      }
       if (request['resourceId'] === QLT_INSPECTION_RESOURCE_ID) {
         return inspectionSurface.query(
           {
@@ -942,6 +973,20 @@ export async function createQuellightComposition(
             ...(idempotencyKey !== undefined ? { idempotencyKey } : {}),
           },
           { permissions: ['qlt.memory.read', 'qlt.memory.write'], effect: 'write' },
+        );
+      }
+      if (request['resourceId'] === QLT_RETENTION_RESOURCE_ID) {
+        // Stage 07D D1: the governed retention write path (user-attributed
+        // inside the surface; the server-derived local actor).
+        return retentionSurface.mutate(
+          {
+            resourceId: QLT_RETENTION_RESOURCE_ID,
+            op,
+            input,
+            ...(id !== undefined ? { id } : {}),
+            ...(idempotencyKey !== undefined ? { idempotencyKey } : {}),
+          },
+          { permissions: ['qlt.retention.read', 'qlt.retention.write'], effect: 'write' },
         );
       }
       if (request['resourceId'] === 'qlt.memory-policy') {

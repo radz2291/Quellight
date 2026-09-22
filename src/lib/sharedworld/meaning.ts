@@ -551,6 +551,13 @@ export function proposalStaleness(
     if (target.retentionState === 'user-removed') {
       return { stale: true, reason: 'target-ineligible' };
     }
+    // D1a dependency re-evaluation (freeze §7): the pure projection
+    // mirrors the boundary — ANY non-currently-relevant target retention
+    // state (expired included) is structurally stale, so the inspection
+    // staleness projection can never contradict the confirm boundary.
+    if (target.retentionState !== 'currently-relevant') {
+      return { stale: true, reason: 'target-ineligible' };
+    }
   }
   if (sourceThread === undefined) {
     return { stale: true, reason: 'source-missing' };

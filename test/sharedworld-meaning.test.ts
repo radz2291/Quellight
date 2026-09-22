@@ -1666,16 +1666,22 @@ describe('A-29: no production path reaches the meaning repository outside the go
     const actionIds = Object.keys(plan.actions).sort();
     // Q5 bounded re-pin (freeze §14): the frozen Q3 inventory is unchanged;
     // the plan adds EXACTLY the two Q5 actions (qlt.inspection read,
-    // qlt.memory-policy setMode). The Q3 actions are unchanged.
+    // qlt.memory-policy setMode). D1a bounded re-pin: the plan adds
+    // EXACTLY the four Lane A retention actions (freeze report §10). The
+    // Q3/Q5 actions are unchanged.
     expect(actionIds).toEqual(
       [
         ...ceremony.QLT_THREAD_ACTION_IDS,
         ...ceremony.QLT_MEMORY_ACTION_IDS,
         'act.queryInspection',
         'act.setMemoryMode',
+        'act.queryRetention',
+        'act.removeRecord',
+        'act.setClaimExpiry',
+        'act.runRetentionPass',
       ].sort(),
     );
-    expect(actionIds).toHaveLength(21);
+    expect(actionIds).toHaveLength(25);
     const threadActionIds = actionIds.filter(
       (id) => (plan.actions[id] as { resourceId?: string }).resourceId === 'qlt.threads',
     );
