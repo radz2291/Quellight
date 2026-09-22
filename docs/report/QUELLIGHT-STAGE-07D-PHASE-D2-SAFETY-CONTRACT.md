@@ -24,12 +24,12 @@
 
 ## 1. Stores and record families affected; authority
 
-| Store (file) | Owner/authority | Families | D2 writes |
-| --- | --- | --- | --- |
-| Quellight Shared World SQLite (`shared-world.db`) | Quellight product; USER only (`actor-quellight-local`; `agent-*` refused) | `qlt_thread`, `qlt_thread_conversation`, six meaning families, proposals, corrections, source links, challenges, amendments, retention passes, context-assembly evidence, memory policy | thread tombstone + link removal (via the VICT governed domain port callback), originating-meaning removal (via the frozen D1 retention store), pending-proposal/correction withdrawal, NEW `qlt_conversation_deletion` + `qlt_conversation_purge` receipt rows, migration 6 |
-| VICT governance store (`governance.db`, NEW dedicated file) | VICT-owned (`AgentGovernanceStore`) | deletion intents + step receipts (`application-domain`, `memory-store`) | only through `ConversationDeletionCoordinator`; content-free identifiers and timestamps only |
-| VICT Mastra memory store (`mastra-store.db`) | VICT-owned; adapter-governed | conversation threads, messages, thread-scoped memory | only through `MastraMemoryDeletionPort` (fenced, coordinator-shared) and `MastraConversationExportPort` (read) |
-| VICT operational stores (`vict-operational.db`) | VICT-owned | turns, invocations, approvals, stream ledger, command idempotency | no D2 writes |
+| Store (file)                                                | Owner/authority                                                           | Families                                                                                                                                                                                | D2 writes                                                                                                                                                                                                                                                                   |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Quellight Shared World SQLite (`shared-world.db`)           | Quellight product; USER only (`actor-quellight-local`; `agent-*` refused) | `qlt_thread`, `qlt_thread_conversation`, six meaning families, proposals, corrections, source links, challenges, amendments, retention passes, context-assembly evidence, memory policy | thread tombstone + link removal (via the VICT governed domain port callback), originating-meaning removal (via the frozen D1 retention store), pending-proposal/correction withdrawal, NEW `qlt_conversation_deletion` + `qlt_conversation_purge` receipt rows, migration 6 |
+| VICT governance store (`governance.db`, NEW dedicated file) | VICT-owned (`AgentGovernanceStore`)                                       | deletion intents + step receipts (`application-domain`, `memory-store`)                                                                                                                 | only through `ConversationDeletionCoordinator`; content-free identifiers and timestamps only                                                                                                                                                                                |
+| VICT Mastra memory store (`mastra-store.db`)                | VICT-owned; adapter-governed                                              | conversation threads, messages, thread-scoped memory                                                                                                                                    | only through `MastraMemoryDeletionPort` (fenced, coordinator-shared) and `MastraConversationExportPort` (read)                                                                                                                                                              |
+| VICT operational stores (`vict-operational.db`)             | VICT-owned                                                                | turns, invocations, approvals, stream ledger, command idempotency                                                                                                                       | no D2 writes                                                                                                                                                                                                                                                                |
 
 The agent capability envelope is UNCHANGED: the compiled plan remains the
 29-action D1 inventory (proposal-only agent capability); D2 operations are
@@ -77,9 +77,9 @@ duplicates.
    4. finalize: `completed` only when the VICT intent is `completed` AND
       every product step is durable; otherwise `incomplete` with the VICT
       intent id recorded.
-   **Conversation-only mode skips step 2 entirely** and preserves all
-   confirmed Shared World meaning; this preservation is disclosed in the
-   preview, the confirmation text, and the completion state.
+      **Conversation-only mode skips step 2 entirely** and preserves all
+      confirmed Shared World meaning; this preservation is disclosed in the
+      preview, the confirmation text, and the completion state.
 5. **Reconcile/recover:** at composition boot (and on explicit retry),
    `coordinator.recoverPending()` resumes open VICT intents from recorded
    receipts (completed steps are never re-driven), `fenceCompletedDeletions()`
@@ -89,10 +89,10 @@ duplicates.
    nothing that was not in the recorded intent. Repeated requests converge.
 6. **Terminal truthfulness:** `incomplete` is a truthful
    reconciliation-required state surfaced to the user (`QLT_DELETION_INCOMPLETE`
-   + the durable row status); the system never reports complete deletion
-   while any governed step lacks its receipt, and refuses ambiguous
-   destructive continuation (a second execution with a DIFFERENT mode on the
-   same thread refuses with `QLT_DELETION_SCOPE_CONFLICT`).
+   - the durable row status); the system never reports complete deletion
+     while any governed step lacks its receipt, and refuses ambiguous
+     destructive continuation (a second execution with a DIFFERENT mode on the
+     same thread refuses with `QLT_DELETION_SCOPE_CONFLICT`).
 
 **Partial-failure matrix:** failure before the product row → zero effect;
 failure during the meaning transaction → rollback, row rolled back with it
@@ -142,6 +142,7 @@ logging exists), or exports (tombstones render content-free by schema).
 
 **Deep purge** is a SEPARATE, explicit, high-intent, conversation-scoped
 action for an already governed-deleted (`completed`) conversation:
+
 - **Precondition:** the conversation's deletion row is `completed` (never
   combined silently with ordinary removal; never a default; the UI hides it
   until deletion completed and requires typing an explicit confirmation
