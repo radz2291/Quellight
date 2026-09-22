@@ -193,15 +193,21 @@ console.log('\n[1] SCHEMA — frozen inventory introspection, bookkeeping, resta
       // (qlt-memory-mode-policy) is applied on top of the frozen Q4
       // schema; the bookkeeping assertion is re-pinned to the full applied
       // list. The frozen Q2 inventory checks above are unchanged.
+      // D1a bounded re-pin: migration 5 (qlt-retention-conflict-foundations)
+      // rebuilds the meaning tables and adds the three D1 families; the
+      // bookkeeping assertion follows the full applied list (the Q4/Q5
+      // reconciliation precedent). The frozen Q2 INVENTORY checks above
+      // consume the amended inventory data and are unchanged in method.
       check(
-        `migration bookkeeping is [1, 2, 3, ${QLT_SHARED_WORLD_SCHEMA_VERSION}]`,
+        `migration bookkeeping is [1, 2, 3, 4, ${QLT_SHARED_WORLD_SCHEMA_VERSION}]`,
         'schema',
-        JSON.stringify(bookkeeping) === JSON.stringify([1, 2, 3, QLT_SHARED_WORLD_SCHEMA_VERSION]),
+        JSON.stringify(bookkeeping) ===
+          JSON.stringify([1, 2, 3, 4, QLT_SHARED_WORLD_SCHEMA_VERSION]),
       );
       check(
-        `QLT_SHARED_WORLD_SCHEMA_VERSION === 4 (Q5 additive migration)`,
+        `QLT_SHARED_WORLD_SCHEMA_VERSION === 5 (D1a retention/conflict migration)`,
         'schema',
-        QLT_SHARED_WORLD_SCHEMA_VERSION === 4,
+        QLT_SHARED_WORLD_SCHEMA_VERSION === 5,
       );
       check(
         'PRAGMA foreign_keys enforced on the connection',
@@ -561,9 +567,10 @@ await (async () => {
   );
   check(
     // Q5 reconciliation (Q5 freeze §14): the frozen Q3 action inventory is
-    // unchanged and EXTENDED by exactly the two Q5 actions; the frozen Q3
-    // contract data is not rewritten and no other assertion is weakened.
-    'the compiled plan carries EXACTLY the frozen Q3 action inventory PLUS exactly the two Q5 actions',
+    // unchanged and EXTENDED by exactly the two Q5 actions. D1a bounded
+    // re-pin: EXTENDED further by exactly the eight D1 actions (freeze
+    // report §10); no other assertion is weakened.
+    'the compiled plan carries EXACTLY the frozen Q3/Q5 inventory PLUS exactly the eight D1 actions',
     'structural',
     JSON.stringify(actionIds) ===
       JSON.stringify(
@@ -572,16 +579,29 @@ await (async () => {
           ...ceremony.QLT_MEMORY_ACTION_IDS,
           'act.queryInspection',
           'act.setMemoryMode',
+          'act.queryRetention',
+          'act.removeRecord',
+          'act.setClaimExpiry',
+          'act.runRetentionPass',
+          'act.queryConflict',
+          'act.amendCommitment',
+          'act.dismissChallenge',
+          'act.resolveChallengeWithAmendment',
         ].sort(),
       ),
   );
   check(
-    'every plan action targets qlt.threads, the Q3 qlt.memory resource, or the two Q5 resources',
+    'every plan action targets qlt.threads, qlt.memory, qlt.inspection, the D1 resources, or qlt.memory-policy',
     'structural',
     Object.values(plan.actions).every((action) =>
-      ['qlt.threads', 'qlt.memory', 'qlt.inspection', 'qlt.memory-policy'].includes(
-        action.resourceId,
-      ),
+      [
+        'qlt.threads',
+        'qlt.memory',
+        'qlt.inspection',
+        'qlt.retention',
+        'qlt.conflict',
+        'qlt.memory-policy',
+      ].includes(action.resourceId),
     ),
   );
   check(

@@ -309,9 +309,10 @@ console.log('\n[3] SCHEMA — migration 4 introspection vs the frozen inventory'
       .all()
       .map((row) => row.version);
     check(
-      'migration bookkeeping is exactly [1, 2, 3, 4] (additive forward-only)',
+      // D1a bounded re-pin: migration 5 applied on top (identity unchanged).
+      'migration bookkeeping is exactly [1, 2, 3, 4, 5] (additive forward-only)',
       'schema',
-      JSON.stringify(bookkeeping) === JSON.stringify([1, 2, 3, 4]),
+      JSON.stringify(bookkeeping) === JSON.stringify([1, 2, 3, 4, 5]),
     );
 
     for (const [table, inventory, pk] of [
@@ -381,11 +382,20 @@ console.log('\n[4] INVENTORY — 19 frozen + exactly the two Q5 actions; envelop
     ...QLT_PLAN_ACTION_INVENTORY,
     'act.queryInspection',
     'act.setMemoryMode',
+    'act.queryRetention',
+    'act.removeRecord',
+    'act.setClaimExpiry',
+    'act.runRetentionPass',
+    'act.queryConflict',
+    'act.amendCommitment',
+    'act.dismissChallenge',
+    'act.resolveChallengeWithAmendment',
   ].sort();
   check(
-    'the compiled plan carries exactly 21 actions (19 frozen + exactly the two Q5 actions)',
+    // D1a bounded re-pin: the plan grew by exactly the eight D1 actions.
+    'the compiled plan carries exactly 29 actions (19 frozen + two Q5 + eight D1)',
     'inventory',
-    actionIds.length === 21 && JSON.stringify(actionIds) === JSON.stringify(expected),
+    actionIds.length === 29 && JSON.stringify(actionIds) === JSON.stringify(expected),
   );
   check(
     'exactly one Q5 query action exists for qlt.inspection',
@@ -424,7 +434,8 @@ console.log('\n[4] INVENTORY — 19 frozen + exactly the two Q5 actions; envelop
     'the agent envelope data is unchanged: no inspection or mode capability exists in the plan',
     'inventory',
     !actionIds.some((id) => id.toLowerCase().includes('inspect') && id !== 'act.queryInspection') &&
-      actionIds.filter((id) => id.startsWith('act.')).length === 21,
+      // D1a bounded re-pin: 29 actions (21 + the eight D1 actions).
+      actionIds.filter((id) => id.startsWith('act.')).length === 29,
   );
   console.log(`  inventory: ${passed} checks`);
 }

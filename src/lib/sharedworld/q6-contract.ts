@@ -75,7 +75,12 @@ export const QLT_Q6_UNCHANGED_ENVELOPE = {
   capabilityRevision: '3',
   declaredEffect: 'write',
   hostQuietWritePolicyIdentity: 'qlt.host-policy.quiet-write@1',
-  actionInventory: 21,
+  // D1a freeze amendment: the plan inventory grew from 21 to 29 actions
+  // (the eight D1 retention/conflict actions; freeze report §10). The Q6
+  // AGENT envelope itself — capability id/revision, declared effect, host
+  // policy, maxToolCalls, profile/instructions revisions — is unchanged;
+  // no D1 action is agent-reachable.
+  actionInventory: 29,
   agentProfileRevision: '7',
   conversationInstructionsRevision: '5',
   conversationInstructionsId: 'quellight.conversation-instructions',

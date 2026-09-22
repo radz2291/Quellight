@@ -376,7 +376,10 @@ console.log('\n[1] CONTRACT — frozen Q6 bounds, identity, envelope, status lan
       QLT_Q6_UNCHANGED_ENVELOPE.declaredEffect === 'write' &&
       QLT_Q6_UNCHANGED_ENVELOPE.hostQuietWritePolicyIdentity ===
         QLT_HOST_QUIET_WRITE_POLICY_IDENTITY &&
-      QLT_Q6_UNCHANGED_ENVELOPE.actionInventory === 21 &&
+      // D1a bounded re-pin: the plan inventory is 29 (21 + the eight D1
+      // actions); the AGENT envelope fields are unchanged (see the
+      // q6-contract amendment note).
+      QLT_Q6_UNCHANGED_ENVELOPE.actionInventory === 29 &&
       QLT_Q6_UNCHANGED_ENVELOPE.agentProfileRevision === '7' &&
       QLT_Q6_UNCHANGED_ENVELOPE.conversationInstructionsRevision === '5' &&
       QLT_Q6_UNCHANGED_ENVELOPE.maxToolCalls === 2,
@@ -423,12 +426,26 @@ console.log('\n[2] ENVELOPE — exactly 21 actions, empty bindings, proposal-onl
   const plan = getCompiledPlan();
   const actionIds = Object.keys(plan.actions).sort();
   check(
-    'the compiled plan carries exactly the 21 frozen actions (no Q6 action added)',
+    // D1a bounded re-pin: the plan grew by exactly the eight D1 actions;
+    // no Q6 action was ever added and none is agent-reachable.
+    'the compiled plan carries exactly the 29 frozen actions (no Q6 action; eight D1 actions added)',
     'envelope',
     actionIds.length === QLT_Q6_UNCHANGED_ENVELOPE.actionInventory &&
       JSON.stringify(actionIds) ===
         JSON.stringify(
-          [...QLT_PLAN_ACTION_INVENTORY, 'act.queryInspection', 'act.setMemoryMode'].sort(),
+          [
+            ...QLT_PLAN_ACTION_INVENTORY,
+            'act.queryInspection',
+            'act.setMemoryMode',
+            'act.queryRetention',
+            'act.removeRecord',
+            'act.setClaimExpiry',
+            'act.runRetentionPass',
+            'act.queryConflict',
+            'act.amendCommitment',
+            'act.dismissChallenge',
+            'act.resolveChallengeWithAmendment',
+          ].sort(),
         ),
   );
   const definitionSource = readFileSync('src/lib/application/definition.ts', 'utf8');
