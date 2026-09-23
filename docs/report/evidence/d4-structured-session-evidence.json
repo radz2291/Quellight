@@ -1,0 +1,33 @@
+{
+  "outcome": "passed",
+  "contract": "quellight.stage07d.d4.proof-contract@2",
+  "profile": "ollama-cloud/glm-5.3-flash",
+  "checks": {
+    "a1-conversation-usable": true,
+    "a2-durable-meaning-preserved": true,
+    "a3-no-agent-canonical": true,
+    "restart-performed": true,
+    "a4-restart-preserved": true,
+    "assembly-selected": true,
+    "a5-fresh-thread-received": true,
+    "ineligible-seeded": true,
+    "a6-ineligible-excluded": true,
+    "a7-conflict-challenge-quiet": true,
+    "export-produced": true,
+    "a8-export-truthful": true,
+    "deletion-previewed": true,
+    "record-removed": true,
+    "a9-proof-record-removal": true,
+    "conversation-deleted": true,
+    "meaning-byte-identical": true,
+    "a10-conversation-only-preserved": true,
+    "reconciliation-receipts": true,
+    "boot-recovery-clean": true,
+    "a11-reconciliation-complete": true,
+    "context-marker-absent": true,
+    "a12-transcripts-clean": true,
+    "a13-evidence-hygiene": true
+  },
+  "sessionStartedAtMs": 1790142883936,
+  "sessionEndedAtMs": 1790143004973
+}

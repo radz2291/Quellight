@@ -1,0 +1,14 @@
+{
+  "authorizedAt": "2026-09-23T05:54:40.754Z",
+  "contract": "quellight.stage07d.d4.proof-contract@2",
+  "profile": "ollama-cloud/glm-5.3-flash",
+  "bounds": {
+    "maxSessionMs": 2700000,
+    "maxUserTurns": 5,
+    "maxProviderRequests": 20,
+    "maxOutputTokensPerRequest": 2048,
+    "maxTurnDeadlineMs": 120000,
+    "retries": 0,
+    "fallback": false
+  }
+}

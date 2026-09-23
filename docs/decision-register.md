@@ -1877,3 +1877,28 @@ paths are clean; a fresh owner authorization can create exactly one new
 attempt. No new structured-session authorization is granted or running;
 D4 remains incomplete; Stage 07D is NOT verified or formally closed;
 Stage 07E has NOT begun.
+
+## D-07D-10 — Stage 07D Phase D4: attempt-2 structured session EXECUTED and SEALED PASSED (Layer A complete)
+
+**Date:** 2026-09-23. Under the owner's one-shot authorization at the
+pinned tree `459a69a…`, the fresh D4 structured real-use session ran
+EXACTLY ONCE (no probe, no diagnostic, no retry, no second execution),
+resolved the credential only through the owner-designated authentication
+boundary, and sealed `passed` at contract @2 with the pinned profile —
+all 24 proof points true, ≈121 s elapsed, every frozen bound enforced
+live and respected (5 planned turns, ≤20 requests, ≤2048 tokens/request,
+zero retries, no fallback). True exit code 1, preserved truthfully: the
+durable cleanup verification failed inside the harness's 15-second
+post-close retry window (Windows SQLite-unlock lag) and the machinery
+refused to report success without a durably verified workspace
+disposition; the workspace was removed and verified immediately after
+process exit and the lag is disclosed as a bounded platform behavior.
+Privacy scans over the sealed bundle found zero scenario text, zero
+conversation payloads, zero credential material. The scenario temp file
+was deleted. The attempt-2 bundle occupies the canonical active paths as
+this attempt's committed record; per the corrected runbook lifecycle any
+future fresh authorization requires the owner to archive this bundle
+first. D4 Layer A is COMPLETE; Layer B (the organic-use window — three
+genuine sessions across two launches on two days, no harness) awaits the
+owner and must not begin automatically. D4 remains incomplete until
+Layer B; Stage 07D is NOT formally closed; Stage 07E has NOT begun.
