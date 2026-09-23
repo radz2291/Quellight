@@ -4,6 +4,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 import { authenticatedActorContext, type ActorRecord } from '@victframework/runtime';
 import {
   MUTATION_ENVELOPE_FIELDS,
@@ -167,8 +168,15 @@ describe('VICT 0.2.0 adoption gates (permanent)', () => {
       '@victframework/kernel',
     ]) {
       const entry = require.resolve(name);
+      // D5 finding L-1 repair (assertion-neutral): same containment
+      // invariant — resolved packages must live inside THIS repo's own
+      // node_modules — with the repo root derived from this test file's
+      // location instead of a hard-coded workspace directory name.
+      const repoRoot = fileURLToPath(new URL('..', import.meta.url))
+        .replace(/\\/g, '/')
+        .replace(/\/$/, '');
       const real = entry.replace(/\\/g, '/');
-      expect(real.includes('/260909-VCT-Quellight/node_modules/'), real).toBe(true);
+      expect(real.includes(`${repoRoot}/node_modules/`), real).toBe(true);
       expect(real.includes('/260831-VCT-02/'), real).toBe(false);
       expect(real.includes('/packages/server/src/'), real).toBe(false);
     }

@@ -25,6 +25,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, sep } from 'node:path';
 import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 // Run with `node --import tsx` so the typed definition compiles in-process:
 // the gate re-derives the compiled plan from the AUTHORITATIVE definition
 // (no YAML, no snapshot) through the installed released packages.
@@ -222,7 +223,15 @@ console.log('\n[7] released boundary provenance (public package, not a local che
     );
   }
   const resolvedFile = entry;
-  if (!resolvedFile.replace(/\\/g, '/').includes('/260909-VCT-Quellight/node_modules/')) {
+  // D5 finding L-1 repair (assertion-neutral): the containment invariant
+  // is unchanged — the resolved package must live inside THIS repo's own
+  // node_modules — but the repo root is derived from this script's
+  // location instead of a hard-coded workspace directory name, so the
+  // gate is portable across checkouts of the same commit.
+  const repoRoot = fileURLToPath(new URL('..', import.meta.url))
+    .replace(/\\/g, '/')
+    .replace(/\/$/, '');
+  if (!resolvedFile.replace(/\\/g, '/').includes(`${repoRoot}/node_modules/`)) {
     fail(`@victframework/server resolves outside Quellight's node_modules: ${resolvedFile}`);
   }
   const appRemote = require.resolve('@victframework/server');
