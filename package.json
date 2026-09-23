@@ -41,6 +41,7 @@
     "verify:d4-prep": "node --import tsx scripts/verify-d4-prep.mjs",
     "verify:d2": "node --import tsx scripts/verify-d2.mjs",
     "verify:browser-d2": "node scripts/browser-d2-check.mjs",
+    "verify:stage7e": "node scripts/verify-stage7e.mjs",
     "verify:q6:live": "node --import tsx scripts/verify-q6-live.mjs"
   },
   "dependencies": {
