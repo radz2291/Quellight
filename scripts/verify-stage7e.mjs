@@ -248,17 +248,18 @@ const validateStatusSurfaces = (surfaces) => {
   const readmeRequires = [
     '**Stage 07D is FORMALLY CLOSED**',
     'Stage 07E: EXIT CONTRACT FROZEN',
-    'PREPARATION COMPLETE',
-    'FINAL INDEPENDENT EXIT AUDIT',
-    'Stage 07:  IN PROGRESS (07A, 07B, 07C, and 07D closed;',
-    'Stage 07 is NOT closed',
+    'the FINAL INDEPENDENT EXIT AUDIT ran (2026-09-24',
+    'STAGE 07 VERIFIED WITH NON-BLOCKING ISSUES — FORMAL CLOSURE PERMITTED',
+    'Stage 07: FORMALLY CLOSED (07A, 07B, 07C, 07D, and 07E all closed',
+    'docs/report/QUELLIGHT-STAGE-07-FORMAL-CLOSURE.md',
     'consumes only published `@victframework/*@0.3.1`',
     'QUELLIGHT-STAGE-07E-EXIT-CONTRACT-FREEZE.md',
   ];
   const readmeForbids = [
     '07D in progress',
     'AWATING FRESH FOCUSED D5 RE-VERIFICATION',
-    '07E not begun and not permitted',
+    'Stage 07 is NOT closed',
+    'Stage 07:  IN PROGRESS',
     'consumes only published `@victframework/*@0.3.0`',
     '(N-1/N-2; 0.3.0 set)',
   ];
@@ -276,15 +277,18 @@ const validateStatusSurfaces = (surfaces) => {
     problems.push('system reference has no current-status header line');
   } else {
     for (const required of [
-      'STAGE 07D FORMALLY CLOSED',
-      'STAGE 07E PREPARED',
-      'STAGE 07 REMAINS IN PROGRESS',
+      'STAGE 07 FORMALLY CLOSED',
+      'STAGE 07 VERIFIED WITH NON-BLOCKING ISSUES — FORMAL CLOSURE PERMITTED',
+      'REQUIRES A FRESH OWNER PLANNING DECISION',
     ]) {
       if (!statusLine.includes(required))
         problems.push(`system-reference status line lacks: ${required}`);
     }
-    if (statusLine.includes('STAGE 07E PERMITTED AND NOT BEGUN')) {
-      problems.push('system-reference status line still carries the stale 07E formulation');
+    if (statusLine.includes('STAGE 07 REMAINS IN PROGRESS')) {
+      problems.push('system-reference status line still carries the pre-closure status');
+    }
+    if (statusLine.includes('THE FINAL INDEPENDENT EXIT AUDIT IS NOT BEGUN')) {
+      problems.push('system-reference status line still carries the pre-closure audit status');
     }
   }
   const stage07Line = surfaces.systemReference
@@ -293,13 +297,13 @@ const validateStatusSurfaces = (surfaces) => {
   if (stage07Line === undefined) {
     problems.push('system reference has no Stage 07 line');
   } else {
-    if (!stage07Line.includes('07E PREPARED'))
-      problems.push('system-reference Stage 07 line lacks: 07E PREPARED');
-    if (stage07Line.includes('07E PERMITTED and NOT BEGUN')) {
-      problems.push('system-reference Stage 07 line still carries the stale 07E formulation');
+    if (!stage07Line.includes('FORMALLY CLOSED'))
+      problems.push('system-reference Stage 07 line lacks: FORMALLY CLOSED');
+    if (stage07Line.includes('IN PROGRESS') || stage07Line.includes('NOT closed')) {
+      problems.push('system-reference Stage 07 line still carries the pre-closure status');
     }
   }
-  for (const required of ['## D-07D-17', '## D-07E-01']) {
+  for (const required of ['## D-07D-17', '## D-07E-03']) {
     if (!surfaces.register.includes(required))
       problems.push(`decision register lacks: ${required}`);
   }
@@ -333,7 +337,7 @@ const validateStatusSurfaces = (surfaces) => {
   const staleReinserted = {
     ...surfaces,
     readme: surfaces.readme.replace(
-      'Stage 07:  IN PROGRESS (07A, 07B, 07C, and 07D closed;',
+      'Stage 07: FORMALLY CLOSED (07A, 07B, 07C, 07D, and 07E all closed',
       'Stage 07:  IN PROGRESS (07A, 07B, and 07C closed; 07D in progress;',
     ),
   };
@@ -344,7 +348,7 @@ const validateStatusSurfaces = (surfaces) => {
   }
   const lineRemoved = {
     ...surfaces,
-    register: surfaces.register.replace('## D-07E-01', '## (removed)'),
+    register: surfaces.register.replace('## D-07E-03', '## (removed)'),
   };
   if (validateStatusSurfaces(lineRemoved).length === 0) {
     fail('negative control: a removed decision-register entry was not detected');
