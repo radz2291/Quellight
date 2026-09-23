@@ -3,8 +3,10 @@
  * cross-store reconciliation contract data.
  *
  * FROZEN CONTRACT DATA (safety contract
- * `quellight.stage07d.d2.safety-contract@1`, committed before any
- * executable D2 change). This module mirrors that contract exactly:
+ * `quellight.stage07d.d2.safety-contract@2` per Amendment 1
+ * (`QUELLIGHT-STAGE-07D-PHASE-D2-CONTRACT-AMENDMENT-1.md`), committed
+ * before any executable change of the repair). This module mirrors that
+ * contract exactly:
  * closed vocabularies, stable non-echoing codes, the deep-purge scope
  * order, the export identity, and the permanent negative-control matrix
  * N-D2-1..N-D2-18. The agent capability envelope is UNCHANGED — D2 adds
@@ -20,7 +22,7 @@
 // ---------------------------------------------------------------------------
 
 /** The D2 safety-contract identity (the amendment of record for D2). */
-export const QLT_D2_SAFETY_CONTRACT_ID = 'quellight.stage07d.d2.safety-contract@1';
+export const QLT_D2_SAFETY_CONTRACT_ID = 'quellight.stage07d.d2.safety-contract@2';
 
 /** The versioned user-export schema identity. */
 export const QLT_D2_EXPORT_SCHEMA_ID = 'quellight.user-export@1';
@@ -97,21 +99,26 @@ export const QLT_D2_WITHDRAWAL_REASON = 'conversation-deleted';
 // ---------------------------------------------------------------------------
 
 /**
- * The closed purge step order (one transaction, in this order):
- * challenges tied to the conversation's rows, amendments tied to its
- * commitments, its corrections, source links touching purged rows, its
- * proposals, its originating subject tombstones, its context-assembly
- * evidence rows, the conversation-link row, the thread row. The deletion
- * row, the purge receipt, the VICT governance receipts, and the retention
- * passes are the preserved minimum content-free evidence.
+ * The closed purge step order (one transaction, in this order;
+ * Amendment 1, frozen from the LIVE foreign-key graph — 20 edges, the
+ * referenced parents being exactly qlt_proposal, qlt_commitment, and
+ * qlt_thread): challenges tied to the conversation's rows, amendments
+ * tied to its commitments, its corrections, source links touching
+ * purged rows, its ORIGINATING SUBJECT TOMBSTONES (before the proposals:
+ * claim/commitment/open_loop proposal references make any earlier
+ * proposal deletion FK-invalid for ceremony-created records), its
+ * proposals, its context-assembly evidence rows, the conversation-link
+ * row, the thread row. The deletion row, the purge receipt, the VICT
+ * governance receipts, and the retention passes are the preserved
+ * minimum content-free evidence.
  */
 export const QLT_D2_PURGE_STEP_ORDER = [
   'challenges',
   'amendments',
   'corrections',
   'source-links',
-  'proposals',
   'originating-tombstones',
+  'proposals',
   'assembly-evidence',
   'conversation-link',
   'thread',
@@ -261,5 +268,29 @@ export const QLT_D2_NEGATIVE_CONTROLS: readonly QltD2NegativeControl[] = [
   {
     id: 'N-D2-18',
     must: 'purge leaves no conversation content in any Shared World table (full-store canary scan; only permitted evidence remains)',
+  },
+  {
+    id: 'N-D2-19',
+    must: 'deep purge of CEREMONY-created meaning succeeds: records created through the real proposal/confirmation ceremony (proposal_id non-null) are removed by the typed purge with a truthful receipt (Amendment 1; the B-1 regression control)',
+  },
+  {
+    id: 'N-D2-20',
+    must: 'the purge closure removes challenges, amendments, and source links referencing the purged records (including a cross-thread judgment row), counted in the receipt; content-bearing rows of unrelated conversations are untouched',
+  },
+  {
+    id: 'N-D2-21',
+    must: 'direct-verb compatibility: purging direct-verb-created meaning (proposal_id NULL) completes exactly as before the amendment',
+  },
+  {
+    id: 'N-D2-22',
+    must: 'unrelated-row byte-identity: every Shared World row outside the authorized purge scope is byte-identical across the purge; only scope rows and permitted content-free evidence differ',
+  },
+  {
+    id: 'N-D2-23',
+    must: 'an induced mid-purge failure rolls back completely (no receipt, zero partial deletion) and a subsequent purge converges (restart/replay truthfulness)',
+  },
+  {
+    id: 'N-D2-24',
+    must: 'post-purge integrity: PRAGMA foreign_key_check returns zero rows and a same-thread supersedes chain is fully removed by the single-transaction order',
   },
 ];

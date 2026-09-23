@@ -34,7 +34,7 @@ export const QLT_THREAD_PROVENANCE = 'user' as const;
 
 /** One durable Shared World thread record.
  *
- * D2 (safety contract `quellight.stage07d.d2.safety-contract@1`): a
+ * D2 (safety contract `quellight.stage07d.d2.safety-contract@2`): a
  * governed-deleted thread keeps a CONTENT-FREE tombstone — `title` is
  * null exactly when `retentionState` is `user-removed` (enforced by the
  * migration-6 storage CHECK).

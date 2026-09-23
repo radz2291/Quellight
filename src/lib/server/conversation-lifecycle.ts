@@ -3,7 +3,7 @@
  * service (deletion, deep purge, export, cross-store reconciliation).
  *
  * FROZEN CONTRACT: the D2 safety contract
- * (`quellight.stage07d.d2.safety-contract@1`; data in `d2-contract.ts`).
+ * (`quellight.stage07d.d2.safety-contract@2`; data in `d2-contract.ts`).
  *
  * Cross-store discipline (no atomicity is claimed or implemented):
  * - VICT-backed stores are touched ONLY through the released 0.3.1

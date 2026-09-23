@@ -4,7 +4,7 @@ import type { RequestHandler } from './$types';
 
 /**
  * The D2 deep-purge route (safety contract
- * `quellight.stage07d.d2.safety-contract@1` §5): a SEPARATE, explicit,
+ * `quellight.stage07d.d2.safety-contract@2` §5): a SEPARATE, explicit,
  * high-intent action for an already governed-deleted conversation. The
  * request must carry the explicit confirmation token; the server derives
  * the identity. Stable, non-echoing codes only.

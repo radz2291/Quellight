@@ -3,7 +3,8 @@
  * purge, and reconciliation store.
  *
  * FROZEN CONTRACT: the D2 safety contract
- * (`d2-contract.ts` mirroring `quellight.stage07d.d2.safety-contract@1`).
+ * (`d2-contract.ts` mirroring `quellight.stage07d.d2.safety-contract@2`
+ * per Amendment 1 — the FK-derived purge order).
  *
  * Discipline (identical to the D1 stores):
  * - USER authority only; an `agent-*` identity fails closed at every
@@ -803,24 +804,30 @@ export function createSharedWorldDeletionStore(
           threadId,
           threadId,
         );
-        // 5. proposals originating from the conversation (plus-meaning
-        // mode only — the recorded mode bounds the purge FOREVER; a
-        // conversation-only deletion PRESERVED its meaning by explicit
-        // user choice, so its purge removes only the conversation shell:
-        // the evidence rows and the link; the content-free thread
-        // tombstone row stays as the provenance FK anchor).
+        // 5. the originating subject rows (tombstones by now) BEFORE the
+        // proposals — Amendment 1: ceremony-created records carry
+        // `proposal_id REFERENCES qlt_proposal(id)` (commitments also
+        // `normative_basis_proposal_id`), so any earlier proposal deletion
+        // is FK-invalid (audit finding B-1). One statement per family; a
+        // same-thread supersedes chain resolves within the statement
+        // (validated on the live schema).
         if (fullPurge) {
-          counts.proposals = single(
-            'DELETE FROM qlt_proposal WHERE source_thread_id = ?;',
-            threadId,
-          );
-          // 6. originating subject rows (tombstones by now).
           for (const table of Object.values(SUBJECT_TABLES)) {
             counts['originating-tombstones'] += single(
               `DELETE FROM ${table} WHERE source_thread_id = ?;`,
               threadId,
             );
           }
+          // 6. proposals originating from the conversation (plus-meaning
+          // mode only — the recorded mode bounds the purge FOREVER; a
+          // conversation-only deletion PRESERVED its meaning by explicit
+          // user choice, so its purge removes only the conversation shell:
+          // the evidence rows and the link; the content-free thread
+          // tombstone row stays as the provenance FK anchor).
+          counts.proposals = single(
+            'DELETE FROM qlt_proposal WHERE source_thread_id = ?;',
+            threadId,
+          );
         }
         // 7. the thread's context-assembly evidence rows.
         counts['assembly-evidence'] = single(

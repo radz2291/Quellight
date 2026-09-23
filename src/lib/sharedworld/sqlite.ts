@@ -361,7 +361,7 @@ export interface SharedWorldSqlite extends SharedWorldPort {
   readonly conflict: SharedWorldConflictStore;
   /**
    * Stage 07D Phase D2 (safety contract
-   * `quellight.stage07d.d2.safety-contract@1`): the governed
+   * `quellight.stage07d.d2.safety-contract@2`): the governed
    * conversation-deletion, deep-purge, and reconciliation repository
    * over the SAME connection (durable product deletion rows, the
    * FK-driven purge with its content-free receipt). User authority only;

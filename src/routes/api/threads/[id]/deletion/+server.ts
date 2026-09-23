@@ -5,7 +5,7 @@ import type { RequestHandler } from './$types';
 
 /**
  * The D2 governed conversation-deletion route (safety contract
- * `quellight.stage07d.d2.safety-contract@1`).
+ * `quellight.stage07d.d2.safety-contract@2`).
  *
  * - GET  (no body): the pure, deterministic preview (no durable row).
  * - POST: the CONFIRMED governed deletion. The request must carry

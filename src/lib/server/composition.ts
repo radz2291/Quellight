@@ -376,7 +376,7 @@ export interface QuellightComposition {
    * D2: the governed conversation lifecycle (deletion, deep purge,
    * export, cross-store reconciliation) over the released VICT 0.3.1
    * governed surface. User authority only (safety contract
-   * `quellight.stage07d.d2.safety-contract@1`).
+   * `quellight.stage07d.d2.safety-contract@2`).
    */
   readonly conversationLifecycle: ConversationLifecycle;
   /**
@@ -567,7 +567,7 @@ export async function createQuellightComposition(
   });
 
   // ---- D2 governed conversation lifecycle (safety contract
-  // `quellight.stage07d.d2.safety-contract@1`): ONE process-local thread
+  // `quellight.stage07d.d2.safety-contract@2`): ONE process-local thread
   // coordinator shared by the agent AND the governed deletion port (the
   // unfenced-composition guard), the durable VICT governance store, and
   // the governed deletion/export ports. VICT-backed stores are touched
