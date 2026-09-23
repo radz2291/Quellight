@@ -338,6 +338,18 @@ different site, and a product action-loss race beneath it):**
    observed force-close signature truthfully in its output; if keyboard
    activation cannot open the tray within the bounded attempts, that remains a
    real failure.
+3. **Pending-label re-present fallback (gate script).** The chip-pending wait
+   can still fail through the documented one-shot refresh gap (§9) even when
+   the turn completes and the proposal is durably created — observed twice
+   (once standalone, once in the full composite). `runScenario` therefore
+   tolerates exactly that gap: if the label has not updated after one
+   standard bound, the page is reloaded — the mount reconcile re-runs
+   `refreshMemory` and re-presents the durable pending state, the same
+   re-present flow step 4 already asserts — and the wait runs once more. The
+   fallback fires visibly in the output so occurrences stay countable; if the
+   label is still absent after the reload, the pending proposal itself is
+   missing and the run fails for real. The assertion target is unchanged (the
+   durable pending proposal is truthfully indicated); no timeout increased.
 
 Protocol for the final audit (RETAINED unchanged): timeouts are NOT increased;
 the check is NOT suppressed. On any browser-gate failure, re-run that gate

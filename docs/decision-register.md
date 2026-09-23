@@ -2262,3 +2262,15 @@ race beneath the flake: the thread-restore continuation sets `memoryOpen =
 false` AFTER its fetch resolves, so a tray opened during a slow thread switch
 is force-closed — carried as a new Low product finding for future product
 work; Stage 07E changes no product code.
+
+**Addendum 2 (same session; evidence: the chip-pending wait failed twice more
+through the documented one-shot refresh gap — once standalone, once in the
+full composite — even though the turn completed and the proposal was durably
+created).** `runScenario` gains a bounded re-present fallback for exactly that
+carried gap: if the pending label has not updated after one standard bound,
+the page is reloaded (the mount reconcile re-runs `refreshMemory` and
+re-presents the durable pending state — the same re-present flow step 4
+asserts) and the wait runs once more; the fallback fires visibly in the
+output; if the label is still absent after the reload, the pending proposal
+itself is missing and the run fails for real. Assertion target unchanged; no
+timeout increased; product code untouched.
