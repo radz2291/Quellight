@@ -2091,3 +2091,43 @@ removal). Amendment text:
 Implementation, coverage, and the focused D5 re-verification request
 follow in subsequent entries; Stage 07D remains NOT independently
 verified and NOT formally closed; Stage 07E NOT permitted and NOT begun.
+
+## D-07D-16 — D2 safety-contract @2 IMPLEMENTED AND VERIFIED: the deep-purge repair, its permanent non-vacuous coverage, and the L-1 portability repair; AWAITING THE FRESH FOCUSED D5 RE-VERIFICATION
+
+**Date:** 2026-09-24. Implements the frozen Amendment 1 (D-07D-15) per the
+owner's remediation instruction. Commit ledger on top of the audited
+`ed144b19…`: `559e40a` Amendment freeze (standalone docs);
+`b232682` the fix (purge order: originating subject tombstones BEFORE
+proposals, derived from the live 20-edge FK graph; contract data @2;
+stale version references updated; migration 6's comment kept at @1 —
+historical truth); `483fd7c` the coverage (verify:d2 N-D2-19..24, 87
+checks; focused `test/d2-deep-purge.test.ts`);
+`8e74991` the L-1 repair (repo-root-relative containment in
+verify-governance + governed-mutation test; assertion-neutral; separate
+bounded commit per the owner's boundary rule); `3503a51` style/type
+corrections.
+
+**Evidence:** the defect was reproduced on the audited pre-fix tree
+(ceremony-created claim → plus-meaning deletion → raw
+`FOREIGN KEY constraint failed`, rollback, no receipt); the repaired
+purge removes ceremony-created claim/commitment/open-loop meaning with
+truthful receipts (originatingTombstones 6, proposals 4, challenges 1,
+amendments 1, corrections 1 in the mixed scenario), removes the
+cross-thread challenge and amendment rows by the id-membership closure,
+keeps unrelated rows byte-identical (full-store inventory), fails closed
+on a foreign correction successor referencing INTO the scope (rollback,
+no receipt) and converges after the foreign child leaves through its own
+governed path, and leaves `PRAGMA foreign_key_check` clean.
+**Non-vacuity:** the new gate and suite were overlaid on a disposable
+pre-fix clone (ed144b1): the gate ran 8 red (N-D2-19 with
+`cause=ERR_SQLITE_ERROR`), the suite failed 3/4 with the raw FK error;
+on the remediated tree both are green. **Battery:** verify:d1/d2/d3/
+dev-live/governance, test:node (30 files / 357 tests), typecheck,
+format:check, production build, verify:browser-d2 (purge ceremony in the
+real browser), `git diff --check` — all exit 0. **Carried truthfully:**
+M-1 NOT rewritten; the D4 Layer-B aggregate attestation ruling NOT
+altered; L-2/L-3 unchanged (L-3 already repaired in the D5 audit
+commit). **Status:** Stage 07D remains NOT independently verified and
+NOT formally closed — this remediation awaits the fresh focused
+independent D5 re-verification; Stage 07E NOT permitted and NOT begun.
+Report: `docs/report/QUELLIGHT-STAGE-07D-PHASE-D2-REMEDIATION.md`.
