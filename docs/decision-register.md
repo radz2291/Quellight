@@ -2246,3 +2246,19 @@ race had been blocking. Full normative text:
 check; the L-5 carried limitation is reclassified truthfully as a repaired
 test-machinery defect (not an intermittent product-adjacent flake); Stage 07
 remains IN PROGRESS; nothing here declares Stage 07 closed.
+
+**Addendum (same date, same session; concrete evidence: the full-composite run
+then failed at the Q6 fresh-conversation Send — the same race class at a site
+without a delivery fallback — and one post-repair standalone run still failed
+the tray reopen with the open-then-close signature).** The repair program is
+completed in two further assertion-neutral, timeout-neutral parts: (1) ALL
+turn-send sites now deliver through the shared `deliverSend` helper
+(re-resolved locator press; delivery verified by the composer clearing; real
+click fallback) — the Lane E pattern the script already used for its main
+scenario; (2) the openOldestThreadTray tray reopen uses bounded retries (three
+attempts at the standard 20 s bound) with every observed force-close signature
+reported truthfully, because the investigation exposed a PRODUCT action-loss
+race beneath the flake: the thread-restore continuation sets `memoryOpen =
+false` AFTER its fetch resolves, so a tray opened during a slow thread switch
+is force-closed — carried as a new Low product finding for future product
+work; Stage 07E changes no product code.

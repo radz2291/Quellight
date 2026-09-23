@@ -311,6 +311,34 @@ every step green including the correction-lineage, memory-mode, fresh-conversati
 responsive/axe, and zero-console steps that the deterministic race had been
 blocking — twice consecutively.
 
+**AMENDMENT 2 (same preparation; completes the D-07E-02 repair program after
+the full-composite run exposed one more occurrence of the same class at a
+different site, and a product action-loss race beneath it):**
+
+1. **Send delivery hardening (gate script).** The Q6 fresh-conversation Send
+   activation (`focus()` + page-level press, no delivery fallback) swallowed
+   the Enter under in-composite load — the turn was never sent and the 45 s
+   assistant-message wait timed out (first and only failure at that step; the
+   same wait passed standalone twice immediately before). The script's Lane E
+   delivery semantics were completed across ALL turn-send sites via a shared
+   `deliverSend` helper: deliver through the re-resolved locator, verify
+   delivery by the composer clearing, fall back to a real click. Delivery
+   mechanism only; every downstream assertion unchanged; no timeout increased.
+2. **Product action-loss race (documented; NOT fixed in Stage 07E).** With the
+   delivery repair in place, one standalone run still failed the tray reopen:
+   the workspace's thread-restore continuation sets `memoryOpen = false` AFTER
+   its fetch resolves, so a tray the user opens while a slow restore is in
+   flight is force-closed — the user's action is lost (the open-then-close
+   signature was observed directly). This is a product-side robustness finding
+   in the memory-control family, small and timing-dependent, with no authority,
+   durability, or truthfulness implication; it is carried in §9 for future
+   product work (Stage 07E changes no product code). The gate's
+   `openOldestThreadTray` therefore opens with BOUNDED retries (three
+   attempts, each at the script's standard 20 s bound) and reports every
+   observed force-close signature truthfully in its output; if keyboard
+   activation cannot open the tray within the bounded attempts, that remains a
+   real failure.
+
 Protocol for the final audit (RETAINED unchanged): timeouts are NOT increased;
 the check is NOT suppressed. On any browser-gate failure, re-run that gate
 fresh. Closure requires ALL of: at least one fully green run of every browser
@@ -327,7 +355,8 @@ destabilize it.
 | M-1 (07D, Medium)                   | D1a Amendment 1 landed Lane B implementation under a docs/standalone label (`6856d45`)                                                                                                                                                                                                                    | Carried permanently as process history; no contract ambiguity, no executable bypass, history not rewritten; no future work                                                                 |
 | L-2 (07D, Low)                      | D4 Layer B OB-1/3/4/7 aggregate attestation (permitted, honestly labeled)                                                                                                                                                                                                                                 | Optional direct owner answers would close it; carried into post-Stage-07 product work; no Stage 07E action                                                                                 |
 | L-4 (07D, Low)                      | Frozen D5 report vs local-path scan                                                                                                                                                                                                                                                                       | RESOLVED by the owner decision frozen in §5 and implemented by the narrow scanner disposition; the gate enforces it permanently                                                            |
-| L-5 (07D, Low)                      | Browser-ceremony gate-script activation race — REPAIRED in the Stage 07E preparation (assertion-neutral `locator.press` at both chip-activation sites; product unaffected)                                                                                                                                | Repaired and re-verified; the §8.2 fresh-run protocol is retained for any future browser-gate failure; the one-shot chip-refresh robustness observation is carried for future product work |
+| L-5 (07D, Low)                      | Browser-ceremony gate-script races — REPAIRED in the Stage 07E preparation (locator.press at the chip sites; shared `deliverSend` at every turn-send site; bounded open-retry with force-close reporting at the thread-switch reopen)                                                                     | Repaired and re-verified; the §8.2 fresh-run protocol is retained for any future browser-gate failure; the one-shot chip-refresh robustness observation is carried for future product work |
+| 07E product finding (new, Low)      | Thread-restore continuation force-closes a memory tray the user opened during a slow thread switch (action-loss race; `memoryOpen = false` after the restore await)                                                                                                                                       | Carried for future product work (synchronous close at switch time, or no post-await close); documented in §8.2; no Stage 07E product change; non-blocking                                  |
 | D4 attempt-2 exit code 1            | Windows SQLite-unlock lag in the 15 s post-close cleanup verification window                                                                                                                                                                                                                              | Truthfully sealed in the attempt-2 record; platform-bounded; no future work unless the platform behavior changes                                                                           |
 | Attempt-2 summary observability     | The `passed` summary omits the exact provider-request count (additive gap)                                                                                                                                                                                                                                | Carried, disclosed in D5 §10; may be closed by an additive evidence-tooling change in future product work; never by editing sealed evidence                                                |
 | MSTR-012 backup/recovery disclosure | Nothing outside the application's stores is claimed erased; documented backup/recovery limitations                                                                                                                                                                                                        | Remains disclosed product documentation; future product work may widen the guarantee                                                                                                       |
