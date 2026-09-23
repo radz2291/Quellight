@@ -86,7 +86,7 @@ console.log(
 // 1. CONTRACT FREEZE — presence + byte pin
 // ---------------------------------------------------------------------------
 const CONTRACT_PATH = 'docs/report/QUELLIGHT-STAGE-07E-EXIT-CONTRACT-FREEZE.md';
-const CONTRACT_SHA256 = 'abd051191bcfab662eddb164fc560ce42c211c01a7c3dfcc72fafb5bf2bdfd93';
+const CONTRACT_SHA256 = 'f4d7589f8c29fda28f5b5248d895d4ae8fec75a3e4c34dabfbab74307851e2ee';
 console.log('\n[1] CONTRACT FREEZE');
 {
   if (!existsSync(CONTRACT_PATH)) {

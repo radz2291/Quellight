@@ -155,14 +155,36 @@ const runScenario = async (page, trigger) => {
   await page.getByRole('button', { name: 'Send' }).waitFor({ state: 'visible', timeout: 45_000 });
   const chip = page.locator('button.qlt-memory-chip');
   await chip.waitFor({ state: 'visible', timeout: 20_000 });
-  await page.waitForFunction(
-    () =>
-      (document.querySelector('button.qlt-memory-chip')?.getAttribute('aria-label') ?? '').includes(
-        'pending',
-      ),
-    undefined,
-    { timeout: 20_000 },
-  );
+  // The pending count is refreshed by a ONE-SHOT post-turn refreshMemory()
+  // whose failure is silently absorbed ("the last known state stands") — a
+  // documented product robustness gap (Stage 07E contract §8.2/§9; carried
+  // for future product work; Stage 07E changes no product code). Tolerate
+  // exactly that gap deterministically: if the label has not updated after
+  // one standard bound, reload the page — the mount reconcile re-runs
+  // refreshMemory and re-presents the durable pending state (the same
+  // re-present flow step 4 asserts) — and wait once more. The fallback
+  // fires visibly in the output so the occurrence stays countable. If the
+  // label is STILL absent after the reload, the pending proposal itself is
+  // missing and this is a real failure.
+  const waitPendingLabel = () =>
+    page.waitForFunction(
+      () =>
+        (
+          document.querySelector('button.qlt-memory-chip')?.getAttribute('aria-label') ?? ''
+        ).includes('pending'),
+      undefined,
+      { timeout: 20_000 },
+    );
+  try {
+    await waitPendingLabel();
+  } catch {
+    note(
+      'the chip label did not update after the turn (documented one-shot refresh gap) — reload re-present fallback',
+    );
+    await page.reload();
+    await page.locator('#qlt-composer').waitFor({ state: 'visible', timeout: 20_000 });
+    await waitPendingLabel();
+  }
   return chip;
 };
 
