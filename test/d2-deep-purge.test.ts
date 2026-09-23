@@ -69,9 +69,13 @@ async function openWorld(): Promise<World> {
 async function confirmCeremony(
   world: World,
   threadId: string,
-  proposalKind: 'claim' | 'commitment' | 'open_loop',
+  proposalKind: 'claim' | 'commitment' | 'open_loop' | 'correction',
   content: Record<string, unknown>,
-  targetRecord?: { recordId: string; family: 'claim' | 'commitment' | 'open_loop'; version: number },
+  targetRecord?: {
+    recordId: string;
+    family: 'claim' | 'commitment' | 'open_loop';
+    version: number;
+  },
 ): Promise<{ proposalId: string; recordIds: string[] }> {
   const proposal = await world.store.meaning.createProposal({
     proposalKind,
@@ -153,11 +157,37 @@ describe('D2 Amendment 1: the FK-derived deep-purge order (N-D2-19..24)', () => 
     expect(receipt.proposals).toBe(3);
     expect(receipt.challenges).toBe(0);
     expect(receipt.amendments).toBe(0);
-    expect(rowCount(world, 'SELECT COUNT(*) AS total FROM qlt_claim WHERE source_thread_id = ?', world.threadP)).toBe(0);
-    expect(rowCount(world, 'SELECT COUNT(*) AS total FROM qlt_commitment WHERE source_thread_id = ?', world.threadP)).toBe(0);
-    expect(rowCount(world, 'SELECT COUNT(*) AS total FROM qlt_open_loop WHERE source_thread_id = ?', world.threadP)).toBe(0);
-    expect(rowCount(world, 'SELECT COUNT(*) AS total FROM qlt_proposal WHERE source_thread_id = ?', world.threadP)).toBe(0);
-    expect(rowCount(world, 'SELECT COUNT(*) AS total FROM qlt_thread WHERE id = ?', world.threadP)).toBe(0);
+    expect(
+      rowCount(
+        world,
+        'SELECT COUNT(*) AS total FROM qlt_claim WHERE source_thread_id = ?',
+        world.threadP,
+      ),
+    ).toBe(0);
+    expect(
+      rowCount(
+        world,
+        'SELECT COUNT(*) AS total FROM qlt_commitment WHERE source_thread_id = ?',
+        world.threadP,
+      ),
+    ).toBe(0);
+    expect(
+      rowCount(
+        world,
+        'SELECT COUNT(*) AS total FROM qlt_open_loop WHERE source_thread_id = ?',
+        world.threadP,
+      ),
+    ).toBe(0);
+    expect(
+      rowCount(
+        world,
+        'SELECT COUNT(*) AS total FROM qlt_proposal WHERE source_thread_id = ?',
+        world.threadP,
+      ),
+    ).toBe(0);
+    expect(
+      rowCount(world, 'SELECT COUNT(*) AS total FROM qlt_thread WHERE id = ?', world.threadP),
+    ).toBe(0);
     // The purge is not repeatable (the thread is gone) and the receipt is content-free.
     expect(JSON.stringify(receipt)).not.toContain('the ceremony');
   });
@@ -222,21 +252,26 @@ describe('D2 Amendment 1: the FK-derived deep-purge order (N-D2-19..24)', () => 
       },
       (await world.store.meaning.getProposal(conflicting.id))!,
     );
-    const challengeId = refusal?.details?.challengeId;
+    const challengeId = (refusal as { details?: { challengeId?: string } } | undefined)?.details
+      ?.challengeId;
     expect(typeof challengeId).toBe('string');
 
     // A full row inventory BEFORE the purge.
     const snapshotOf = (): Map<string, string[]> => {
       const raw = new DatabaseSync(world.dbPath, { readOnly: true });
       const tables = raw
-        .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'qlt_%' ORDER BY name;")
+        .prepare(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'qlt_%' ORDER BY name;",
+        )
         .all()
         .map((row) => row.name as string);
       const snap = new Map<string, string[]>();
       for (const table of tables) {
         snap.set(
           table,
-          (raw.prepare(`SELECT * FROM ${table};`).all() as unknown[]).map((row) => JSON.stringify(row)),
+          (raw.prepare(`SELECT * FROM ${table};`).all() as unknown[]).map((row) =>
+            JSON.stringify(row),
+          ),
         );
       }
       raw.close();
@@ -258,17 +293,36 @@ describe('D2 Amendment 1: the FK-derived deep-purge order (N-D2-19..24)', () => 
     expect(receipt.originatingTombstones).toBe(5);
 
     // N-D2-20: the cross-thread challenge is gone; Q's proposal row stays.
-    expect(rowCount(world, 'SELECT COUNT(*) AS total FROM qlt_conflict_challenge WHERE id = ?', challengeId!)).toBe(0);
-    expect(rowCount(world, 'SELECT COUNT(*) AS total FROM qlt_proposal WHERE id = ?', conflicting.id)).toBe(1);
+    expect(
+      rowCount(
+        world,
+        'SELECT COUNT(*) AS total FROM qlt_conflict_challenge WHERE id = ?',
+        challengeId!,
+      ),
+    ).toBe(0);
+    expect(
+      rowCount(world, 'SELECT COUNT(*) AS total FROM qlt_proposal WHERE id = ?', conflicting.id),
+    ).toBe(1);
 
     // N-D2-21: the direct-verb record was removed by the same purge.
-    expect(rowCount(world, 'SELECT COUNT(*) AS total FROM qlt_claim WHERE id = ?', direct.id)).toBe(0);
+    expect(rowCount(world, 'SELECT COUNT(*) AS total FROM qlt_claim WHERE id = ?', direct.id)).toBe(
+      0,
+    );
 
     // N-D2-24: both lineage chains are fully removed (correction pair and
     // amendment pair) and the whole store passes foreign_key_check.
-    for (const id of [claim.recordIds[0], correction.recordIds[0], commitment.recordIds[0], amended.successor.id]) {
+    for (const id of [
+      claim.recordIds[0],
+      correction.recordIds[0],
+      commitment.recordIds[0],
+      amended.successor.id,
+    ]) {
       const inClaims = rowCount(world, 'SELECT COUNT(*) AS total FROM qlt_claim WHERE id = ?', id);
-      const inCommitments = rowCount(world, 'SELECT COUNT(*) AS total FROM qlt_commitment WHERE id = ?', id);
+      const inCommitments = rowCount(
+        world,
+        'SELECT COUNT(*) AS total FROM qlt_commitment WHERE id = ?',
+        id,
+      );
       expect(inClaims + inCommitments).toBe(0);
     }
     const raw = new DatabaseSync(world.dbPath, { readOnly: true });
@@ -284,7 +338,7 @@ describe('D2 Amendment 1: the FK-derived deep-purge order (N-D2-19..24)', () => 
       commitment.proposalId,
       correction.proposalId,
       challengeId as string,
-      amended.amendment.id,
+      amended.amendment.amendmentId,
       direct.id,
       ...claim.recordIds,
       ...commitment.recordIds,
@@ -335,19 +389,23 @@ describe('D2 Amendment 1: the FK-derived deep-purge order (N-D2-19..24)', () => 
     await deletePlusMeaning(world, world.threadR, 'k-purge-r');
     const snapshotClaim = (): string[] => {
       const reader = new DatabaseSync(world.dbPath, { readOnly: true });
-      const rows = (reader.prepare('SELECT * FROM qlt_claim ORDER BY id;').all() as unknown[]).map((row) =>
-        JSON.stringify(row),
+      const rows = (reader.prepare('SELECT * FROM qlt_claim ORDER BY id;').all() as unknown[]).map(
+        (row) => JSON.stringify(row),
       );
-      const threads = (reader.prepare('SELECT * FROM qlt_thread ORDER BY id;').all() as unknown[]).map((row) =>
-        JSON.stringify(row),
-      );
+      const threads = (
+        reader.prepare('SELECT * FROM qlt_thread ORDER BY id;').all() as unknown[]
+      ).map((row) => JSON.stringify(row));
       reader.close();
       return [...rows, ...threads];
     };
     const before = snapshotClaim();
     let failure: { code?: string } | undefined;
     try {
-      world.store.deletion.purgeConversation({ threadId: world.threadR, purgedBy: USER, confirmation: 'purge' });
+      world.store.deletion.purgeConversation({
+        threadId: world.threadR,
+        purgedBy: USER,
+        confirmation: 'purge',
+      });
     } catch (cause) {
       failure = cause as { code?: string };
     }
@@ -359,10 +417,20 @@ describe('D2 Amendment 1: the FK-derived deep-purge order (N-D2-19..24)', () => 
     // The foreign child leaves through its OWN governed path; then the
     // R purge converges (restart/replay truthfulness).
     await deletePlusMeaning(world, world.threadT, 'k-purge-t');
-    world.store.deletion.purgeConversation({ threadId: world.threadT, purgedBy: USER, confirmation: 'purge' });
-    const receipt = world.store.deletion.purgeConversation({ threadId: world.threadR, purgedBy: USER, confirmation: 'purge' });
+    world.store.deletion.purgeConversation({
+      threadId: world.threadT,
+      purgedBy: USER,
+      confirmation: 'purge',
+    });
+    const receipt = world.store.deletion.purgeConversation({
+      threadId: world.threadR,
+      purgedBy: USER,
+      confirmation: 'purge',
+    });
     expect(receipt.originatingTombstones).toBe(1);
-    expect(rowCount(world, 'SELECT COUNT(*) AS total FROM qlt_thread WHERE id = ?', world.threadR)).toBe(0);
+    expect(
+      rowCount(world, 'SELECT COUNT(*) AS total FROM qlt_thread WHERE id = ?', world.threadR),
+    ).toBe(0);
   });
 
   it('N-D2-7/authority: the purge prerequisites and user authority hold under the amended order', async () => {
@@ -376,21 +444,39 @@ describe('D2 Amendment 1: the FK-derived deep-purge order (N-D2-19..24)', () => 
     });
     // No completed deletion yet.
     expect(() =>
-      world.store.deletion.purgeConversation({ threadId: world.threadP, purgedBy: USER, confirmation: 'purge' }),
+      world.store.deletion.purgeConversation({
+        threadId: world.threadP,
+        purgedBy: USER,
+        confirmation: 'purge',
+      }),
     ).toThrowError(expect.objectContaining({ code: 'QLT_PURGE_NOT_AVAILABLE' }));
     // Wrong token: refused with zero effect.
     await deletePlusMeaning(world, world.threadP, 'k-purge-guard');
     expect(() =>
-      world.store.deletion.purgeConversation({ threadId: world.threadP, purgedBy: USER, confirmation: 'PURGE' }),
+      world.store.deletion.purgeConversation({
+        threadId: world.threadP,
+        purgedBy: USER,
+        confirmation: 'PURGE',
+      }),
     ).toThrowError(expect.objectContaining({ code: 'QLT_PURGE_CONFIRMATION_INVALID' }));
     expect(world.store.deletion.getPurgeReceipt(world.threadP)).toBeUndefined();
     // Agent identity: refused.
     expect(() =>
-      world.store.deletion.purgeConversation({ threadId: world.threadP, purgedBy: AGENT, confirmation: 'purge' }),
+      world.store.deletion.purgeConversation({
+        threadId: world.threadP,
+        purgedBy: AGENT,
+        confirmation: 'purge',
+      }),
     ).toThrowError();
     // The successful purge still removes the ceremony record.
-    const receipt = world.store.deletion.purgeConversation({ threadId: world.threadP, purgedBy: USER, confirmation: 'purge' });
+    const receipt = world.store.deletion.purgeConversation({
+      threadId: world.threadP,
+      purgedBy: USER,
+      confirmation: 'purge',
+    });
     expect(receipt.originatingTombstones).toBe(1);
-    expect(rowCount(world, 'SELECT COUNT(*) AS total FROM qlt_claim WHERE id = ?', claim.recordIds[0])).toBe(0);
+    expect(
+      rowCount(world, 'SELECT COUNT(*) AS total FROM qlt_claim WHERE id = ?', claim.recordIds[0]),
+    ).toBe(0);
   });
 });

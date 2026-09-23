@@ -11,6 +11,7 @@ The owner's decision: repair by deriving and enforcing the correct foreign-key d
 **Changed:** exactly one thing — the frozen deep-purge step order. The `originating-tombstones` step (the originating subject rows of the conversation: claims, commitments, open loops) now executes BEFORE the `proposals` step. Everything else in the purge is byte-for-byte the @1 semantics.
 
 **Unchanged (re-affirmed):**
+
 - the completed-deletion prerequisite (`QLT_PURGE_NOT_AVAILABLE` without a `completed` deletion row or a present thread tombstone);
 - the explicit typed confirmation token (`purge`; wrong/missing token refuses with zero effect);
 - the recorded-mode scope bound FOREVER (conversation-only purges never delete meaning rows, proposals, or the thread tombstone row; the recorded mode is never broadened);
@@ -23,28 +24,28 @@ The owner's decision: repair by deriving and enforcing the correct foreign-key d
 
 Derived from the LIVE schema (`PRAGMA foreign_key_list` over every `qlt_*` table after migration 6 on a synthetic disposable store — not from assumption; the dump is reproduced in the remediation report). All edges use `ON DELETE NO ACTION` / `ON UPDATE NO ACTION`. Exactly 20 edges:
 
-| # | Child column | → Referenced parent |
-| --- | --- | --- |
-| 1 | `qlt_amendment.source_thread_id` | `qlt_thread.id` |
-| 2 | `qlt_amendment.successor_id` | `qlt_commitment.id` |
-| 3 | `qlt_amendment.commitment_id` | `qlt_commitment.id` |
-| 4 | `qlt_claim.source_thread_id` | `qlt_thread.id` |
-| 5 | `qlt_claim.supersedes_id` | `qlt_claim.id` (self) |
-| 6 | `qlt_claim.proposal_id` | `qlt_proposal.id` |
-| 7 | `qlt_commitment.source_thread_id` | `qlt_thread.id` |
-| 8 | `qlt_commitment.supersedes_id` | `qlt_commitment.id` (self) |
-| 9 | `qlt_commitment.proposal_id` | `qlt_proposal.id` |
-| 10 | `qlt_commitment.normative_basis_proposal_id` | `qlt_proposal.id` |
-| 11 | `qlt_conflict_challenge.thread_id` | `qlt_thread.id` |
-| 12 | `qlt_conflict_challenge.incoming_proposal_id` | `qlt_proposal.id` |
-| 13 | `qlt_conflict_challenge.existing_commitment_id` | `qlt_commitment.id` |
-| 14 | `qlt_context_assembly.thread_id` | `qlt_thread.id` |
-| 15 | `qlt_correction.source_thread_id` | `qlt_thread.id` |
-| 16 | `qlt_open_loop.source_thread_id` | `qlt_thread.id` |
-| 17 | `qlt_open_loop.supersedes_id` | `qlt_open_loop.id` (self) |
-| 18 | `qlt_open_loop.proposal_id` | `qlt_proposal.id` |
-| 19 | `qlt_proposal.source_thread_id` | `qlt_thread.id` |
-| 20 | `qlt_thread_conversation.thread_id` | `qlt_thread.id` |
+| #   | Child column                                    | → Referenced parent        |
+| --- | ----------------------------------------------- | -------------------------- |
+| 1   | `qlt_amendment.source_thread_id`                | `qlt_thread.id`            |
+| 2   | `qlt_amendment.successor_id`                    | `qlt_commitment.id`        |
+| 3   | `qlt_amendment.commitment_id`                   | `qlt_commitment.id`        |
+| 4   | `qlt_claim.source_thread_id`                    | `qlt_thread.id`            |
+| 5   | `qlt_claim.supersedes_id`                       | `qlt_claim.id` (self)      |
+| 6   | `qlt_claim.proposal_id`                         | `qlt_proposal.id`          |
+| 7   | `qlt_commitment.source_thread_id`               | `qlt_thread.id`            |
+| 8   | `qlt_commitment.supersedes_id`                  | `qlt_commitment.id` (self) |
+| 9   | `qlt_commitment.proposal_id`                    | `qlt_proposal.id`          |
+| 10  | `qlt_commitment.normative_basis_proposal_id`    | `qlt_proposal.id`          |
+| 11  | `qlt_conflict_challenge.thread_id`              | `qlt_thread.id`            |
+| 12  | `qlt_conflict_challenge.incoming_proposal_id`   | `qlt_proposal.id`          |
+| 13  | `qlt_conflict_challenge.existing_commitment_id` | `qlt_commitment.id`        |
+| 14  | `qlt_context_assembly.thread_id`                | `qlt_thread.id`            |
+| 15  | `qlt_correction.source_thread_id`               | `qlt_thread.id`            |
+| 16  | `qlt_open_loop.source_thread_id`                | `qlt_thread.id`            |
+| 17  | `qlt_open_loop.supersedes_id`                   | `qlt_open_loop.id` (self)  |
+| 18  | `qlt_open_loop.proposal_id`                     | `qlt_proposal.id`          |
+| 19  | `qlt_proposal.source_thread_id`                 | `qlt_thread.id`            |
+| 20  | `qlt_thread_conversation.thread_id`             | `qlt_thread.id`            |
 
 Referenced parents: **`qlt_proposal`** (edges 6, 9, 10, 12, 18), **`qlt_commitment`** (edges 2, 3, 13), **`qlt_thread`** (edges 1, 4, 7, 11, 14, 15, 16, 19, 20). Tables with no inbound edges (`qlt_correction`, `qlt_source_link`, `qlt_retention_pass`, `qlt_conversation_deletion`, `qlt_conversation_purge`, policy/idempotency tables) are ordered only by their outbound edges. `qlt_conversation_deletion` and `qlt_conversation_purge` carry NO foreign keys by design (the preserved minimum evidence must outlive the purged rows). `qlt_source_link` carries no foreign keys (plain-text references; ordered for residue completeness, not FK necessity).
 
@@ -109,4 +110,4 @@ verify:d2 and the focused tests implement, at minimum:
 
 Both D5 findings close: B-1 (the repaired order; N-D2-19 proves the principal scenario) and H-1 (the gate now exercises ceremony-created purges).
 
-*Standalone freeze: this file and the decision-register entry are the entire commit; no executable change is included.*
+_Standalone freeze: this file and the decision-register entry are the entire commit; no executable change is included._

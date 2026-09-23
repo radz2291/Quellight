@@ -920,7 +920,9 @@ const lifecycle = (composition) => composition.conversationLifecycle;
 // 2b. PURGE CLOSURE — the Amendment 1 controls (N-D2-19..N-D2-24)
 // ---------------------------------------------------------------------------
 {
-  console.log('\n[2b] PURGE CLOSURE — ceremony-created meaning, closure, byte-identity, failure, integrity');
+  console.log(
+    '\n[2b] PURGE CLOSURE — ceremony-created meaning, closure, byte-identity, failure, integrity',
+  );
   const probe = await compose(tempDir());
   const sw = probe.sharedWorld;
   const dbPath = join(probe.dataDir, 'shared-world.db');
@@ -946,7 +948,10 @@ const lifecycle = (composition) => composition.conversationLifecycle;
       sourceThreadId: threadP.id,
     });
     await sw.meaning.markProposalAwaitingDecision(proposal.id);
-    const outcome = await sw.meaning.confirmProposal({ proposalId: proposal.id, confirmedBy: USER });
+    const outcome = await sw.meaning.confirmProposal({
+      proposalId: proposal.id,
+      confirmedBy: USER,
+    });
     return { proposal, records: outcome.createdRecords };
   };
   const ceremonyClaim = await ceremony('claim', {
@@ -1005,7 +1010,11 @@ const lifecycle = (composition) => composition.conversationLifecycle;
       content: { statement: 'the corrected claim text in P' },
       proposedBy: AGENT,
       sourceThreadId: threadP.id,
-      targetRecord: { recordId: ceremonyClaimId, family: 'claim', version: ceremonyClaim.records[0].version },
+      targetRecord: {
+        recordId: ceremonyClaimId,
+        family: 'claim',
+        version: ceremonyClaim.records[0].version,
+      },
     });
     await sw.meaning.markProposalAwaitingDecision(proposal.id);
     return sw.meaning.confirmProposal({ proposalId: proposal.id, confirmedBy: USER });
@@ -1015,9 +1024,7 @@ const lifecycle = (composition) => composition.conversationLifecycle;
 
   const rawCheck = new DatabaseSync(dbPath, { readOnly: true });
   const ceremonyShape = rawCheck
-    .prepare(
-      'SELECT proposal_id, normative_basis_proposal_id FROM qlt_commitment WHERE id = ?;',
-    )
+    .prepare('SELECT proposal_id, normative_basis_proposal_id FROM qlt_commitment WHERE id = ?;')
     .get(ceremonyCommitmentId);
   rawCheck.close();
   check(
@@ -1078,7 +1085,11 @@ const lifecycle = (composition) => composition.conversationLifecycle;
   let purgeReceipt;
   let purgeError;
   try {
-    purgeReceipt = sw.deletion.purgeConversation({ threadId: threadP.id, purgedBy: USER, confirmation: 'purge' });
+    purgeReceipt = sw.deletion.purgeConversation({
+      threadId: threadP.id,
+      purgedBy: USER,
+      confirmation: 'purge',
+    });
   } catch (cause) {
     purgeError = cause;
   }
@@ -1096,12 +1107,11 @@ const lifecycle = (composition) => composition.conversationLifecycle;
       : `cause=${purgeError.code ?? purgeError.message}`,
   );
   const rawAfter = new DatabaseSync(dbPath, { readOnly: true });
-  const pLeftovers =
-    rawAfter
-      .prepare(
-        "SELECT (SELECT COUNT(*) FROM qlt_claim WHERE source_thread_id = ?) + (SELECT COUNT(*) FROM qlt_commitment WHERE source_thread_id = ?) + (SELECT COUNT(*) FROM qlt_open_loop WHERE source_thread_id = ?) + (SELECT COUNT(*) FROM qlt_proposal WHERE source_thread_id = ?) AS total;",
-      )
-      .get(threadP.id, threadP.id, threadP.id, threadP.id).total;
+  const pLeftovers = rawAfter
+    .prepare(
+      'SELECT (SELECT COUNT(*) FROM qlt_claim WHERE source_thread_id = ?) + (SELECT COUNT(*) FROM qlt_commitment WHERE source_thread_id = ?) + (SELECT COUNT(*) FROM qlt_open_loop WHERE source_thread_id = ?) + (SELECT COUNT(*) FROM qlt_proposal WHERE source_thread_id = ?) AS total;',
+    )
+    .get(threadP.id, threadP.id, threadP.id, threadP.id).total;
   const proposalIdsLeft = rawAfter
     .prepare(
       `SELECT COUNT(*) AS total FROM qlt_proposal WHERE id IN (${pProposalIds.map(() => '?').join(',')});`,
@@ -1115,8 +1125,9 @@ const lifecycle = (composition) => composition.conversationLifecycle;
   );
   const rawClosure = new DatabaseSync(dbPath, { readOnly: true });
   const challengeGone =
-    rawClosure.prepare('SELECT COUNT(*) AS total FROM qlt_conflict_challenge WHERE id = ?;').get(crossChallengeId)
-      .total === 0;
+    rawClosure
+      .prepare('SELECT COUNT(*) AS total FROM qlt_conflict_challenge WHERE id = ?;')
+      .get(crossChallengeId).total === 0;
   const qProposalStays = rawClosure
     .prepare('SELECT COUNT(*) AS total FROM qlt_proposal WHERE id = ?;')
     .get(qConflictingProposal.id).total;
@@ -1176,8 +1187,9 @@ const lifecycle = (composition) => composition.conversationLifecycle;
   // records (the main scenario's thread A purge re-proves it standalone).
   const rawDirect = new DatabaseSync(dbPath, { readOnly: true });
   const directGone =
-    rawDirect.prepare('SELECT COUNT(*) AS total FROM qlt_claim WHERE id = ?;').get(directVerbClaim.id)
-      .total === 0;
+    rawDirect
+      .prepare('SELECT COUNT(*) AS total FROM qlt_claim WHERE id = ?;')
+      .get(directVerbClaim.id).total === 0;
   rawDirect.close();
   check(
     'N-D2-21: the direct-verb record was purged together with the ceremony records',
@@ -1244,7 +1256,9 @@ const lifecycle = (composition) => composition.conversationLifecycle;
       sw.deletion.getPurgeReceipt(threadR.id) === undefined &&
       afterR.qlt_claim === beforeR.qlt_claim &&
       afterR.qlt_thread === beforeR.qlt_thread,
-    boundaryFailure === undefined ? 'unexpectedly succeeded' : `refused with ${boundaryFailure.code ?? boundaryFailure.message}`,
+    boundaryFailure === undefined
+      ? 'unexpectedly succeeded'
+      : `refused with ${boundaryFailure.code ?? boundaryFailure.message}`,
   );
   // The foreign child leaves through its OWN governed path (plus-meaning
   // deletion + purge of T), after which R's purge converges.
@@ -1255,8 +1269,16 @@ const lifecycle = (composition) => composition.conversationLifecycle;
     key: 'k-purge-foreign',
     actorId: USER,
   });
-  await sw.deletion.purgeConversation({ threadId: threadT.id, purgedBy: USER, confirmation: 'purge' });
-  const convergedReceipt = sw.deletion.purgeConversation({ threadId: threadR.id, purgedBy: USER, confirmation: 'purge' });
+  await sw.deletion.purgeConversation({
+    threadId: threadT.id,
+    purgedBy: USER,
+    confirmation: 'purge',
+  });
+  const convergedReceipt = sw.deletion.purgeConversation({
+    threadId: threadR.id,
+    purgedBy: USER,
+    confirmation: 'purge',
+  });
   check(
     'N-D2-23: once the foreign child is gone the purge converges (replay/restart truthfulness)',
     'controls',
