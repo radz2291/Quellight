@@ -2049,3 +2049,45 @@ control (closes H-1); (3) run the focused gates and request a focused D5
 re-verification. Optionally: one direct owner answer each for OB-1/3/4/7
 (L-2); repo-root-relative path containment (L-1). Report:
 `docs/report/QUELLIGHT-STAGE-07D-PHASE-D5-INDEPENDENT-AUDIT.md`.
+
+## D-07D-15 — D2 safety contract Amendment 1 FROZEN (`…d2.safety-contract@1` → `@2`): the deep purge is repaired by FK-derived deletion order, NOT by erasing proposal provenance
+
+**Date:** 2026-09-24. Response to the Phase D5 independent audit finding B-1
+(blocking: plus-meaning deep purge of ceremony-created meaning failed with a
+raw FOREIGN KEY constraint failed; the transaction rolled back, no receipt,
+no partial deletion — fail-closed but the principal scenario was unusable)
+and H-1 (verify:d2 seeded purges only through direct-verb records with
+`proposal_id` NULL, so the gate could not see the class).
+
+**Owner decision recorded here:** repair by deriving and enforcing the
+correct foreign-key dependency order for deep purge; do NOT expand D1
+tombstoning to erase `proposal_id` (provenance and lineage are preserved
+during normal logical removal); the physical purge may delete dependent
+rows before their referenced parents inside the existing single
+transaction and existing authorized scope.
+
+**Frozen (standalone docs commit, before any executable change):** the
+complete live FK graph (20 edges, PRAGMA-derived on the live schema; the
+referenced parents are exactly `qlt_proposal`, `qlt_commitment`,
+`qlt_thread`); the amended purge order — challenges, amendments,
+corrections, source links, ORIGINATING SUBJECT TOMBSTONES, proposals,
+assembly evidence, conversation link, thread (the only change from @1 is
+moving the subject tombstones before the proposals, satisfying FK edges
+`claim/commitment/open_loop.proposal(_normative_basis)_id → proposal`);
+self-referential supersedes chains resolved within one statement per
+family (validated empirically); the @1 judgment-row closure (challenges
+and amendments deleted by id-membership, cross-thread judgment rows
+included, counted in the receipt) formally frozen; the precise boundary
+(a foreign content record referencing INTO the scope through supersedes
+fails the purge closed) retained; prerequisites, typed confirmation,
+recorded-mode bounding, one transaction, content-free receipt, best-effort
+VACUUM, rollback-no-receipt semantics all unchanged; D1 tombstone null
+sets NOT amended; D4 evidence and all prior contracts NOT reinterpreted.
+Coverage matrix extended to N-D2-19..24 (ceremony-created purge, closure
+receipt, direct-verb compatibility, unrelated-row byte-identity, induced
+failure rollback + convergence, post-purge `foreign_key_check` + chain
+removal). Amendment text:
+`docs/report/QUELLIGHT-STAGE-07D-PHASE-D2-CONTRACT-AMENDMENT-1.md`.
+Implementation, coverage, and the focused D5 re-verification request
+follow in subsequent entries; Stage 07D remains NOT independently
+verified and NOT formally closed; Stage 07E NOT permitted and NOT begun.
