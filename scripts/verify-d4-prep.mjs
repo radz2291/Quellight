@@ -2,9 +2,10 @@
 /**
  * Quellight Stage 07D Phase D4a — the permanent offline preparation gate
  * for the MSTR-012 real-use proof (contract
- * `quellight.stage07d.d4.proof-contract@1`).
+ * `quellight.stage07d.d4.proof-contract@2`, Amendment 1).
  *
- * Implements the frozen control list N-D4-P-1..N-D4-P-18
+ * Implements the frozen control list N-D4-P-1..N-D4-P-18 plus the
+ * Amendment-1 determinism controls N-D4-P-19..N-D4-P-24
  * (src/lib/sharedworld/d4-contract.ts §7) ENTIRELY OFFLINE: synthetic
  * evidence, disposable synthetic stores, no provider access of any
  * kind, no operator data, no `.quellight-data`, no `.pi/` reads. The
@@ -24,12 +25,17 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   QLT_D4_BOUNDS,
+  QLT_D4_CHECK_CLASSIFICATION,
   QLT_D4_CODES,
+  QLT_D4_OBSERVATION_DETAIL_KEYS,
+  QLT_D4_OUTCOMES,
   QLT_D4_PROFILE,
   QLT_D4_PROOF_CONTRACT_ID,
   QLT_D4_REQUIRED_CHECKS,
   QLT_D4_CHECK_PREREQUISITES,
 } from '../src/lib/sharedworld/d4-contract.ts';
+import { QLT_AGENT_PROPOSER_ID } from '../src/lib/sharedworld/ceremony-contract.ts';
+import { getCompiledPlan } from '../src/lib/application/definition.ts';
 import {
   createEvidenceLedger,
   planBudget,
@@ -57,21 +63,28 @@ const fakeDigest = 'offline-prep-scenario-digest';
 // ---------------------------------------------------------------------------
 // Synthetic full-lifecycle ledger builder
 // ---------------------------------------------------------------------------
-const buildFullLedger = (ledger, omit = []) => {
+const buildFullLedger = (ledger, omit = [], observations = false) => {
   const ids = { preserved: 'cl-preserved', removable: 'cl-removable', thread: 'qlt-thread-c' };
   const add = (checkId, detail = {}, ok = true) => {
     if (!omit.includes(checkId)) ledger.append({ kind: 'receipt', check: checkId, ok, detail });
   };
   add('a1-conversation-usable', { turnStatus: 'completed', messageCount: 2 });
-  add('a2-durable-meaning-preserved', { recordId: ids.preserved, path: 'direct-save' });
+  add('a2-durable-meaning-preserved', {
+    recordId: ids.preserved,
+    path: 'direct-save',
+    ...(observations ? { ceremonyObservation: { drafted: false } } : {}),
+  });
   add('a3-no-agent-canonical', {
     recordId: ids.preserved,
     pendingCount: 1,
     preservedPath: 'direct-save',
   });
   add('a7-conflict-challenge-quiet', {
-    trigger: 'distinct-key',
-    standingCommitmentUnchanged: true,
+    exercise: 'distinct-key',
+    standingUnchanged: true,
+    boundaryFailed: false,
+    openChallengesRemaining: 0,
+    ...(observations ? { conflictClassExercised: false, modelProposalObserved: true } : {}),
   });
   add('export-produced', { documentBytes: 16, disclosure: true });
   add('a8-export-truthful', { documentBytes: 16 });
@@ -82,8 +95,16 @@ const buildFullLedger = (ledger, omit = []) => {
   add('a4-restart-preserved', { recordId: 'commitment-proof' });
   add('assembly-selected', { recordId: 'commitment-proof', selectedCount: 1 });
   add('a5-fresh-thread-received', { recordId: 'commitment-proof' });
-  add('ineligible-seeded', { pendingId: 'prop-pending', removedRecordId: ids.removable });
-  add('a6-ineligible-excluded', { pendingExcluded: true, removedExcluded: true });
+  add('ineligible-seeded', {
+    pendingId: 'prop-pending',
+    removedRecordId: ids.removable,
+    expiredRecordId: 'cl-expired',
+  });
+  add('a6-ineligible-excluded', {
+    removedExcluded: true,
+    expiredExcluded: true,
+    ...(observations ? { pendingProposalObservation: true } : {}),
+  });
   add('conversation-deleted', { threadId: ids.thread, mode: 'conversation-only' });
   add('meaning-byte-identical', { threadId: ids.thread });
   add('a10-conversation-only-preserved', { threadId: ids.thread });
@@ -363,6 +384,232 @@ try {
     'N-D4-P-18 the preparation machinery performs no provider access (static)',
     gateSourceClean && evidenceSourceClean && gateBeforeComposition && observerGated,
   );
+
+  // ---- N-D4-P-19: the complete proof completes with ZERO observations ------
+  {
+    const ledger = createEvidenceLedger();
+    buildFullLedger(ledger, [], false);
+    const sealed = sealEvidence(ledger, sealOptions);
+    check(
+      'N-D4-P-19 the structured proof completes with zero model observations',
+      sealed.outcome === 'passed',
+    );
+  }
+
+  // ---- N-D4-P-20: observations never change the verdict ---------------------
+  {
+    const plain = createEvidenceLedger();
+    buildFullLedger(plain, [], false);
+    const observed = createEvidenceLedger();
+    buildFullLedger(observed, [], true);
+    const a = sealEvidence(plain, sealOptions);
+    const b = sealEvidence(observed, sealOptions);
+    check(
+      'N-D4-P-20 adding model observations never changes the seal verdict',
+      a.outcome === 'passed' && b.outcome === 'passed',
+    );
+  }
+
+  // ---- N-D4-P-21: invented or model-proposed check ids cannot enter ---------
+  {
+    const ledger = createEvidenceLedger();
+    const verdict = ledger.append({
+      kind: 'receipt',
+      check: 'model-drafted-canonical-record',
+      ok: true,
+      detail: { recordId: 'x' },
+    });
+    check('N-D4-P-21 an unknown check id is refused by the ledger', verdict.ok === false);
+  }
+
+  // ---- N-D4-P-22: no required check is a model observation (static) ---------
+  {
+    const harnessText = readFileSync(harnessPath, 'utf8');
+    const gateText = readFileSync(fileURLToPath(import.meta.url), 'utf8');
+    const evidenceText = readFileSync(join(repoRoot, 'scripts', 'lib', 'd4-evidence.mjs'), 'utf8');
+    const contractText = readFileSync(
+      join(repoRoot, 'src', 'lib', 'sharedworld', 'd4-contract.ts'),
+      'utf8',
+    );
+    const coversEveryCheck = QLT_D4_REQUIRED_CHECKS.every(
+      (id) => QLT_D4_CHECK_CLASSIFICATION[id] !== undefined,
+    );
+    const noneModelGated = QLT_D4_REQUIRED_CHECKS.every(
+      (id) => QLT_D4_CHECK_CLASSIFICATION[id] !== 'model-observation',
+    );
+    const observationKeysExist = QLT_D4_OBSERVATION_DETAIL_KEYS.length > 0;
+    const noScenarioOutcome =
+      !QLT_D4_OUTCOMES.some((outcome) => outcome.includes('scenario')) &&
+      !harnessText.includes('SCEN' + 'ARIO_BEHAVIOR') &&
+      !gateText.includes('failed-sce' + 'nario-behavior') &&
+      !evidenceText.includes('failed-sce' + 'nario-behavior') &&
+      !contractText.includes('SCEN' + 'ARIO_BEHAVIOR');
+    check(
+      'N-D4-P-22 every required check is owner-action or runtime-observation (static)',
+      coversEveryCheck && noneModelGated && observationKeysExist && noScenarioOutcome,
+    );
+  }
+
+  // ---- N-D4-P-24: plan-declared actions only; no fixture wording ------------
+  {
+    const harnessText = readFileSync(harnessPath, 'utf8');
+    const actionIds = [...harnessText.matchAll(/'(act\.[a-zA-Z]+)'/g)].map((m) => m[1]);
+    const declared = new Set(Object.keys(getCompiledPlan().actions));
+    const allDeclared = actionIds.length > 0 && actionIds.every((id) => declared.has(id));
+    const commitmentKeyUses = [...harnessText.matchAll(/commitmentKey: '([^']+)'/g)].map(
+      (m) => m[1],
+    );
+    const onlyProofKeys =
+      commitmentKeyUses.length > 0 &&
+      commitmentKeyUses.every((key) => key === 'd4-proof-commitment');
+    const noFixtureWording =
+      !harnessText.includes('quarterly') && !harnessText.includes('I have to');
+    check(
+      'N-D4-P-24 every harness action is plan-declared; only proof keys; no fixture wording (static)',
+      allDeclared && onlyProofKeys && noFixtureWording,
+    );
+  }
+
+  // ---- N-D4-P-23: the conflict class at the REAL boundary (offline) --------
+  {
+    const { createQuellightComposition, resolveQuellightEnvironment } = await import(
+      new URL('../src/lib/server/composition.ts', import.meta.url).href
+    );
+    const taskRoot = mkdtempSync(join(tmpdir(), 'verify-d4-p23-'));
+    try {
+      const env = resolveQuellightEnvironment(
+        {
+          QUELLIGHT_DATA_DIR: 'data',
+          QUELLIGHT_ACTOR_TOKEN: `qlt-token-canary-${crypto.randomUUID()}`,
+        },
+        taskRoot,
+      );
+      const composition = await createQuellightComposition({
+        env,
+        offlineScript: {},
+        skipListen: true,
+      });
+      try {
+        const actorOf = (composition) => ({
+          ...composition.actor,
+          presentedTokenKind: 'local-test',
+        });
+        const governedMutate = async (composition, actionId, input, idempotencyKey) => {
+          const action = getCompiledPlan().actions[actionId];
+          if (action === undefined || action.kind !== 'mutation') {
+            throw new Error(`the plan does not declare mutation action ${actionId}`);
+          }
+          const outcome = await composition.commandService.dispatch(actorOf(composition), {
+            command: 'app.data.mutate',
+            payload: {
+              resourceId: action.resourceId,
+              releaseVersion: composition.releaseVersion,
+              expectedRevision: action.resourceRevision,
+              actionKind: 'mutation',
+              actionId,
+              expectedActionRevision: action.revision,
+              mutation: { op: action.op, input, idempotencyKey },
+            },
+            idempotencyKey,
+          });
+          if (!outcome.ok) {
+            return { ok: false, code: outcome.code };
+          }
+          const resultData = (outcome.data ?? {}).result;
+          return {
+            ok: resultData === undefined || resultData.ok === true,
+            code: resultData?.code,
+            row: resultData?.row,
+          };
+        };
+        const thread = await composition.sharedWorld.createThread({ title: 'd4-offline-control' });
+        const saved = await governedMutate(
+          composition,
+          'act.createClaim',
+          {
+            threadId: thread.id,
+            subject: 'offline direct save',
+            epistemicType: 'E2',
+            honestyState: 'known',
+            confidence: 'stated',
+            statement: 'a direct-saved claim',
+          },
+          'p23-direct-save',
+        );
+        const savedId = saved.row?.id;
+        const afterSave = await composition.sharedWorld.meaning.listClaims({});
+        const directSaveCrossed =
+          saved.ok === true && afterSave.rows.some((row) => row.id === savedId);
+        const standing = await governedMutate(
+          composition,
+          'act.createCommitment',
+          {
+            threadId: thread.id,
+            commitmentKey: 'd4-proof-commitment',
+            statement: 'the standing commitment',
+          },
+          'p23-standing',
+        );
+        const commitmentId = standing.row?.id;
+        const before = await composition.sharedWorld.meaning.getCommitment(commitmentId);
+        const proposal = await composition.sharedWorld.meaning.createProposal({
+          proposalKind: 'commitment',
+          content: { commitmentKey: 'd4-proof-commitment', statement: 'a contradicting duplicate' },
+          proposedBy: QLT_AGENT_PROPOSER_ID,
+          sourceThreadId: thread.id,
+        });
+        await composition.sharedWorld.meaning.markProposalAwaitingDecision(proposal.id);
+        const commitmentsBefore = (await composition.sharedWorld.meaning.listCommitments({})).total;
+        const refused = await governedMutate(
+          composition,
+          'act.confirmProposal',
+          { proposalId: proposal.id },
+          'p23-confirm',
+        );
+        const openChallenges = composition.sharedWorld.conflict.listChallenges({ status: 'open' });
+        const refusalQuiet =
+          refused.ok === false &&
+          refused.code === 'QLT_COMMITMENT_CONFLICT' &&
+          openChallenges.rows.length === 1 &&
+          openChallenges.rows[0].incomingProposalId === proposal.id;
+        const commitmentsAfter = (await composition.sharedWorld.meaning.listCommitments({})).total;
+        const dismissal = await governedMutate(
+          composition,
+          'act.dismissChallenge',
+          { challengeId: openChallenges.rows[0].challengeId },
+          'p23-dismiss',
+        );
+        const openAfter = composition.sharedWorld.conflict.listChallenges({ status: 'open' }).rows
+          .length;
+        const after = await composition.sharedWorld.meaning.getCommitment(commitmentId);
+        const standingUnchanged =
+          after.version === before.version &&
+          JSON.stringify(after.content) === JSON.stringify(before.content);
+        check(
+          'N-D4-P-23 the deterministic conflict class completes at the real product boundary (offline real composition)',
+          directSaveCrossed &&
+            standing.ok === true &&
+            refusalQuiet &&
+            commitmentsAfter === commitmentsBefore &&
+            dismissal.ok === true &&
+            openAfter === 0 &&
+            standingUnchanged,
+        );
+      } finally {
+        await composition.close();
+      }
+    } finally {
+      // Best-effort removal (the verify-d2 precedent): the composition
+      // close is awaited, but on Windows the SQLite unlock can lag the
+      // process; the scratch store is disposable synthetic data either
+      // way, so a lingering directory never fails the gate.
+      try {
+        rmSync(taskRoot, { recursive: true, force: true });
+      } catch {
+        /* disposable */
+      }
+    }
+  }
 
   // ---- contract self-consistency -------------------------------------------
   const everyPrereqExists = Object.values(QLT_D4_CHECK_PREREQUISITES).every((rules) =>

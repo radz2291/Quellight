@@ -24,7 +24,7 @@
 // ---------------------------------------------------------------------------
 
 /** The D4 proof-contract identity (the amendment of record for D4). */
-export const QLT_D4_PROOF_CONTRACT_ID = 'quellight.stage07d.d4.proof-contract@1';
+export const QLT_D4_PROOF_CONTRACT_ID = 'quellight.stage07d.d4.proof-contract@2';
 
 // ---------------------------------------------------------------------------
 // 2. Session identity and bounds (frozen)
@@ -90,12 +90,7 @@ export const QLT_D4_PROOF_THREAD_TITLE_PREFIX = 'd4-proof';
  */
 export const QLT_D4_EVIDENCE_KINDS = ['receipt', 'note'] as const;
 
-export const QLT_D4_OUTCOMES = [
-  'passed',
-  'failed',
-  'failed-infrastructure',
-  'failed-scenario-behavior',
-] as const;
+export const QLT_D4_OUTCOMES = ['passed', 'failed', 'failed-infrastructure'] as const;
 export type QltD4Outcome = (typeof QLT_D4_OUTCOMES)[number];
 
 /** Stable non-echoing failure codes for the structured session. */
@@ -111,7 +106,6 @@ export const QLT_D4_CODES = {
   TURN_FAILED: 'QLT_D4_TURN_FAILED',
   PROOF_POINT_FAILED: 'QLT_D4_PROOF_POINT_FAILED',
   SCAN_HIT: 'QLT_D4_SCAN_HIT',
-  SCENARIO_BEHAVIOR: 'QLT_D4_SCENARIO_BEHAVIOR',
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -195,6 +189,62 @@ export const QLT_D4_CHECK_PREREQUISITES: Readonly<
   'a12-transcripts-clean': [{ check: 'context-marker-absent' }],
   'a13-evidence-hygiene': [],
 };
+
+// ---------------------------------------------------------------------------
+// 5b. Determinism classification (Amendment 1)
+// ---------------------------------------------------------------------------
+
+/**
+ * Amendment 1: every REQUIRED check classifies as an owner/product
+ * action (1) or a deterministic runtime observation (2). The class
+ * value 'model-observation' (3) exists for the vocabulary only — NO
+ * required check carries it, and a nondeterministic model observation
+ * can never gate the seal. The static gate proves this mapping.
+ */
+export type QltD4CheckClass = 'owner-action' | 'runtime-observation' | 'model-observation';
+
+export const QLT_D4_CHECK_CLASSIFICATION: Readonly<Record<QltD4CheckId, QltD4CheckClass>> = {
+  'a1-conversation-usable': 'runtime-observation',
+  'a2-durable-meaning-preserved': 'owner-action',
+  'a3-no-agent-canonical': 'runtime-observation',
+  'restart-performed': 'owner-action',
+  'a4-restart-preserved': 'runtime-observation',
+  'assembly-selected': 'runtime-observation',
+  'a5-fresh-thread-received': 'runtime-observation',
+  'ineligible-seeded': 'owner-action',
+  'a6-ineligible-excluded': 'runtime-observation',
+  'a7-conflict-challenge-quiet': 'owner-action',
+  'export-produced': 'runtime-observation',
+  'a8-export-truthful': 'runtime-observation',
+  'deletion-previewed': 'owner-action',
+  'record-removed': 'owner-action',
+  'a9-proof-record-removal': 'runtime-observation',
+  'conversation-deleted': 'owner-action',
+  'meaning-byte-identical': 'runtime-observation',
+  'a10-conversation-only-preserved': 'runtime-observation',
+  'reconciliation-receipts': 'runtime-observation',
+  'boot-recovery-clean': 'runtime-observation',
+  'a11-reconciliation-complete': 'runtime-observation',
+  'context-marker-absent': 'runtime-observation',
+  'a12-transcripts-clean': 'runtime-observation',
+  'a13-evidence-hygiene': 'runtime-observation',
+};
+
+/**
+ * Reserved receipt-detail keys for OPTIONAL, truthfully recorded model
+ * observations (Amendment 1). They are structural facts only (booleans
+ * and product identities — never content) and can never gate a
+ * required check: adding or removing them leaves the seal verdict
+ * unchanged. The validator treats them like any other structural
+ * detail key (they carry no content, path, or secret shape).
+ */
+export const QLT_D4_OBSERVATION_DETAIL_KEYS = [
+  'modelProposalObserved',
+  'ceremonyObservation',
+  'conflictClassExercised',
+  'pendingProposalObservation',
+] as const;
+export type QltD4ObservationDetailKey = (typeof QLT_D4_OBSERVATION_DETAIL_KEYS)[number];
 
 // ---------------------------------------------------------------------------
 // 6. Forbidden evidence (closed)

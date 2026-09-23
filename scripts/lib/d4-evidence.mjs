@@ -127,6 +127,13 @@ export function createEvidenceLedger() {
     if (!verdict.ok) {
       return verdict;
     }
+    // Amendment 1: the check-id set is CLOSED. An invented or
+    // model-proposed check id can never enter the evidence ledger —
+    // only the frozen required ids are valid receipts; notes carry no
+    // check id and stay available for structural annotations.
+    if (candidate.kind === 'receipt' && !QLT_D4_REQUIRED_CHECKS.includes(candidate.check)) {
+      return { ok: false, reason: 'unknown check id' };
+    }
     seq += 1;
     receipts.push({ ...candidate, seq });
     return { ok: true, seq };

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Quellight Stage 07D Phase D4 — the MSTR-012 bounded structured
- * real-use session (proof contract `quellight.stage07d.d4.proof-contract@1`).
+ * real-use session (proof contract `quellight.stage07d.d4.proof-contract@2`).
  *
  * OWNER-INVOKED ONLY; not part of any test suite. Refuses to run unless
  * ALL of the following hold:
@@ -10,10 +10,11 @@
  *     docs/report/evidence/d4-structured-session-receipt.json does NOT
  *     exist (exclusive-create; any later run refuses — only the OWNER
  *     may archive a consumed receipt to authorize a fresh session);
- *   - the provider credential is present (OLLAMA_API_KEY in the
- *     environment, or the owner-located auth file the Q6 precedent
- *     used) — EXISTENCE ONLY; the value is never printed, logged, or
- *     written anywhere;
+ *   - the provider credential is present through the owner-designated
+ *     authentication boundary (the Q6-precedent credential file; the
+ *     environment variable is accepted as a secondary source) —
+ *     EXISTENCE ONLY; the value is never printed, logged, persisted,
+ *     reported, or copied anywhere;
  *   - the owner scenario file (QUELLIGHT_D4_SCENARIO_FILE) exists
  *     outside the repository; its content stays in memory, never
  *     printed; only its SHA-256 digest (memory-only) feeds the leak
@@ -31,11 +32,24 @@
  * actions) and only on dedicated d4-proof-* records/threads. The
  * harness gains no deletion authority beyond them.
  *
- * A7 (contract §2): a model key collision exercises the quiet challenge
- * and dismissal end to end; a distinct key is CORRECT product behavior
- * (a different key is a different commitment) recorded with the
- * standing commitment's unchanged identity. A collision that fails
- * non-quietly, or a silent overwrite, fails the session truthfully.
+ * A7 (contract §2, Amendment 1): DETERMINISTIC AT THE PRODUCT
+ * BOUNDARY. The owner establishes the standing d4-proof-* commitment
+ * through the governed plan; for EVERY commitment-kind proposal the
+ * session turn produced, the owner exercises the real decision
+ * boundary (confirmProposal): same key ⇒ quiet QLT_COMMITMENT_CONFLICT
+ * refusal + challenge row + user-only dismissal; distinct key ⇒
+ * ordinary confirmation. Required: the standing commitment is
+ * unchanged after all observations, no challenge remains open, and
+ * refusals mutated nothing. No commitment proposal ⇒ A7 still passes —
+ * model discretion can never prevent completion (the full refusal
+ * class is permanently proven offline by verify:d4-prep N-D4-P-23).
+ * A live collision is recorded as the observation conflictClassExercised.
+ *
+ * Model discretion is a real-use OBSERVATION only: whether the turns
+ * draft proposals, which semantic keys they choose, and which
+ * capabilities they call are recorded as structural detail facts under
+ * the contract's observation vocabulary — none of them gates a
+ * required check (Amendment 1).
  *
  * This preparation phase NEVER RUNS the harness; verify:d4-prep proves
  * the gate, scanner, and seal machinery offline on synthetic data.
@@ -74,6 +88,7 @@ import {
 } from './lib/d4-evidence.mjs';
 import { installProviderObserver } from './lib/q6-provider-observer.mjs';
 import { getCompiledPlan } from '../src/lib/application/definition.ts';
+import { QLT_CONTEXT_BLOCK_OPEN } from '../src/lib/sharedworld/context-contract.ts';
 
 const repoRoot = resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -309,12 +324,7 @@ const sealAndCleanup = (forcedCode) => {
     };
   } else if (typeof forcedCode === 'string') {
     summary = {
-      outcome:
-        forcedCode === QLT_D4_CODES.CREDENTIAL_MISSING
-          ? 'failed-infrastructure'
-          : forcedCode === QLT_D4_CODES.SCENARIO_BEHAVIOR
-            ? 'failed-scenario-behavior'
-            : 'failed',
+      outcome: forcedCode === QLT_D4_CODES.CREDENTIAL_MISSING ? 'failed-infrastructure' : 'failed',
       contract: QLT_D4_PROOF_CONTRACT_ID,
       profile: QLT_D4_PROFILE,
       code: forcedCode,
@@ -406,6 +416,11 @@ try {
   });
 
   // ---- A2: the owner deliberately preserves durable meaning ---------------
+  // Amendment 1: the REQUIRED path is the owner's direct Save through
+  // the governed plan — a first-class product behavior, never a test
+  // workaround. A ceremony confirmation of a turn-drafted proposal, when
+  // one exists, is a genuine-use OBSERVATION recorded on the receipt;
+  // its absence can never gate the required preservation.
   phase = 'a2';
   const pendingBefore = (await composition.sharedWorld.meaning.listProposals({})).total;
   const t2 = await startTurn(composition, convA.mastraThreadId, scenario.durableRemember, 'd4-a2');
@@ -413,52 +428,47 @@ try {
   if (t2Settled.status !== 'completed') {
     failFast(QLT_D4_CODES.TURN_FAILED, `the a2 turn ended ${t2Settled.status}`);
   }
+  const saved = await governedMutate(
+    composition,
+    'act.createClaim',
+    {
+      threadId: threadA.id,
+      subject: 'd4-proof preserved meaning',
+      epistemicType: 'E2',
+      honestyState: 'known',
+      confidence: 'stated',
+      statement: scenario.durableRemember,
+    },
+    'd4-a2-direct-save',
+  );
+  if (!saved.ok) {
+    failFast(QLT_D4_CODES.PROOF_POINT_FAILED, `the direct save was refused (${saved.code})`);
+  }
+  const a2RecordId = saved.row?.id;
   const pendingPage = await composition.sharedWorld.meaning.listProposals({});
   const newProposals = pendingPage.rows
     .filter((row) => row.status === 'awaiting_decision')
     .slice(0, Math.max(0, pendingPage.total - pendingBefore));
-  let a2RecordId;
-  let a2Path;
+  let ceremonyObservation;
   if (newProposals.length > 0) {
-    // The ceremony path: the owner confirms the drafted proposal.
+    // Optional genuine-use observation: the owner confirms the drafted
+    // proposal through the same decision boundary. A refusal here is a
+    // truthful observation failure recorded on the A7 boundary, not a
+    // scenario verdict.
     const confirm = await governedMutate(
       composition,
       'act.confirmProposal',
       { proposalId: newProposals[0].id },
       'd4-a2-confirm',
     );
-    if (!confirm.ok) {
-      failFast(
-        QLT_D4_CODES.PROOF_POINT_FAILED,
-        `the ceremony confirmation was refused (${confirm.code})`,
-      );
-    }
-    a2RecordId = confirm.row?.id;
-    a2Path = 'ceremony-confirm';
+    ceremonyObservation = { drafted: true, confirmed: confirm.ok === true };
   } else {
-    // The direct Save path is an equally valid product path.
-    const saved = await governedMutate(
-      composition,
-      'act.createClaim',
-      {
-        threadId: threadA.id,
-        subject: 'd4-proof preserved meaning',
-        epistemicType: 'E2',
-        honestyState: 'known',
-        confidence: 'stated',
-        statement: scenario.durableRemember,
-      },
-      'd4-a2-direct-save',
-    );
-    if (!saved.ok) {
-      failFast(QLT_D4_CODES.PROOF_POINT_FAILED, `the direct save was refused (${saved.code})`);
-    }
-    a2RecordId = saved.row?.id;
-    a2Path = 'direct-save';
+    ceremonyObservation = { drafted: false };
   }
   appendReceipt('a2-durable-meaning-preserved', true, {
     recordId: a2RecordId,
-    path: a2Path,
+    path: 'direct-save',
+    ceremonyObservation,
   });
 
   // ---- A2b: the owner direct-saves the standing d4-proof commitment -------
@@ -482,24 +492,36 @@ try {
   const commitmentId = commitment.row?.id;
 
   // ---- A3: nothing is canonical without user authority --------------------
+  // Amendment 1: store-attribution audit — model-independent. Every
+  // canonical record must carry user attribution (an agent creator is
+  // forbidden), and every owner-created session identity must be
+  // canonically present. A drafted-but-unconfirmed proposal stays
+  // pending and non-canonical; its existence is not required.
   phase = 'a3';
   const pendingAfter = await composition.sharedWorld.meaning.listProposals({});
   const openPending = pendingAfter.rows.filter((row) => row.status === 'awaiting_decision');
-  if (openPending.length === 0) {
-    failFast(
-      QLT_D4_CODES.SCENARIO_BEHAVIOR,
-      'a3: the remember request produced no pending proposal to review (truthful scenario-behavior finding)',
-    );
-  }
-  appendReceipt('a3-no-agent-canonical', true, {
+  const canonicalClaims = await composition.sharedWorld.meaning.listClaims({});
+  const canonicalCommitments = await composition.sharedWorld.meaning.listCommitments({});
+  const canonicalRecords = [...canonicalClaims.rows, ...canonicalCommitments.rows];
+  const agentCanonical = canonicalRecords.filter((row) =>
+    String(row.createdBy ?? '').startsWith('agent-'),
+  );
+  const ownerCreatedPresent = [a2RecordId, commitmentId].every((id) =>
+    canonicalRecords.some((row) => row.id === id),
+  );
+  appendReceipt('a3-no-agent-canonical', agentCanonical.length === 0 && ownerCreatedPresent, {
     recordId: a2RecordId,
-    pendingCount: openPending.length,
-    preservedPath: a2Path,
+    canonicalCount: canonicalRecords.length,
+    agentCanonicalCount: agentCanonical.length,
+    ownerCreatedPresent,
+    pendingProposalObservation: { present: openPending.length > 0 },
   });
 
-  // ---- ineligible material: the pending pool + a dedicated removable claim
+  // ---- ineligible material: a removable claim + an expired claim ----------
+  // Amendment 1: the REQUIRED exclusion pool is owner-seeded. The
+  // pending proposal (when the model drafted one) is observation only.
   phase = 'seed';
-  const pendingId = openPending[0].id;
+  const pendingId = openPending[0]?.id;
   const removable = await governedMutate(
     composition,
     'act.createClaim',
@@ -520,9 +542,67 @@ try {
     );
   }
   const removedRecordId = removable.row?.id;
-  appendReceipt('ineligible-seeded', true, { pendingId, removedRecordId });
+  // The owner expires a dedicated claim through the governed plan:
+  // future-only assignment (the composition's clock is the real wall
+  // clock), then the retention pass at an explicit later instant — the
+  // same frozen due predicate production executes, deterministically.
+  const expirySeed = await governedMutate(
+    composition,
+    'act.createClaim',
+    {
+      threadId: threadA.id,
+      subject: 'd4-proof expiring',
+      epistemicType: 'E2',
+      honestyState: 'known',
+      confidence: 'stated',
+      statement: scenario.removableNote,
+    },
+    'd4-seed-expiring',
+  );
+  if (!expirySeed.ok) {
+    failFast(
+      QLT_D4_CODES.PROOF_POINT_FAILED,
+      `the expiring claim was refused (${expirySeed.code})`,
+    );
+  }
+  const expiredRecordId = expirySeed.row?.id;
+  const expirySet = await governedMutate(
+    composition,
+    'act.setClaimExpiry',
+    { claimId: expiredRecordId, expiresAtMs: Date.now() + 60_000 },
+    'd4-seed-expiry-set',
+  );
+  if (!expirySet.ok) {
+    failFast(
+      QLT_D4_CODES.PROOF_POINT_FAILED,
+      `the expiry assignment was refused (${expirySet.code})`,
+    );
+  }
+  const passOutcome = await governedMutate(
+    composition,
+    'act.runRetentionPass',
+    { now: Date.now() + 120_000 },
+    'd4-seed-retention-pass',
+  );
+  if (!passOutcome.ok) {
+    failFast(
+      QLT_D4_CODES.PROOF_POINT_FAILED,
+      `the retention pass was refused (${passOutcome.code})`,
+    );
+  }
+  appendReceipt('ineligible-seeded', true, { pendingId, removedRecordId, expiredRecordId });
 
-  // ---- A7: a supported commitment conflict → the quiet challenge ----------
+  // ---- A7: the conflict class, deterministic at the product boundary ------
+  // Amendment 1: the model CANNOT decide this proof point. The owner
+  // exercises the real decision boundary (confirmProposal) on every
+  // commitment-kind proposal the turn produced — a same-key collision
+  // must refuse quietly (refusal + challenge + user-only dismissal), a
+  // distinct key confirms ordinarily. REQUIRED either way: the standing
+  // commitment is unchanged, no challenge remains open, and refusals
+  // mutated nothing. With NO commitment proposal, A7 still passes: the
+  // detector ran at the boundary on every confirmation that occurred,
+  // and no false challenge exists. The full refusal class is
+  // permanently proven offline (verify:d4-prep N-D4-P-23).
   phase = 'a7';
   const standingBefore = await composition.sharedWorld.meaning.getCommitment(commitmentId);
   const t3 = await startTurn(composition, convA.mastraThreadId, scenario.durableSecond, 'd4-a7');
@@ -531,54 +611,74 @@ try {
     failFast(QLT_D4_CODES.TURN_FAILED, `the a7 turn ended ${t3Settled.status}`);
   }
   const poolSecond = await composition.sharedWorld.meaning.listProposals({});
-  const collision = poolSecond.rows.find(
-    (row) =>
-      row.status === 'awaiting_decision' &&
-      row.proposalKind === 'commitment' &&
-      row.content?.commitmentKey === 'd4-proof-commitment',
+  const commitmentProposals = poolSecond.rows.filter(
+    (row) => row.status === 'awaiting_decision' && row.proposalKind === 'commitment',
   );
-  if (collision !== undefined) {
-    const refused = await governedMutate(
+  let conflictClassExercised = false;
+  let boundaryFailed = false;
+  for (const proposal of commitmentProposals) {
+    const decision = await governedMutate(
       composition,
       'act.confirmProposal',
-      { proposalId: collision.id },
-      'd4-a7-confirm',
+      { proposalId: proposal.id },
+      `d4-a7-confirm-${proposal.id}`,
     );
-    if (refused.ok || refused.code !== 'QLT_COMMITMENT_CONFLICT') {
-      failFast(
-        QLT_D4_CODES.PROOF_POINT_FAILED,
-        `a7: a key collision must refuse quietly with QLT_COMMITMENT_CONFLICT (got ${refused.code ?? 'ok'})`,
+    if (decision.ok) {
+      // A distinct key is CORRECT product behavior: a different key is
+      // a different commitment. The audit below proves the standing
+      // commitment was untouched.
+      continue;
+    }
+    if (decision.code === 'QLT_COMMITMENT_CONFLICT') {
+      conflictClassExercised = true;
+      const challengePage = composition.sharedWorld.conflict.listChallenges({ status: 'open' });
+      const openChallenge = challengePage.rows.find(
+        (row) => row.incomingProposalId === proposal.id,
       );
+      if (openChallenge === undefined) {
+        boundaryFailed = true;
+        continue;
+      }
+      const dismissed = await governedMutate(
+        composition,
+        'act.dismissChallenge',
+        { challengeId: openChallenge.challengeId },
+        `d4-a7-dismiss-${openChallenge.challengeId}`,
+      );
+      if (!dismissed.ok) {
+        boundaryFailed = true;
+      }
+      continue;
     }
-    const challengePage = composition.sharedWorld.conflict.listChallenges({ status: 'open' });
-    const openChallenge = challengePage.rows.find((row) => row.incomingProposalId === collision.id);
-    if (openChallenge === undefined) {
-      failFast(QLT_D4_CODES.PROOF_POINT_FAILED, 'a7: no challenge row was recorded');
-    }
-    const dismissed = await governedMutate(
-      composition,
-      'act.dismissChallenge',
-      { challengeId: openChallenge.challengeId },
-      'd4-a7-dismiss',
-    );
-    if (!dismissed.ok) {
-      failFast(QLT_D4_CODES.PROOF_POINT_FAILED, `the quiet dismissal failed (${dismissed.code})`);
-    }
-    appendReceipt('a7-conflict-challenge-quiet', true, {
-      trigger: 'key-collision',
-      challengeResolved: true,
-    });
-  } else {
-    const standingAfter = await composition.sharedWorld.meaning.getCommitment(commitmentId);
-    const unchanged =
-      standingAfter !== undefined &&
-      standingAfter.version === standingBefore.version &&
-      JSON.stringify(standingAfter.content) === JSON.stringify(standingBefore.content);
-    appendReceipt('a7-conflict-challenge-quiet', unchanged, {
-      trigger: 'distinct-key',
-      standingCommitmentUnchanged: unchanged,
-    });
+    // Any OTHER refusal is a non-quiet boundary failure.
+    boundaryFailed = true;
   }
+  const standingAfter = await composition.sharedWorld.meaning.getCommitment(commitmentId);
+  const standingUnchanged =
+    standingAfter !== undefined &&
+    standingAfter.id === commitmentId &&
+    standingAfter.version === standingBefore.version &&
+    JSON.stringify(standingAfter.content) === JSON.stringify(standingBefore.content);
+  const openChallengesRemaining = composition.sharedWorld.conflict.listChallenges({
+    status: 'open',
+  }).rows.length;
+  appendReceipt(
+    'a7-conflict-challenge-quiet',
+    standingUnchanged && !boundaryFailed && openChallengesRemaining === 0,
+    {
+      exercise:
+        commitmentProposals.length === 0
+          ? 'none'
+          : conflictClassExercised
+            ? 'collision'
+            : 'distinct-key',
+      standingUnchanged,
+      boundaryFailed,
+      openChallengesRemaining,
+      conflictClassExercised,
+      modelProposalObserved: commitmentProposals.length > 0,
+    },
+  );
 
   // ---- ordinary execution under the standing commitment -------------------
   phase = 'ordinary';
@@ -611,12 +711,21 @@ try {
   );
 
   // ---- A9: removal of the dedicated proof record ---------------------------
+  // Amendment 1: the removal goes through the governed plan action the
+  // product UI uses — the same user-only boundary, no store shortcut.
   phase = 'a9';
-  await composition.sharedWorld.retention.removeRecord({
-    recordId: removedRecordId,
-    family: 'claim',
-    removedBy: composition.actorId,
-  });
+  const removalOutcome = await governedMutate(
+    composition,
+    'act.removeRecord',
+    { recordId: removedRecordId, family: 'claim' },
+    'd4-a9-remove',
+  );
+  if (!removalOutcome.ok) {
+    failFast(
+      QLT_D4_CODES.PROOF_POINT_FAILED,
+      `the governed removal was refused (${removalOutcome.code})`,
+    );
+  }
   const removedView = composition.sharedWorld.retention.getRecordView({
     recordId: removedRecordId,
     family: 'claim',
@@ -642,7 +751,8 @@ try {
   const commitmentAfterRestart = await composition2.sharedWorld.meaning.getCommitment(commitmentId);
   const restartOk =
     commitmentAfterRestart !== undefined &&
-    commitmentAfterRestart.version === standingBefore.version;
+    commitmentAfterRestart.version === standingBefore.version &&
+    JSON.stringify(commitmentAfterRestart.content) === JSON.stringify(standingBefore.content);
   appendReceipt('restart-performed', restartOk, { recordId: commitmentId });
   appendReceipt('a4-restart-preserved', restartOk, { recordId: commitmentId });
 
@@ -664,12 +774,22 @@ try {
   appendReceipt('a5-fresh-thread-received', selectedIds.includes(commitmentId), {
     recordId: commitmentId,
   });
-  const pendingExcluded = !selectedIds.includes(pendingId);
+  // Amendment 1: the REQUIRED exclusions are the owner-seeded removed
+  // and expired records. The pending proposal, when the model drafted
+  // one, is an observation recorded under the reserved vocabulary —
+  // its absence never gates the check, its selection always fails it.
+  const pendingObservation = pendingId === undefined ? null : !selectedIds.includes(pendingId);
   const removedExcluded = !selectedIds.includes(removedRecordId);
-  appendReceipt('a6-ineligible-excluded', pendingExcluded && removedExcluded, {
-    pendingExcluded,
-    removedExcluded,
-  });
+  const expiredExcluded = !selectedIds.includes(expiredRecordId);
+  appendReceipt(
+    'a6-ineligible-excluded',
+    removedExcluded && expiredExcluded && pendingObservation !== false,
+    {
+      removedExcluded,
+      expiredExcluded,
+      pendingProposalObservation: pendingObservation,
+    },
+  );
 
   // ---- A10: conversation-only deletion preserves Shared World meaning ------
   phase = 'a10';
@@ -751,8 +871,7 @@ try {
     .concat(restoredB.messages)
     .map((message) => message.text)
     .join('\n');
-  const marker = '<<<QLT:SHARED-WORLD-CONTEXT:V1>>>';
-  const transcriptClean = !transcriptText.includes(marker);
+  const transcriptClean = !transcriptText.includes(QLT_CONTEXT_BLOCK_OPEN);
   appendReceipt('context-marker-absent', transcriptClean, { threadId: threadB.id });
   appendReceipt('a12-transcripts-clean', transcriptClean, { threadId: threadB.id });
 
