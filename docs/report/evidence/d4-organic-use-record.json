@@ -1,0 +1,114 @@
+{
+  "recordKind": "d4-organic-use-observation-record",
+  "layer": "B",
+  "stage": "Stage 07D Phase D4",
+  "contract": "quellight.stage07d.d4.proof-contract@2",
+  "recordedAt": "2026-09-23T12:40:00Z",
+  "authority": "owner-attested (no harness runs; the organic window requires no harness authorization per contract section 5)",
+  "privacyBasis": {
+    "conversationContentRecorded": false,
+    "contentDigestsRecorded": false,
+    "credentialsRecorded": false,
+    "absolutePathsRecorded": false,
+    "operatorDataInspected": false,
+    "providerContacted": false,
+    "exclusions": "the owner may exclude any private event from this record without giving a reason; structural counts below are owner-reported and not derived from operator data"
+  },
+  "livePathConfirmation": {
+    "question": "were the counted sessions on the supported live startup (npm run dev:live) with the live provider disclosure shown?",
+    "ownerAnswer": "yes — the live provider was working",
+    "note": "the owner's earlier pre-Amendment-2 session ran in offline-fixture mode and remains explicitly excluded from Layer B per decision-register entries D-07D-11 and D-07D-12"
+  },
+  "windowMinimums": {
+    "contractMinimum": "three genuine sessions, across at least two separate application launches on at least two calendar days, including at least one full restart and at least one genuinely fresh conversation",
+    "genuineSessions": { "required": 3, "ownerReported": 3, "established": true },
+    "separateLaunches": { "requiredAtLeast": 2, "ownerReported": 2, "established": true },
+    "calendarDays": {
+      "requiredAtLeast": 2,
+      "ownerReported": 2,
+      "established": true,
+      "note": "calendar dates not recorded — owner-reported structural count only"
+    },
+    "fullRestart": { "required": true, "ownerReported": true, "established": true },
+    "genuinelyFreshConversation": {
+      "required": true,
+      "ownerReported": "multiple conversations from scratch",
+      "established": true
+    },
+    "windowExtendedByOwner": false,
+    "minimumSatisfied": true
+  },
+  "answeringStyle": "the owner answered conversationally and in aggregate; one-line direct answers are recorded for the structural facts and observations OB-2, OB-5, OB-6, OB-8; observations OB-1, OB-3, OB-4, OB-7 are recorded as covered by the owner's explicit blanket evaluation — they are NOT independent detailed observations",
+  "ownerBlanketEvaluation": {
+    "statement": "used Quellight enough for the Stage 07D organic-use assessment; the product is approved from the owner's side; the overall experience and the implemented retention, memory, conflict, correction, removal, expiry, retirement, open-loop transformation, deletion, and export concepts are acceptable; the system was understandable after learning its vocabulary; no blocking product concern to report",
+    "blockingConcern": "none reported"
+  },
+  "observations": [
+    {
+      "id": "OB-1",
+      "topic": "did continuity actually help",
+      "resolution": "covered-by-owner-overall-approval",
+      "ownerSubstance": "no continuity concern reported; the overall experience including retention and memory concepts was affirmed acceptable"
+    },
+    {
+      "id": "OB-2",
+      "topic": "was remembered meaning accurate",
+      "resolution": "affirmed",
+      "ownerSubstance": "remembering is accurate (owner's direct answer)"
+    },
+    {
+      "id": "OB-3",
+      "topic": "was the confirmation burden reasonable",
+      "resolution": "covered-by-owner-overall-approval",
+      "ownerSubstance": "no confirmation-burden concern reported"
+    },
+    {
+      "id": "OB-4",
+      "topic": "did conflict handling interrupt natural conversation",
+      "resolution": "covered-by-owner-overall-approval",
+      "ownerSubstance": "conflict concepts affirmed acceptable; no interruption concern reported"
+    },
+    {
+      "id": "OB-5",
+      "topic": "could the owner understand and control memory",
+      "resolution": "affirmed-with-note",
+      "ownerSubstance": "understandable after learning the system's vocabulary; the learning curve is noted as non-blocking feedback"
+    },
+    {
+      "id": "OB-6",
+      "topic": "did restart preserve trust",
+      "resolution": "affirmed",
+      "ownerSubstance": "restart and everything after it working well (owner's direct answer)"
+    },
+    {
+      "id": "OB-7",
+      "topic": "did deletion/export behave as the UI claimed",
+      "resolution": "covered-by-owner-overall-approval",
+      "ownerSubstance": "implemented deletion and export concepts affirmed acceptable; no blocking concern"
+    },
+    {
+      "id": "OB-8",
+      "topic": "was there noticeable friction or latency",
+      "resolution": "friction-noted-nonblocking",
+      "ownerSubstance": "the feel is still prototype-like and needs continued work later; explicitly non-blocking (owner's direct answer)"
+    }
+  ],
+  "nonBlockingFeedbackCarriedForward": [
+    "prototype-level feel: the owner reports the product still feels like a prototype and wants continued polish later (explicitly non-blocking)",
+    "vocabulary learning curve: the system became understandable only after learning its vocabulary; onboarding and wording are improvement candidates"
+  ],
+  "reconciliationWithLayerA": {
+    "layerAEvidence": "docs/report/evidence/d4-structured-session-evidence.json (attempt-2, sealed passed, all 24 proof points true, contract @2)",
+    "layerAEvidenceUnchanged": true,
+    "statement": "Layer A proved the structural end-to-end controls under harness bounds; Layer B recorded genuine uncontrolled live use on the normal operator store with the owner's evaluation. Neither layer substitutes for the other; the two D4 evidence layers are now both present and mutually consistent, with no contradiction between them."
+  },
+  "d4Status": {
+    "layerA": "complete",
+    "layerB": "complete",
+    "d4Complete": true,
+    "readyForIndependentD5Verification": true,
+    "stage07DIndependentlyVerified": false,
+    "stage07DFormallyClosed": false,
+    "stage07EBegun": false
+  }
+}

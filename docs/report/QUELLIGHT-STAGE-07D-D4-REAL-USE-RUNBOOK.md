@@ -1,10 +1,15 @@
 # Quellight Stage 07D D4 Real-Use Runbook (owner-facing)
 
-> **Status:** preparation only. Nothing in this runbook authorizes or
-> performs the proof. **D4 real-use evidence does not exist yet.** This
-> runbook is the owner's instructions for the two D4 evidence layers
-> fixed by the proof contract
-> `quellight.stage07d.d4.proof-contract@2` (Amendment 1).
+> **Status:** D4 real-use evidence is now COMPLETE — Layer A (the
+> bounded structured session) sealed `passed` as attempt-2, and Layer B
+> (the organic-use observation window) was recorded at the frozen
+> minimum in `docs/report/evidence/d4-organic-use-record.json` and
+> `docs/report/QUELLIGHT-STAGE-07D-PHASE-D4B-LAYER-B-ORGANIC-USE-CLOSEOUT.md`.
+> This runbook is retained as the owner-facing instructions for the two
+> D4 evidence layers fixed by the proof contract
+> `quellight.stage07d.d4.proof-contract@2` (Amendment 1); any FUTURE
+> fresh structured authorization first requires archiving the active
+> attempt-2 bundle per the bundle lifecycle in Part 1.
 
 ## Part 1 — The bounded structured session (Layer A)
 

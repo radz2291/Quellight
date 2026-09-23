@@ -1959,3 +1959,34 @@ offline-fixture mode and does NOT count toward Layer B**; the window
 begins with genuine live use on `npm run dev:live` and remains
 harness-free. No D4 rerun; no real provider contact in any proof; no
 operator data access; D5 not begun.
+
+## D-07D-13 — D4 Layer B recorded and closed: the owner's organic-use window satisfies the frozen minimum; D4 is COMPLETE; Stage 07D awaits independent D5
+
+**Date:** 2026-09-23. The owner used Quellight normally on the live
+startup (`npm run dev:live`, live provider working — owner-affirmed; the
+earlier offline-fixture attempt remains excluded per D-07D-11/12) and
+answered the window questions directly. Every frozen minimum of proof
+contract @2 §3 is established without inference: THREE genuine sessions,
+across TWO separate launches on TWO calendar days, including a full
+application restart ("restart all is working well") and genuinely fresh
+conversations ("multiple conversations from scratch"). The eight
+observation answers are recorded structurally in
+`docs/report/evidence/d4-organic-use-record.json` with explicit
+attribution: direct answers — remembered meaning ACCURATE, restart
+trust preserved, memory understandable after learning the vocabulary,
+and prototype-level feel noted as friction — plus the owner's explicit
+blanket evaluation covering continuity, confirmation burden, conflict
+handling, and deletion/export (acceptable; NOT presented as independent
+detailed observations). The owner approved the product from their side
+with NO blocking concern. Non-blocking feedback carried forward:
+prototype-level feel needing continued polish, and the vocabulary
+learning curve. Layer A (attempt-2 sealed passed) and Layer B are
+mutually consistent and complementary; Layer A evidence, receipts,
+attempt archives, and contracts are preserved byte-for-byte (the only
+evidence-directory addition is the organic-use record itself). **D4 is
+COMPLETE** — both contract-required evidence layers exist. Stage 07D is
+ready for independent Phase D5 verification; D5 has NOT begun (it is
+the next session's work); Stage 07D is NOT independently verified or
+formally closed by this entry; Stage 07E has NOT begun. Closeout was
+documentation-only: no executable change, no provider contact, no
+operator-data access, no structured-session rerun.
