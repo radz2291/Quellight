@@ -1737,3 +1737,21 @@ gate-found lifecycle defects fixed and pinned) are documented in the
 **D4 real-use proof has NOT begun and requires its own owner
 authorization; Stage 07D is NOT verified or formally closed; Stage 07E has
 NOT begun.**
+
+## D-07D-5 — Stage 07D Phase D4a: MSTR-012 real-use proof PREPARED, execution NOT authorized
+
+**Date:** 2026-09-22. Following the standalone D4 proof contract
+(`59bb43ad` — the contract SHA is corrected in the machinery commit
+message of record), Phase D4a prepared the MSTR-012 real-use proof: the
+two evidence layers fixed by the contract (a bounded owner-authorized
+structured session over the pinned provider profile in a disposable
+out-of-repository directory, and a short organic-use observation window
+on the normal operator store with no harness attached), the session-level
+one-shot authorization receipt, the evidence ledger with fail-closed
+scanning and sealing, bounds enforced before transport, the governed-user-surface-only
+deletion authority, the permanent offline `verify:d4-prep` gate (23
+checks green over synthetic evidence), and the owner runbook with the
+exact authorization text. **D4 real-use evidence DOES NOT EXIST; no
+provider or operator-data access occurred; D4 execution requires its own
+owner authorization; Stage 07D is NOT verified or formally closed; Stage
+07E has NOT begun.**

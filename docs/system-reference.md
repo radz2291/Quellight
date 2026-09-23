@@ -1,6 +1,6 @@
 # Quellight system reference — Stage 07B/07C
 
-## Status (current, 2026-09-22 — STAGE 07C FORMALLY CLOSED (PHASE Q7 AUDIT VERIFIED, 0 BLOCKING / 0 HIGH / 0 MEDIUM); STAGE 07D IN PROGRESS — D1a FROZEN, D1/D3/D2 IMPLEMENTED (SELF-VERIFIED), D4/D5 NOT BEGUN; STAGE 07E NOT BEGUN)
+## Status (current, 2026-09-22 — STAGE 07C FORMALLY CLOSED (PHASE Q7 AUDIT VERIFIED, 0 BLOCKING / 0 HIGH / 0 MEDIUM); STAGE 07D IN PROGRESS — D1a FROZEN, D1/D3/D2 IMPLEMENTED (SELF-VERIFIED), D4 PREPARED-NOT-EXECUTED, D5 NOT BEGUN; STAGE 07E NOT BEGUN)
 
 ```text
 VICT-M-1: INDEPENDENTLY VERIFIED AND FORMALLY CLOSED (qlt.proposal.draft@2/write; exact host quiet-write policy qlt.host-policy.quiet-write@1; adopted STABLE set @victframework/*@0.3.0 = vict-release-set@1/0.3.0, contentId v1_5f3a074a…; latest = 0.3.0; the 0.3.0-rc.1 candidate and its recovered evidence chain remain immutable historical record)
@@ -13,7 +13,7 @@ Stage 07C Phase Q5: VERIFIED WITH NON-BLOCKING ISSUES — FORMALLY CLOSED (Share
 Stage 07C Phase Q6: VERIFIED WITH NON-BLOCKING FINDINGS — FORMALLY CLOSED (root-cause recovery; ONE recovery live ceremony passed 2026-09-22 — six turns, eight HTTP requests, zero findings, exact stable VICT 0.3.1, instructions 5/profile 7; the one-shot live authorization is consumed; independently verified by the Phase Q7 audit with independent offline negative controls for every mandated defect class; see docs/report/QUELLIGHT-STAGE-07C-PHASE-Q7-INDEPENDENT-VERIFICATION.md and docs/report/QUELLIGHT-STAGE-07C-PHASE-Q7-FORMAL-CLOSURE.md)
 Stage 07C Phase Q7: COMPLETE — AUTHORITATIVE VERDICT PASS (independent Stage 07C audit; the audited tree 8a26d31…; audit ladder green with one recorded browser-timing rerun, unchanged assertions)
 Stage 07C: FORMALLY CLOSED (Phases F and Q1–Q5 closed in their own records; Q6/Q7 closed by the Q7 audit and closure record)
-Stage 07D: D1a CONTRACT FROZEN; D1/D3 FOUNDATIONS AND D2 GOVERNED DELETION/EXPORT/RECONCILIATION IMPLEMENTED (content-free tombstones with storage-CHECK enforcement; claim-only expiry via the visible enforcement pass; deterministic conflict challenges with quiet dismiss/amend paths; structural amendment-vs-execution; conversation deletion with conversation-only default and proven-originating scoping; word-gated deep purge with content-free receipts and mode-bounded scope; deterministic versioned user export via the governed VICT ports; receipt-driven cross-store recovery with boot fencing) — self-verified by verify:d1 (49), verify:d3 (35), verify:d2 (74) and the real-browser pass; MSTR-012 real-use proof NOT executed (D4); Stage 07D NOT verified or formally closed
+Stage 07D: D1a CONTRACT FROZEN; D1/D3 FOUNDATIONS AND D2 GOVERNED DELETION/EXPORT/RECONCILIATION IMPLEMENTED; D4 REAL-USE PROOF PREPARED (proof contract frozen; evidence machinery, one-shot authorization receipt, and the permanent offline verify:d4-prep gate green; owner runbook ready) — EXECUTION NOT AUTHORIZED, D4 EVIDENCE DOES NOT EXIST; MSTR-012 real-use proof NOT executed; Stage 07D NOT verified or formally closed
 Stage 07:  IN PROGRESS (07A, 07B, 07C closed; 07D permitted and not begun; 07D, 07E remain)
 ```
 

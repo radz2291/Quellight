@@ -1,0 +1,134 @@
+# Quellight Stage 07D D4 Real-Use Runbook (owner-facing)
+
+> **Status:** preparation only. Nothing in this runbook authorizes or
+> performs the proof. **D4 real-use evidence does not exist yet.** This
+> runbook is the owner's instructions for the two D4 evidence layers
+> fixed by the proof contract
+> `quellight.stage07d.d4.proof-contract@1`.
+
+## Part 1 — The bounded structured session (Layer A)
+
+### What will run
+
+The harness `scripts/run-d4-structured-session.mjs` drives the REAL
+application against the pinned provider profile
+(`ollama-cloud/glm-4.6-flash` at `https://ollama.com/v1`) in a dedicated
+disposable data directory outside the repository. It performs the
+structural proof points A1–A13 (contract §2): conversation usable,
+deliberate meaning preservation (ceremony confirmation or direct Save —
+both are valid), no agent-canonical records, restart survival, fresh-
+conversation receipt, exclusion of pending/removed material, the quiet
+commitment-conflict behavior, a truthful in-scope export, removal and
+conversation-only deletion of DEDICATED `d4-proof-*` records only, complete
+and truthful reconciliation, transcript hygiene, and evidence hygiene.
+
+### Bounds (enforced BEFORE each provider transport)
+
+One session: ≤ 45 minutes; ≤ 5 of your user turns; ≤ 20 provider
+requests; ≤ 2048 output tokens per request; ≤ 120 s per-turn deadline;
+zero retries; no fallback.
+
+### Before you authorize
+
+1. Think of a **low-sensitivity durable fact about yourself** (e.g., a
+   working preference) and a matching commitment you are willing to use
+   for the proof. Write them in a scenario file OUTSIDE the repository,
+   e.g. `%TEMP%\d4-scenario.json`:
+
+```json
+{
+  "chatter": "…ordinary small talk…",
+  "durableRemember": "…please remember this about me: <your durable fact>…",
+  "durableSecond": "…restate the same commitment in your own words…",
+  "ordinaryFollowup": "…an ordinary follow-up question…",
+  "freshProbe": "…ask something the durable fact would help answer…",
+  "preservedNote": "…a short note to preserve…",
+  "removableNote": "…a short note you will remove during the proof…"
+}
+```
+
+The file's content stays in memory only — it is never printed,
+logged, or committed. Only its SHA-256 digest (kept in memory) feeds
+the leak scanners.
+
+2. Make sure `OLLAMA_API_KEY` is present in the environment (or the
+   owner-located auth file the Q6 precedent used). The value is never
+   printed or written anywhere.
+
+### Authorization (exact text)
+
+> I authorize ONE Quellight D4 structured real-use session. It will run
+> the real application against the pinned provider profile
+> `ollama-cloud/glm-4.6-flash` using my `OLLAMA_API_KEY` from the
+> environment. It will use a dedicated proof data directory outside the
+> repository; my normal Quellight data and VICT `.pi/` data are not
+> touched. Bounds: one session of at most 45 minutes, at most 5 of my
+> user turns, at most 20 provider requests, at most 2048 output tokens
+> per request, no retries and no fallback. I will supply the scenario
+> file myself and it will never be committed. Evidence will be
+> structural outcomes only — no conversation content, no credentials,
+> no absolute paths. If the provider fails before the scenario begins,
+> the session is sealed as failed and I may authorize one fresh session
+> with a new receipt. Everything is cleaned up afterwards; a receipt
+> records that the authorization was consumed. — Owner, [date]
+
+### Running it
+
+```
+set QUELLIGHT_D4_STRUCTURED=1
+set QUELLIGHT_D4_SCENARIO_FILE=<path to your scenario file>
+node --import tsx scripts/run-d4-structured-session.mjs
+```
+
+What happens: the harness refuses unless the flag is set, the receipt
+`docs/report/evidence/d4-structured-session-receipt.json` is absent, and
+a credential is present. Then it consumes the receipt (one-shot),
+runs the proof points, seals `docs/report/evidence/d4-structured-session-
+evidence.json` (structural outcomes only), removes its workspace, and
+verifies the removal. If anything fails, the seal says so truthfully —
+a failed session is a valid, truthful result, not a hidden error.
+
+A consumed receipt prevents rerun. To authorize a fresh session after an
+infrastructure-only failure, archive the receipt file yourself (e.g.
+rename it with the date), state a new authorization line, and run again.
+
+## Part 2 — The organic-use observation window (Layer B)
+
+No harness runs. Use Quellight normally, on a real low-sensitivity
+subject of your choice, on your normal data directory.
+
+**Smallest defensible window:** three genuine sessions, across at least
+two separate application launches on at least two calendar days,
+including at least one restart and at least one genuinely fresh
+conversation. You may extend it; do not shorten it below one session.
+
+**Rules:** conversation wording is never committed; you may exclude any
+private event from the record without giving a reason; nothing except
+structural metadata (session/launch/restart/fresh-conversation counts)
+and your observation answers below is recorded.
+
+After the window, answer (privately or in your own notes — the eight
+observation answers are the evidence):
+
+1. Did continuity actually help?
+2. Was remembered meaning accurate?
+3. Was the confirmation burden reasonable?
+4. Did conflict handling interrupt natural conversation?
+5. Could you understand and control memory?
+6. Did restart preserve trust?
+7. Did deletion/export behave as the UI claimed?
+8. Was there noticeable friction or latency?
+
+The documented backup/recovery limitations disclosure (MSTR-012) carries
+the standing truth: nothing can claim that OS/file backups or external
+copies were deleted; `VACUUM` reclaims space only inside the
+application's own database file.
+
+## Verification before requesting authorization
+
+`npm run verify:d4-prep` must be green: 23+ offline checks proving the
+authorization gate (absent / reused / malformed), the before-transport
+bounds, the leak scanners, the fail-closed seal, the false-claim
+refusals, the truthful failure path, the cleanup, the workspace policy,
+and the static no-provider-access property — all over synthetic
+evidence only.
