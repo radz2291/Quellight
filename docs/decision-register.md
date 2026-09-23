@@ -2178,3 +2178,38 @@ Stage 07 exit gate) is PERMITTED and NOT BEGUN** — its entry requires its own
 owner authorization and contract freeze; no 07E implementation is authorized
 by this record. Documentation-only VICT reconciliation registered
 separately (VICT v0.4.27, §0.33).
+
+## D-07E-01 — Stage 07E preparation authorized; exit contract FROZEN; L-4 resolved by the owner's hash-bound frozen-evidence exception
+
+**Decision (2026-09-24, owner).** Stage 07E preparation is authorized:
+reconcile the Stage 07 exit requirements from the canonical roadmap, freeze the
+Stage 07E exit contract, and prepare deterministic exit-gate verification. This
+authorizes NO new product feature, NO provider call, NO operator-data access,
+NO rewrite of historical evidence, and NO declaration that Stage 07 is closed —
+the final Stage 07E audit is performed by a fresh independent session against
+the frozen contract.
+
+**L-4 governance decision.** The frozen D5 audit report is preserved
+byte-for-byte, and the narrowest defensible scan disposition is implemented:
+the `verify:quellight` local-path scan gains exactly one evidence-bound
+exception for `docs/report/QUELLIGHT-STAGE-07D-PHASE-D5-INDEPENDENT-AUDIT.md`,
+bound to its exact content SHA-256
+(`169a215369114b443697e68c7974b10d56742196f5bc11912cd7d0a6dd7a41b5`), its exact
+Git blob (`d89fad1134e55b5e32e302519219e23085f8ff69`), and its exact
+documented match set (exactly two matches of the ten-character Windows
+user-directory prefix — JS-escaped here as `C:\\Users\\` to keep this register
+scan-clean; registered machine-readably in `scripts/lib/frozen-evidence.mjs` —
+on lines 15–16: the auditor's quoted VICT-checkout and frozen-audit-tree
+paths). The scanner
+must still inspect the file and must report the accepted matches explicitly.
+Any byte change, additional match, different file, different path, or new
+local-path disclosure must fail. Documentation in general is not excluded; the
+credential, canary, fixture-content, operator-data, and privacy scans are not
+weakened; the historical report is not redacted or rewritten. Full normative
+text: `docs/report/QUELLIGHT-STAGE-07E-EXIT-CONTRACT-FREEZE.md` §5/§6.1
+(contract `quellight.stage07e.exit-contract@1`).
+
+**Consequences:** Stage 07E work proceeds in reviewable order (contract freeze;
+narrow L-4 scanner disposition; exit-gate machinery and negative controls;
+preparation report/status). Stage 07 remains IN PROGRESS; 07A–07D remain
+FORMALLY CLOSED; the final independent Stage 07E exit audit has NOT begun.
