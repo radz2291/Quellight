@@ -181,8 +181,11 @@ const runScenario = async (page, trigger) => {
     note(
       'the chip label did not update after the turn (documented one-shot refresh gap) — reload re-present fallback',
     );
-    await page.reload();
-    await page.locator('#qlt-composer').waitFor({ state: 'visible', timeout: 20_000 });
+    // After a bare reload nothing is selected (the workspace starts with
+    // selectedThreadId undefined), so re-select the scenario's thread — the
+    // most recently updated one, sidebar index 0 — exactly as step 4 does.
+    await page.reload({ waitUntil: 'networkidle' });
+    await openThreadAt(page, 0);
     await waitPendingLabel();
   }
   return chip;
