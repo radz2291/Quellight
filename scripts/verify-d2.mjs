@@ -41,12 +41,12 @@ const USER = 'actor-quellight-local';
 const AGENT = 'agent-quellight-probe';
 const sections = { schema: 0, controls: 0, structural: 0, wiring: 0 };
 const failures = [];
-const check = (label, sectionName, condition) => {
+const check = (label, sectionName, condition, probeDetail) => {
   if (condition) {
     sections[sectionName] += 1;
   } else {
     failures.push(`[${sectionName}] ${label}`);
-    console.error(`  FAIL: ${label}`);
+    console.error(`  FAIL: ${label}${probeDetail === undefined ? '' : ` — ${probeDetail}`}`);
   }
 };
 
@@ -711,17 +711,24 @@ const lifecycle = (composition) => composition.conversationLifecycle;
     now: 20_000,
   });
   // The frozen expiry rule: future-only assignment (the composition's
-  // clock is the real wall clock here); the pass then sees it due.
+  // clock is the real wall clock here). The assignment sits one minute
+  // ahead so it can never race the clock during validation, and the
+  // pass then runs at an explicit LATER instant — the same frozen due
+  // predicate production executes, deterministically.
   await sw.retention.setClaimExpiry({
     claimId: dueClaim.id,
-    expiresAtMs: Date.now() + 1,
+    expiresAtMs: Date.now() + 60_000,
     assignedBy: USER,
   });
-  const passReport = await sw.retention.runRetentionPass({ ranBy: USER });
+  const passReport = await sw.retention.runRetentionPass({
+    ranBy: USER,
+    now: Date.now() + 120_000,
+  });
   check(
     'N-D2-16: the D1 retention pass still expires due claims',
     'controls',
     passReport.expiredCount === 1 && passReport.expiredIds.includes(dueClaim.id),
+    `expiredCount=${passReport.expiredCount} expiredIds=${JSON.stringify(passReport.expiredIds)} dueClaim=${dueClaim.id}`,
   );
 
   // N-D2-7 + N-D2-18: the deep purge of the completed conversation C.
