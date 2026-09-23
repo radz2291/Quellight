@@ -1782,3 +1782,26 @@ composition-pinned `ollama-cloud/glm-5.3-flash`. Bounds unchanged. No
 provider, credential, operator data, `.pi/`, `.quellight-data`, or
 scenario file access; D4 execution remains NOT authorized; Stage 07D is
 NOT verified or formally closed; Stage 07E has NOT begun.
+
+## D-07D-7 — Stage 07D Phase D4b: the one authorized structured session FAILED truthfully; no rerun
+
+**Date:** 2026-09-23. Under the owner's one-shot authorization the D4
+structured real-use session was executed exactly once against the
+pinned profile with the credential resolved through the owner-designated
+authentication boundary. The session aborted ~3.4 s after receipt
+consumption, at or before the first provider turn could complete, and
+the machinery sealed the truthful failure outcome
+(`failed` / `QLT_D4_PROOF_POINT_FAILED`); the process exited 1. Zero
+user turns were verified completed; no A1–A13 proof point was
+established. The failure path's cause line was lost to the
+`process.exit(1)` buffered-write discard (reported as an observability
+finding; NOT repaired). Cleanup completed: the harness removed and the
+assistant independently verified the proof workspace absent; the
+owner-scenario materialization and run-log directories were removed and
+verified absent; leak scans found no scenario text or credential-shaped
+material; the repo `.quellight-data` operator store has zero writes in
+the session window and VICT `.pi` is untouched. The consumed receipt
+now blocks re-execution. Per the owner's instruction, any future
+execution requires a new explicit owner authorization; the organic-use
+window has NOT begun; Stage 07D is NOT verified or formally closed;
+Stage 07E has NOT begun.

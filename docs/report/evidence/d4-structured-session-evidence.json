@@ -1,0 +1,6 @@
+{
+  "outcome": "failed",
+  "contract": "quellight.stage07d.d4.proof-contract@2",
+  "profile": "ollama-cloud/glm-5.3-flash",
+  "code": "QLT_D4_PROOF_POINT_FAILED"
+}
