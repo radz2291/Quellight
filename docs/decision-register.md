@@ -1990,3 +1990,62 @@ the next session's work); Stage 07D is NOT independently verified or
 formally closed by this entry; Stage 07E has NOT begun. Closeout was
 documentation-only: no executable change, no provider contact, no
 operator-data access, no structured-session rerun.
+
+## D-07D-14 — Phase D5 independent audit EXECUTED: verdict NOT VERIFIED — FORMAL CLOSURE REFUSED (1 Blocking / 1 High / 1 Medium / 3 Low); D2 deep-purge ordering defect reported, NOT repaired; remediation path fixed
+
+**Date:** 2026-09-23. **Audited tree:** `60859c4e4f741b3d711f62bbae33303d638b06d9`
+(verified HEAD == origin/main after fresh fetch, clean; VICT tip
+`4aa245d29a79b0e9f9f2e35b46597e7a10701571` verified the same way). The
+audit was performed fresh and independently: full history/ancestry
+reconciliation (linear, no merges; the two commits between the attempt-2
+seal `5cc7e42…` and the tip are the standalone Amendment-2 freeze
+`0efd1f4` and its disclosed implementation `72a5922`; the D4 machinery is
+byte-unchanged since `459a69a`; the sealed attempt-2 bundle and the
+attempt-1 archive are git-blob-identical to the sealing commit and match
+the pinned digests); independent source review plus 44 fresh negative
+controls on disposable synthetic stores (43 pass — the single failure is
+the blocking defect below); mutation-based non-vacuity demonstration
+(3/3 injected regressions caught); one first-run real-browser D2/D1/D3
+evidence pass on an isolated disposable store (PASS, never rerun); and
+the complete authoritative ladder on the frozen clone with every true
+exit recorded (verify:governance and one node test fail ONLY on a
+hard-coded `/260909-VCT-Quellight/` directory-name assertion — green on
+reruns in the identical-SHA original tree; verify:d4-prep's single red is
+the documented by-design active-paths state).
+
+**B-1 (Blocking):** the D2 deep purge (`purgeConversation`) throws a raw
+`FOREIGN KEY constraint failed` for ceremony-created meaning in the
+plus-meaning path: the frozen step order deletes `qlt_proposal` rows
+before the originating subject rows whose `proposal_id` (and a
+commitment's `normative_basis_proposal_id`) reference them, and the D1
+tombstone null-set does not clear `proposal_id`. Fails closed (rollback,
+no receipt, no partial deletion, no false success) — a required D2
+capability is functionally broken in its principal scenario. **H-1
+(High):** `verify:d2` seeds purge scenarios only through direct-verb
+records (`proposal_id` NULL) and cannot detect the B-1 class. **M-1
+(Medium):** commit `6856d45` landed the Lane B implementation under a
+`docs(…AMENDMENT 1…standalone)` label — the amendment was not standalone
+in history (final-state conformance verified). **L-1:** hard-coded
+`/260909-VCT-Quellight/` in `verify-governance.mjs` and
+`test/governed-mutation.test.ts` breaks the ladder in any differently
+named checkout. **L-2:** Layer B OB-1/3/4/7 are aggregate-attested
+(covered by the owner's blanket evaluation) — ruled within the frozen
+minimum and honestly labeled, weaker than direct answers. **L-3:**
+stale system-reference status tail (corrected by this entry's status
+update).
+
+**Consequences:** Stage 07D is NOT independently verified and NOT
+formally closed; D4 is not marked closed by the audit; Stage 07E is NOT
+begun and NOT permitted. No executable change was made by the audit; all
+historical records, contracts, receipts, evidence, and reports remain
+byte-preserved; no provider contact, no credential access, no D4 rerun,
+no access to `.quellight-data` or VICT `.pi/`. VICT required no
+reconciliation. **Smallest next permitted remediation (owner-authorized,
+in order):** (1) freeze the D2 safety-contract amendment @1 → @2
+correcting the purge step order (or, by explicit owner decision, extend
+the D1 tombstone null-set to the proposal-reference columns);
+(2) implement it and extend `verify:d2` with a ceremony-path purge
+control (closes H-1); (3) run the focused gates and request a focused D5
+re-verification. Optionally: one direct owner answer each for OB-1/3/4/7
+(L-2); repo-root-relative path containment (L-1). Report:
+`docs/report/QUELLIGHT-STAGE-07D-PHASE-D5-INDEPENDENT-AUDIT.md`.
