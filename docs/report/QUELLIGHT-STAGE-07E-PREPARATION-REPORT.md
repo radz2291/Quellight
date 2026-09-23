@@ -136,7 +136,10 @@ the standard 20 s bound) that report every observed force-close signature
 truthfully. The fresh-run protocol (contract §8.2) is retained for any future
 browser-gate failure. The one-shot post-turn chip-refresh robustness
 observation (silently-absorbed single refresh, no retry) remains carried for
-future product work.
+future product work; the gate's `runScenario` gained a bounded re-present
+fallback for exactly that carried gap (reload → mount reconcile re-presents
+the durable pending state → wait once more; the fallback fires visibly in the
+output, and a still-absent label after the reload is a real failure).
 
 ## 6. Gate composition and negative controls
 
@@ -192,20 +195,36 @@ D-07E-01 authorizes; every other gate is invoked exactly as wired).
 Focused, per mandate — no provider ceremony; no D4 rerun; no consumed one-shot
 re-executed:
 
-- `verify:stage7e` full gate: machinery sections all green at the rehearsal
-  (contract pin, closure, release identity, evidence immutability, manifest,
-  separation, L-4 acceptance + negative controls, all composed gates PASS,
-  d4-prep exact by-design red); status-surface checks red exactly as disclosed
-  until the status commit, then green (final full run recorded below);
-- `verify:quellight` full composite: run once on the final tree — the L-4
-  acceptance line appears in step 7 and the composite is green (see §9);
-- browser-ceremony-check: 4 pre-repair failures recorded truthfully (1 at the
-  Scenario-C chip wait, 3+1 in-sequence at the identical tray-reopen wait);
-  after the repair, two consecutive full-completion serial runs green;
-- `npm run format:check` and `node --check` on every changed script: green;
-- `git diff --check`: clean;
-- digest cross-checks: all contract digests and the gate's digest pins verified
-  programmatically.
+- **The L-4 disposition in the real composite:** `verify:quellight` step 7 now
+  reports `frozen-evidence exception ACCEPTED 2 local-path match(es) in
+docs/report/QUELLIGHT-STAGE-07D-PHASE-D5-INDEPENDENT-AUDIT.md (path+sha256
++git-blob+match-set all verified; owner decision D-07E-01; historical record
+byte-preserved)` and the scan passes (333 files) — this step had failed
+  deterministically since the D5 audit report entered the tree (the frozen D5
+  re-verification recorded that failure live);
+- **`verify:stage7e`:** expected-red at the machinery commit (status surfaces
+  land later, disclosed in the ledger), FULL PASS on the final tree — contract
+  pin, closure/status/identity/evidence sections, all negative controls, all
+  13 composed constituents, the exact by-design d4-prep red;
+- **browser-ceremony-check (the L-5 program), full truthful ledger:**
+  pre-repair: 5 failures (4× the identical `openOldestThreadTray` tray-reopen
+  wait — the deterministic activation race, including a fully serial no-load
+  run — and 1× the Scenario-C chip-pending wait); after the delivery repairs:
+  2 full-completion green serial runs, then 1 in-composite failure at the Q6
+  Send (same race class, no delivery fallback) and 1 standalone failure with
+  the open-then-close force-close signature (the product action-loss race);
+  after the complete hardening (deliverSend + bounded open-retry + re-present
+  fallback): the fallback's own reload exposed a stale selection wait (fixed;
+  the fallback fired and reported truthfully), then fresh runs settled at
+  2 full-completion greens out of 3 (the single failure: the post-reload
+  pending-label wait, first occurrence at that step — the environmental tail
+  of the two documented product gaps). Every run, green or not, is recorded
+  here; the fresh-run protocol (§8.2) governs the final audit;
+- **`npm run format:check` and `node --check`** on every changed script:
+  green;
+- **`git diff --check`:** clean at every commit;
+- **digest cross-checks:** every digest pin verified programmatically
+  (including both gate re-pins).
 
 ## 9. Carried limitations (unchanged + updated)
 
