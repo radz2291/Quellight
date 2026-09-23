@@ -50,6 +50,10 @@ import {
   composeMastraTurnExecutor,
   MastraThreadCoordinator,
 } from '@victframework/mastra';
+import {
+  OPERATOR_CREDENTIAL_BOUNDARY_PATH,
+  readOperatorCredentialThroughBoundary,
+} from './operator-credential';
 import { fenceCompletedDeletions } from '@victframework/mastra';
 import { ConversationDeletionCoordinator, ConversationExportService } from '@victframework/runtime';
 import { createSqliteAgentGovernanceStore } from '@victframework/store-sqlite';
@@ -203,6 +207,13 @@ export interface QuellightEnvironment {
   /** Bounded per-turn output cap (64–1024); used to keep the live proof small. */
   readonly maxOutputTokens: number;
   readonly liveProofRequested: boolean;
+  /**
+   * Contract Amendment 2 (`quellight.stage07d.operator-live-use@1`): the
+   * SUPPORTED normal-use live startup seam (`npm run dev:live`). Entirely
+   * separate from the proof-only live seam; both seams together are a
+   * fail-closed configuration error.
+   */
+  readonly operatorLiveRequested: boolean;
   readonly actorToken: string;
   readonly port: number | undefined;
 }
@@ -320,6 +331,13 @@ export function resolveQuellightEnvironment(
     );
   }
   const liveProofRequested = env.QUELLIGHT_LIVE_PROOF === '1';
+  const operatorLiveRequested = env.QUELLIGHT_OPERATOR_LIVE === '1';
+  if (liveProofRequested && operatorLiveRequested) {
+    throw new QuellightCompositionError(
+      'VICT_OPERATOR_CONFIG_INVALID',
+      'QUELLIGHT_OPERATOR_LIVE (normal live use) and QUELLIGHT_LIVE_PROOF (the proof-only harness seam) are separate seams and must never be set together.',
+    );
+  }
   const actorToken =
     env.QUELLIGHT_ACTOR_TOKEN !== undefined && env.QUELLIGHT_ACTOR_TOKEN.length > 0
       ? env.QUELLIGHT_ACTOR_TOKEN
@@ -328,7 +346,15 @@ export function resolveQuellightEnvironment(
     env.QUELLIGHT_PORT !== undefined && env.QUELLIGHT_PORT.trim() !== ''
       ? Number(env.QUELLIGHT_PORT)
       : undefined;
-  return { dataDir, turnDeadlineMs, maxOutputTokens, liveProofRequested, actorToken, port };
+  return {
+    dataDir,
+    turnDeadlineMs,
+    maxOutputTokens,
+    liveProofRequested,
+    operatorLiveRequested,
+    actorToken,
+    port,
+  };
 }
 
 export type QuellightModelMode = 'offline-fixture' | 'live';
@@ -434,6 +460,13 @@ export interface CreateQuellightCompositionOptions {
    * how provider execution, the adapter, the hub, or the boundary behave.
    */
   readonly offlineModelFactory?: () => unknown;
+  /**
+   * Contract Amendment 2: override the owner-designated credential boundary
+   * path for tests (a task-owned temporary file). The value `null` DISABLES
+   * the boundary fallback entirely (deterministic fail-closed proofs);
+   * `undefined` uses the one owner-designated path. Test-only.
+   */
+  readonly operatorCredentialBoundary?: string | null;
 }
 
 /**
@@ -469,22 +502,36 @@ export async function createQuellightComposition(
   });
   const serializedOperatorConfig = serializeOperatorConfiguration(operatorConfig);
 
-  // ---- Model mode (offline by default; live only when gated) ---------------
+  // ---- Model mode (offline by default; live only through a named seam) -----
+  // Contract Amendment 2: the proof-only seam and the operator live-use
+  // seam are separate; both resolve the credential identically through the
+  // protected operator configuration, and the operator seam additionally
+  // falls back, in memory only, to the owner-designated authentication
+  // boundary. Either way: no credential → fail closed, NO fixture fallback.
   let modelMode: QuellightModelMode = 'offline-fixture';
-  if (env.liveProofRequested) {
-    // Gated live seam: the credential resolves just in time and is set as
-    // the provider environment value for the router resolution path.
-    const credential = await requireOperatorCredential(operatorConfig, process.env).catch(
-      (cause: unknown) => {
-        if (cause instanceof OperatorCredentialUnavailableError) {
-          throw new QuellightCompositionError(
-            'VICT_OPERATOR_CREDENTIAL_UNAVAILABLE',
-            `The provider credential variable '${cause.credentialName}' could not be resolved; the live seam fails closed.`,
-          );
-        }
-        throw cause;
-      },
+  if (env.liveProofRequested || env.operatorLiveRequested) {
+    const liveCredential = await requireOperatorCredential(operatorConfig, process.env).catch(
+      () => undefined,
     );
+    // Contract Amendment 2: `operatorCredentialBoundary: null` DISABLES the
+    // boundary fallback entirely (deterministic fail-closed proofs);
+    // `undefined` selects the one owner-designated path; a string overrides
+    // it (test-only, task-owned temporary boundary files).
+    const boundaryDisabled = options.operatorCredentialBoundary === null;
+    const boundaryPath =
+      boundaryDisabled || !env.operatorLiveRequested
+        ? null
+        : (options.operatorCredentialBoundary ?? OPERATOR_CREDENTIAL_BOUNDARY_PATH);
+    const credential =
+      liveCredential ??
+      (boundaryPath === null ? undefined : readOperatorCredentialThroughBoundary(boundaryPath));
+    if (typeof credential !== 'string' || credential.length === 0) {
+      // Fail closed, clearly (Amendment 2 §2.4): never a fixture fallback.
+      throw new QuellightCompositionError(
+        'VICT_OPERATOR_CREDENTIAL_UNAVAILABLE',
+        `The provider credential could not be resolved: it is neither set as the protected environment variable '${PINNED_CREDENTIAL_VAR}' nor present through the owner-designated authentication boundary. Live mode refuses to start without it (no fallback).`,
+      );
+    }
     if (process.env[PINNED_CREDENTIAL_VAR] !== credential) {
       // Inject the provider environment value (the router reads it by its
       // registered env-var name). The value never enters any VICT or

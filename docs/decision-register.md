@@ -1902,6 +1902,12 @@ first. D4 Layer A is COMPLETE; Layer B (the organic-use window — three
 genuine sessions across two launches on two days, no harness) awaits the
 owner and must not begin automatically. D4 remains incomplete until
 Layer B; Stage 07D is NOT formally closed; Stage 07E has NOT begun.
+**Truthful wording correction (owner instruction, 2026-09-23):** the
+credential resolution sentence above must not be read as "the boundary
+file was never read": the harness DID read the designated credential
+field of the owner-designated authentication boundary file — in memory
+only; no human or tooling inspection of the file, no printing, and no
+persistence of the credential value occurred.
 
 ## D-07D-11 — Stage 07D Contract Amendment 2: the supported operator live-use startup (`quellight.stage07d.operator-live-use@1`)
 
@@ -1926,3 +1932,30 @@ mode disclosure stays exactly Live / Offline fixture / Unavailable. The
 live path is proven offline through the loopback transport stand-in over a
 task-owned store. No D4 machinery change; no rerun of the structured
 proof; D5 not begun.
+
+## D-07D-12 — Contract Amendment 2 implemented and proven; the organic-use attempt re-run instruction
+
+**Date:** 2026-09-23. Executable changes landed AFTER the frozen
+amendment (D-07D-11): `src/lib/server/operator-credential.ts` (the
+owner-designated boundary reader, in-memory only, structural failures),
+the composition mode selection (`QUELLIGHT_OPERATOR_LIVE=1`, mutually
+exclusive with the proof seam, credential = protected variable →
+boundary → fail-closed `VICT_OPERATOR_CREDENTIAL_UNAVAILABLE` with NO
+fixture fallback), the cross-platform `scripts/dev-live.mjs` launcher
+(`npm run dev:live`), and the permanent offline proof gate
+`verify:dev-live` (19 checks green: offline default unchanged; live
+selection through the loopback transport stand-in with exactly one
+provider request and the assistant response produced through the real
+adapter path; credential in memory only, in no durable frame, no
+serialized configuration; fail-closed refusals; seam separation;
+boundary unavailability; task-owned store with the default operator
+directory proven untouched). Full battery: node tests 353, UI tests 20,
+dev-start gate, d1/d2/d3 all green; `verify:d4-prep` shows exactly one
+red line — the by-design post-consumption active-paths invariant (the
+attempt-2 bundle occupies the canonical paths as its committed record;
+any fresh authorization requires the owner to archive that bundle
+first). **The owner's attempted organic-use session ran in
+offline-fixture mode and does NOT count toward Layer B**; the window
+begins with genuine live use on `npm run dev:live` and remains
+harness-free. No D4 rerun; no real provider contact in any proof; no
+operator data access; D5 not begun.

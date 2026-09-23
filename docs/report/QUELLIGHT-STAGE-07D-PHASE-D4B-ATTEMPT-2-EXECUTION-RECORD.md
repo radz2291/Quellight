@@ -25,8 +25,11 @@
   keys, each a non-empty string; digest computable) and deleted after the
   session. The credential was resolved ONLY through the existing
   owner-designated authentication boundary by the harness's gate (the
-  pinned environment variable was not set by the operator; the boundary
-  file was never read or printed by anything in this session's tooling).
+  pinned environment variable was not set by the operator). **Truthful
+  wording correction (owner instruction, 2026-09-23):** the harness DID
+  read the designated credential field of the boundary file — in memory
+  only; what never occurred is any human or tooling INSPECTION of the
+  file, any printing, and any persistence of the credential value.
 
 ## 2. Execution (exactly once)
 

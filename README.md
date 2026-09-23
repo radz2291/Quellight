@@ -313,6 +313,27 @@ any provider). See `docs/setup.md` for the operator configuration,
 including the live provider credential, and `docs/database.md` for the
 store layout.
 
+**Normal live use (genuine operator conversations through the pinned
+live provider):**
+
+```bash
+npm run dev:live
+```
+
+This is the supported live-use startup (Contract Amendment 2,
+`quellight.stage07d.operator-live-use@1`): it composes the pinned
+provider profile `ollama-cloud/glm-5.3-flash` with the NORMAL operator
+store and resolves the credential through the protected operator
+variable or, in memory only, the owner-designated authentication
+boundary — never printed, persisted, or asked of you. If the credential
+or provider is unavailable, the app fails closed with a clear
+explanation and the UI shows **Unavailable**; it never silently falls
+back to the fixture. The top of the workspace always shows the truthful
+mode: **Live**, **Offline deterministic fixture — no live provider
+call**, or **Configuration unavailable**. Ordinary `npm run dev` stays
+the deterministic offline mode used by tests and verification; the
+proof-only `QUELLIGHT_LIVE_PROOF` seam is unchanged and separate.
+
 ## Verification
 
 ```bash

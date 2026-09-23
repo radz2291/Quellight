@@ -572,9 +572,37 @@ describe('Quellight composition — offline deterministic conversation (WP-4)', 
       { QUELLIGHT_DATA_DIR: 'data', QUELLIGHT_LIVE_PROOF: '1' },
       dir,
     );
-    await expect(createQuellightComposition({ env, skipListen: true })).rejects.toMatchObject({
+    await expect(
+      // Contract Amendment 2: the owner-designated boundary fallback exists
+      // only on the operator live-use seam; the proof-only seam is proven
+      // with the boundary explicitly disabled so the refusal is deterministic.
+      createQuellightComposition({ env, skipListen: true, operatorCredentialBoundary: null }),
+    ).rejects.toMatchObject({
       code: 'VICT_OPERATOR_CREDENTIAL_UNAVAILABLE',
     });
+  });
+
+  it('Amendment 2: the operator live-use seam without any resolvable credential fails closed and never falls back', async () => {
+    const dir = tempDir();
+    delete process.env.OLLAMA_API_KEY;
+    const env = resolveQuellightEnvironment(
+      { QUELLIGHT_DATA_DIR: 'data', QUELLIGHT_OPERATOR_LIVE: '1' },
+      dir,
+    );
+    await expect(
+      createQuellightComposition({ env, skipListen: true, operatorCredentialBoundary: null }),
+    ).rejects.toMatchObject({
+      code: 'VICT_OPERATOR_CREDENTIAL_UNAVAILABLE',
+    });
+  });
+
+  it('Amendment 2: the two live seams never combine', async () => {
+    expect(() =>
+      resolveQuellightEnvironment(
+        { QUELLIGHT_DATA_DIR: 'data', QUELLIGHT_OPERATOR_LIVE: '1', QUELLIGHT_LIVE_PROOF: '1' },
+        tempDir(),
+      ),
+    ).toThrow(/separate seams/);
   });
 
   it('the app.data.mutate command boundary fails closed with the documented structural refusal', async () => {
