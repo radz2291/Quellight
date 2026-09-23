@@ -180,8 +180,15 @@ const openTray = async (page, tab = 'pending') => {
   // Q5: the surface opens on the Pending tab. Toggle only when closed,
   // then select the requested area and wait for its content to load.
   if ((await trayNow.count()) === 0) {
-    await chip.focus();
-    await page.keyboard.press('Enter');
+    // Race note (L-5, Stage 07E investigation): a focus() followed by a
+    // page-level keyboard.press() can deliver Enter to a detached element
+    // when a re-render replaces the chip between the two calls — the same
+    // class the Lane E fix addressed for the Send button. locator.press()
+    // re-resolves the element, waits for actionability, focuses, and then
+    // presses, with Playwright retrying on detachment. The assertion is
+    // unchanged (keyboard activation must open the tray); the timeout is
+    // pinned to this script's standard 20 s (never increased).
+    await chip.press('Enter', { timeout: 20_000 });
     await trayNow.waitFor({ state: 'visible', timeout: 20_000 });
     await page.locator('.qlt-memory-tabs').waitFor({ state: 'visible', timeout: 20_000 });
   }
@@ -453,8 +460,13 @@ try {
     }
     const chipNow = page.locator('button.qlt-memory-chip');
     await chipNow.waitFor({ state: 'visible', timeout: 20_000 });
-    await chipNow.focus();
-    await page.keyboard.press('Enter');
+    // L-5 race repair (Stage 07E): see the race note in openTray(). After a
+    // thread switch the post-switch refresh cascade re-renders the chip, so
+    // focus() + page-level press() deterministically delivered Enter to a
+    // detached element on a loaded machine (reproduced 3× consecutively at
+    // this exact step). locator.press() re-resolves and retries; the
+    // keyboard-activation assertion and the 20 s bound are unchanged.
+    await chipNow.press('Enter', { timeout: 20_000 });
     await trayNow.waitFor({ state: 'visible', timeout: 20_000 });
     await trayNow.locator('.qlt-memory-tabs').waitFor({ state: 'visible', timeout: 20_000 });
   };
