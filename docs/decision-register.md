@@ -2131,3 +2131,50 @@ commit). **Status:** Stage 07D remains NOT independently verified and
 NOT formally closed — this remediation awaits the fresh focused
 independent D5 re-verification; Stage 07E NOT permitted and NOT begun.
 Report: `docs/report/QUELLIGHT-STAGE-07D-PHASE-D2-REMEDIATION.md`.
+
+## D-07D-17 — Stage 07D FORMALLY CLOSED on the fresh focused independent D5 re-verification: VERIFIED WITH NON-BLOCKING ISSUES — CLOSURE PERMITTED; Stage 07E PERMITTED and NOT BEGUN
+
+**Decision (2026-09-24, documentation-only).** The fresh focused independent
+D5 re-verification of the D2 deep-purge remediation returned **VERIFIED WITH
+NON-BLOCKING ISSUES — STAGE 07D FORMAL CLOSURE PERMITTED** (0 Blocking / 0
+High / 1 Medium carried / new non-blocking L-4 and L-5), audited tip
+`072430e74874dfb5b1c22c4771f7fc176c2be42d` == `origin/main` after fresh
+fetch. The auditor did not implement the remediation and re-derived every
+claim independently: the pre-fix B-1 defect was reproduced on a disposable
+`60859c4` tree through the real boundaries (raw `FOREIGN KEY constraint
+failed`, full rollback, no receipt, direct-verb mask confirmed); the 20-edge
+live FK graph was independently re-derived (0 order violations); a 24-probe
+real-boundary battery passed (ceremony families, conversation-only
+preservation, same-key replay, restart truthfulness, mixed scope with real
+amendment/correction/challenge lineage, unrelated-row byte-identity,
+fail-closed foreign references with full mid-purge rollback and governed
+convergence, `foreign_key_check` clean after success AND failure);
+non-vacuity was demonstrated against the pre-fix tree (focused suite 3/4 red
+with the raw FK error; `verify:d2` overlay red exactly on N-D2-19..24) versus
+green on the remediated tree (87/87 + 4/4); the L-1 repair was confirmed in a
+renamed checkout. The authoritative ladder ran on the frozen tip: every
+mandated step green (`verify:d2` 87; `test:node` 30 files / 357 tests;
+preservation gates q2–q6 and stage7c; consumer; dev-live; governance;
+browser-d2; `npm audit --omit=dev` 0 vulnerabilities; `git diff --check`);
+`verify:d4-prep`'s single red is the documented by-design active-paths state
+(the sealed attempt-2 bundle occupies the canonical paths — refusal
+invariant, not a regression); the live provider session was NOT run and D4
+was NOT re-executed. **Carried truthfully:** M-1 remains carried (process/
+attribution; verified no frozen-contract ambiguity, no executable bypass;
+history NOT rewritten); L-2 ruling unchanged; L-3 remains repaired. **New
+non-blocking findings:** L-4 — the frozen D5 audit report's own
+environment-path quotations deterministically trip `verify:quellight`'s
+local-path scan (self-referential: the report entered the tree after that
+audit's battery; byte-preservation of historical records vs scan hygiene
+requires an owner decision — scan-scope exception for frozen historical
+documents or owner-authorized redaction; neither performed here); L-5 — an
+intermittent load-sensitive in-sequence browser-ceremony timing flake,
+reproduced identically on the pre-fix tree (gate byte-identical since 07C;
+same class as the Q7-audit incident recorded in VICT §0.32; standalone runs
+green). **Consequence:** Stage 07D is FORMALLY CLOSED
+(`docs/report/QUELLIGHT-STAGE-07D-FORMAL-CLOSURE.md`; re-verification report
+`docs/report/QUELLIGHT-STAGE-07D-D5-REVERIFICATION.md`). **Stage 07E (the
+Stage 07 exit gate) is PERMITTED and NOT BEGUN** — its entry requires its own
+owner authorization and contract freeze; no 07E implementation is authorized
+by this record. Documentation-only VICT reconciliation registered
+separately (VICT v0.4.27, §0.33).
