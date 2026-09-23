@@ -3,9 +3,10 @@
  * Quellight Stage 07D Phase D2 — the governed data-safety verifier
  * (`npm run verify:d2`; run as `node --import tsx scripts/verify-d2.mjs`).
  *
- * Implements the frozen D2 negative-control matrix (N-D2-1..N-D2-18 of
+ * Implements the frozen D2 negative-control matrix (N-D2-1..N-D2-24 of
  * `d2-contract.ts`; safety contract
- * `quellight.stage07d.d2.safety-contract@1`) END-TO-END over the REAL
+ * `quellight.stage07d.d2.safety-contract@2` per Amendment 1) END-TO-END
+ * over the REAL
  * application composition (offline deterministic fixture; fresh
  * disposable synthetic stores in a temp directory), plus schema and
  * structural checks. Per-phase SELF-verification (owner decision
@@ -36,6 +37,7 @@ import {
   QLT_D2_PURGE_STEP_ORDER,
 } from '../src/lib/sharedworld/d2-contract.ts';
 import { QLT_SHARED_WORLD_SCHEMA_VERSION } from '../src/lib/sharedworld/migrations.ts';
+import { detectCommitmentConflict } from '../src/lib/sharedworld/conflict-surface.ts';
 
 const USER = 'actor-quellight-local';
 const AGENT = 'agent-quellight-probe';
@@ -915,6 +917,373 @@ const lifecycle = (composition) => composition.conversationLifecycle;
 }
 
 // ---------------------------------------------------------------------------
+// 2b. PURGE CLOSURE — the Amendment 1 controls (N-D2-19..N-D2-24)
+// ---------------------------------------------------------------------------
+{
+  console.log('\n[2b] PURGE CLOSURE — ceremony-created meaning, closure, byte-identity, failure, integrity');
+  const probe = await compose(tempDir());
+  const sw = probe.sharedWorld;
+  const dbPath = join(probe.dataDir, 'shared-world.db');
+
+  // P: meaning created through the REAL proposal/confirmation ceremony
+  // (proposal_id non-null). Q: an unrelated conversation that must
+  // survive byte-identically. R: the fail-closed boundary (a foreign
+  // content record references INTO it). T: holder of that foreign child.
+  const threadP = await sw.createThread({ title: 'Ceremony P', id: 'qlt-verify-p' });
+  const threadQ = await sw.createThread({ title: 'Unrelated Q', id: 'qlt-verify-q' });
+  const threadR = await sw.createThread({ title: 'Boundary R', id: 'qlt-verify-r' });
+  const threadT = await sw.createThread({ title: 'Foreign T', id: 'qlt-verify-t' });
+  await sw.ensureConversationLink(threadP.id);
+  const linkQ = await sw.ensureConversationLink(threadQ.id);
+  await seedMemory(probe, linkQ.mastraThreadId, 'unrelated conversation content');
+
+  // --- ceremony-created claim, commitment, and open loop in P.
+  const ceremony = async (proposalKind, content) => {
+    const proposal = await sw.meaning.createProposal({
+      proposalKind,
+      content,
+      proposedBy: AGENT,
+      sourceThreadId: threadP.id,
+    });
+    await sw.meaning.markProposalAwaitingDecision(proposal.id);
+    const outcome = await sw.meaning.confirmProposal({ proposalId: proposal.id, confirmedBy: USER });
+    return { proposal, records: outcome.createdRecords };
+  };
+  const ceremonyClaim = await ceremony('claim', {
+    subject: 'ceremony-p-claim',
+    epistemicType: 'E1',
+    honestyState: 'known',
+    confidence: 'stated',
+    statement: 'the ceremony claim in P',
+  });
+  const ceremonyCommitment = await ceremony('commitment', {
+    commitmentKey: 'ceremony-p-key',
+    statement: 'the ceremony commitment in P',
+  });
+  const ceremonyLoop = await ceremony('open_loop', {
+    subject: 'ceremony-p-loop',
+    loopKind: 'undecided_question',
+    detail: 'the ceremony open loop in P',
+  });
+  const pProposalIds = [
+    ceremonyClaim.proposal.id,
+    ceremonyCommitment.proposal.id,
+    ceremonyLoop.proposal.id,
+  ];
+  const ceremonyCommitmentId = ceremonyCommitment.records[0].id;
+  const ceremonyClaimId = ceremonyClaim.records[0].id;
+  const ceremonyLoopId = ceremonyLoop.records[0].id;
+
+  // --- one DIRECT-VERB record in the same scope (proposal_id NULL):
+  // the amended order must stay compatible with non-ceremony records.
+  const directVerbClaim = await sw.meaning.createClaim({
+    subject: 'direct-verb-p',
+    epistemicType: 'E4',
+    honestyState: 'uncertain',
+    confidence: 'qualified',
+    statement: 'a direct-verb claim in P',
+    createdBy: USER,
+    sourceThreadId: threadP.id,
+  });
+
+  // --- the AMENDMENT lineage: the user amends the ceremony commitment
+  // (predecessor amended, successor supersedes it, immutable amendment
+  // row) — commitment-family chain + judgment row in ONE scope.
+  const amended = sw.conflict.amendCommitment({
+    commitmentId: ceremonyCommitmentId,
+    statement: 'the amended commitment text in P',
+    amendedBy: USER,
+  });
+  const amendmentSuccessorId = amended.successor.id;
+  const amendmentRowId = amended.amendment.id;
+
+  // --- the CORRECTION lineage: a correction proposal in P supersedes the
+  // ceremony claim (claim-family chain, same thread).
+  const correctionOutcome = await (async () => {
+    const proposal = await sw.meaning.createProposal({
+      proposalKind: 'correction',
+      content: { statement: 'the corrected claim text in P' },
+      proposedBy: AGENT,
+      sourceThreadId: threadP.id,
+      targetRecord: { recordId: ceremonyClaimId, family: 'claim', version: ceremonyClaim.records[0].version },
+    });
+    await sw.meaning.markProposalAwaitingDecision(proposal.id);
+    return sw.meaning.confirmProposal({ proposalId: proposal.id, confirmedBy: USER });
+  })();
+  const correctionSuccessorId = correctionOutcome.createdRecords[0].id;
+  pProposalIds.push(correctionOutcome.proposal.id);
+
+  const rawCheck = new DatabaseSync(dbPath, { readOnly: true });
+  const ceremonyShape = rawCheck
+    .prepare(
+      'SELECT proposal_id, normative_basis_proposal_id FROM qlt_commitment WHERE id = ?;',
+    )
+    .get(ceremonyCommitmentId);
+  rawCheck.close();
+  check(
+    'N-D2-19 pre-condition: the ceremony commitment carries proposal_id AND normative_basis_proposal_id',
+    'controls',
+    ceremonyShape !== undefined &&
+      ceremonyShape.proposal_id === ceremonyCommitment.proposal.id &&
+      ceremonyShape.normative_basis_proposal_id === ceremonyCommitment.proposal.id,
+  );
+
+  // --- the cross-thread judgment closure: an ACTIVE-looking commitment
+  // proposal in Q on the amended key is refused and a challenge row is
+  // recorded (thread Q, existing_commitment_id -> P's active successor).
+  const qConflictingProposal = await sw.meaning.createProposal({
+    proposalKind: 'commitment',
+    content: { commitmentKey: 'ceremony-p-key', statement: 'a contradicting duplicate in Q' },
+    proposedBy: AGENT,
+    sourceThreadId: threadQ.id,
+  });
+  await sw.meaning.markProposalAwaitingDecision(qConflictingProposal.id);
+  const conflictRefusal = await detectCommitmentConflict(
+    {
+      conflict: sw.conflict,
+      resolveCurrentEffectiveCommitment: async (key) => {
+        const active = await sw.meaning.resolveCurrentEffectiveCommitment(key);
+        return active === undefined ? undefined : { id: active.id };
+      },
+      userActorId: USER,
+    },
+    await sw.meaning.getProposal(qConflictingProposal.id),
+  );
+  const crossChallengeId = conflictRefusal?.details?.challengeId;
+  check(
+    'N-D2-20 pre-condition: the cross-thread conflict was refused and a challenge row recorded',
+    'controls',
+    conflictRefusal !== undefined && typeof crossChallengeId === 'string',
+  );
+
+  // --- plus-meaning deletion of P, then the typed deep purge.
+  const deletionP = await lifecycle(probe).deleteConversation({
+    threadId: threadP.id,
+    mode: 'conversation-and-originating-meaning',
+    confirmed: true,
+    key: 'k-purge-ceremony',
+    actorId: USER,
+  });
+  check(
+    'N-D2-19 pre-condition: the plus-meaning deletion of P completed',
+    'controls',
+    deletionP?.row?.status === 'completed',
+  );
+  const beforePurge = snapshot(dbPath);
+  // qlt_conversation_purge is the PERMITTED content-free evidence — it
+  // legitimately gains the receipt row during the purge and is excluded
+  // from the byte-identity comparison (its content-freedom is asserted
+  // separately by N-D2-7/N-D2-18).
+  delete beforePurge.qlt_conversation_purge;
+  let purgeReceipt;
+  let purgeError;
+  try {
+    purgeReceipt = sw.deletion.purgeConversation({ threadId: threadP.id, purgedBy: USER, confirmation: 'purge' });
+  } catch (cause) {
+    purgeError = cause;
+  }
+  check(
+    'N-D2-19: the deep purge of CEREMONY-created meaning succeeds (B-1 regression control)',
+    'controls',
+    purgeError === undefined &&
+      purgeReceipt !== undefined &&
+      purgeReceipt?.originatingTombstones === 6 &&
+      purgeReceipt?.proposals === 4 &&
+      purgeReceipt?.amendments === 1 &&
+      purgeReceipt?.challenges === 1,
+    purgeError === undefined
+      ? `receipt=${JSON.stringify(purgeReceipt)}`
+      : `cause=${purgeError.code ?? purgeError.message}`,
+  );
+  const rawAfter = new DatabaseSync(dbPath, { readOnly: true });
+  const pLeftovers =
+    rawAfter
+      .prepare(
+        "SELECT (SELECT COUNT(*) FROM qlt_claim WHERE source_thread_id = ?) + (SELECT COUNT(*) FROM qlt_commitment WHERE source_thread_id = ?) + (SELECT COUNT(*) FROM qlt_open_loop WHERE source_thread_id = ?) + (SELECT COUNT(*) FROM qlt_proposal WHERE source_thread_id = ?) AS total;",
+      )
+      .get(threadP.id, threadP.id, threadP.id, threadP.id).total;
+  const proposalIdsLeft = rawAfter
+    .prepare(
+      `SELECT COUNT(*) AS total FROM qlt_proposal WHERE id IN (${pProposalIds.map(() => '?').join(',')});`,
+    )
+    .get(...pProposalIds).total;
+  rawAfter.close();
+  check(
+    'N-D2-19: every ceremony-created record and proposal row is physically gone',
+    'controls',
+    Number(pLeftovers) === 0 && Number(proposalIdsLeft) === 0,
+  );
+  const rawClosure = new DatabaseSync(dbPath, { readOnly: true });
+  const challengeGone =
+    rawClosure.prepare('SELECT COUNT(*) AS total FROM qlt_conflict_challenge WHERE id = ?;').get(crossChallengeId)
+      .total === 0;
+  const qProposalStays = rawClosure
+    .prepare('SELECT COUNT(*) AS total FROM qlt_proposal WHERE id = ?;')
+    .get(qConflictingProposal.id).total;
+  rawClosure.close();
+  check(
+    'N-D2-20: the cross-thread challenge was removed by the closure; the unrelated proposal row of Q stays',
+    'controls',
+    challengeGone && Number(qProposalStays) === 1,
+  );
+  check(
+    'N-D2-20: the amendment row and the cross-thread challenge are counted in the receipt',
+    'controls',
+    purgeReceipt?.challenges === 1 && purgeReceipt?.amendments === 1,
+  );
+
+  // N-D2-22: byte-identity of every row outside the authorized scope.
+  const afterPurge = snapshot(dbPath);
+  delete afterPurge.qlt_conversation_purge;
+  const foreignOK = [];
+  for (const table of Object.keys(afterPurge)) {
+    const before = JSON.parse(beforePurge[table]);
+    const after = JSON.parse(afterPurge[table]);
+    if (after.length > before.length) {
+      foreignOK.push(`${table} gained rows`);
+      continue;
+    }
+    const afterKeys = new Set(after.map((row) => JSON.stringify(row)));
+    const removed = before.filter((row) => !afterKeys.has(JSON.stringify(row)));
+    const scopeTokens = [
+      threadP.id,
+      ceremonyClaimId,
+      correctionSuccessorId,
+      ceremonyCommitmentId,
+      amendmentSuccessorId,
+      ceremonyLoopId,
+      directVerbClaim.id,
+      amendmentRowId,
+      crossChallengeId,
+      ...pProposalIds,
+    ];
+    for (const row of removed) {
+      const line = JSON.stringify(row);
+      if (!scopeTokens.some((token) => typeof token === 'string' && line.includes(token))) {
+        foreignOK.push(`${table}: ${line.slice(0, 80)}`);
+      }
+    }
+  }
+  check(
+    'N-D2-22: every removed row belongs to the authorized scope; nothing outside P changed',
+    'controls',
+    foreignOK.length === 0,
+    foreignOK.slice(0, 3).join(' | '),
+  );
+
+  // N-D2-21: direct-verb compatibility — the direct-verb claim
+  // (proposal_id NULL) was removed by the SAME purge as the ceremony
+  // records (the main scenario's thread A purge re-proves it standalone).
+  const rawDirect = new DatabaseSync(dbPath, { readOnly: true });
+  const directGone =
+    rawDirect.prepare('SELECT COUNT(*) AS total FROM qlt_claim WHERE id = ?;').get(directVerbClaim.id)
+      .total === 0;
+  rawDirect.close();
+  check(
+    'N-D2-21: the direct-verb record was purged together with the ceremony records',
+    'controls',
+    directGone && purgeReceipt?.originatingTombstones === 6,
+  );
+
+  // N-D2-23: a foreign content row referencing INTO a scope fails the
+  // purge CLOSED (rollback, no receipt, no partial deletion), and a
+  // later purge of that scope converges once the foreign child is gone
+  // through its own governed path. The foreign child is a CORRECTION
+  // successor in T (the real chain mechanism: supersedes_id -> R's claim).
+  const rClaim = await sw.meaning.createClaim({
+    subject: 'boundary-r-claim',
+    epistemicType: 'E3',
+    honestyState: 'known',
+    confidence: 'stated',
+    statement: 'the boundary claim in R',
+    createdBy: USER,
+    sourceThreadId: threadR.id,
+  });
+  const foreignChild = await (async () => {
+    const proposal = await sw.meaning.createProposal({
+      proposalKind: 'correction',
+      content: { statement: 'a foreign correction in T superseding the R claim' },
+      proposedBy: AGENT,
+      sourceThreadId: threadT.id,
+      targetRecord: { recordId: rClaim.id, family: 'claim', version: rClaim.version },
+    });
+    await sw.meaning.markProposalAwaitingDecision(proposal.id);
+    return sw.meaning.confirmProposal({ proposalId: proposal.id, confirmedBy: USER });
+  })();
+  const foreignChildRaw = new DatabaseSync(dbPath, { readOnly: true });
+  const foreignLink = foreignChildRaw
+    .prepare('SELECT supersedes_id, source_thread_id FROM qlt_claim WHERE id = ?;')
+    .get(foreignChild.createdRecords[0].id);
+  foreignChildRaw.close();
+  check(
+    'N-D2-23 pre-condition: the foreign successor in T references INTO R (cross-thread supersedes edge)',
+    'controls',
+    foreignLink !== undefined &&
+      foreignLink.supersedes_id === rClaim.id &&
+      foreignLink.source_thread_id === threadT.id,
+  );
+  await lifecycle(probe).deleteConversation({
+    threadId: threadR.id,
+    mode: 'conversation-and-originating-meaning',
+    confirmed: true,
+    key: 'k-purge-boundary',
+    actorId: USER,
+  });
+  const beforeR = snapshot(dbPath);
+  let boundaryFailure;
+  try {
+    sw.deletion.purgeConversation({ threadId: threadR.id, purgedBy: USER, confirmation: 'purge' });
+  } catch (cause) {
+    boundaryFailure = cause;
+  }
+  const afterR = snapshot(dbPath);
+  check(
+    'N-D2-23: the foreign-reference purge fails closed (no receipt, zero partial deletion)',
+    'controls',
+    boundaryFailure !== undefined &&
+      sw.deletion.getPurgeReceipt(threadR.id) === undefined &&
+      afterR.qlt_claim === beforeR.qlt_claim &&
+      afterR.qlt_thread === beforeR.qlt_thread,
+    boundaryFailure === undefined ? 'unexpectedly succeeded' : `refused with ${boundaryFailure.code ?? boundaryFailure.message}`,
+  );
+  // The foreign child leaves through its OWN governed path (plus-meaning
+  // deletion + purge of T), after which R's purge converges.
+  await lifecycle(probe).deleteConversation({
+    threadId: threadT.id,
+    mode: 'conversation-and-originating-meaning',
+    confirmed: true,
+    key: 'k-purge-foreign',
+    actorId: USER,
+  });
+  await sw.deletion.purgeConversation({ threadId: threadT.id, purgedBy: USER, confirmation: 'purge' });
+  const convergedReceipt = sw.deletion.purgeConversation({ threadId: threadR.id, purgedBy: USER, confirmation: 'purge' });
+  check(
+    'N-D2-23: once the foreign child is gone the purge converges (replay/restart truthfulness)',
+    'controls',
+    convergedReceipt !== undefined && sw.deletion.getPurgeReceipt(threadR.id) !== undefined,
+  );
+
+  // N-D2-24: post-purge integrity — zero FK violations store-wide, and
+  // the correction/amendment chains are fully removed (both chain
+  // members gone by id: the amended predecessor/successor pair and the
+  // corrected predecessor/successor pair).
+  const rawIntegrity = new DatabaseSync(dbPath, { readOnly: true });
+  const fkViolations = rawIntegrity.prepare('PRAGMA foreign_key_check;').all();
+  const chainLeft = rawIntegrity
+    .prepare(
+      'SELECT COUNT(*) AS total FROM qlt_claim WHERE id IN (?, ?) UNION ALL SELECT COUNT(*) FROM qlt_commitment WHERE id IN (?, ?);',
+    )
+    .get(ceremonyClaimId, correctionSuccessorId, ceremonyCommitmentId, amendmentSuccessorId).total;
+  rawIntegrity.close();
+  check(
+    'N-D2-24: PRAGMA foreign_key_check is clean and both lineage chains are fully removed',
+    'controls',
+    fkViolations.length === 0 && Number(chainLeft) === 0,
+    `violations=${JSON.stringify(fkViolations).slice(0, 120)} chainLeft=${chainLeft}`,
+  );
+}
+
+// ---------------------------------------------------------------------------
 // 3. RESTART — recovery converges; the fence holds across restart
 // ---------------------------------------------------------------------------
 {
@@ -988,7 +1357,7 @@ const lifecycle = (composition) => composition.conversationLifecycle;
     d2.QLT_D2_DELETION_STEPS.length === 3 && d2.QLT_D2_DELETION_STEPS.includes('memory-store'),
   );
   check(
-    'the frozen purge step order (challenges → … → thread)',
+    'the frozen purge step order (Amendment 1: originating tombstones BEFORE proposals)',
     'structural',
     JSON.stringify(d2.QLT_D2_PURGE_STEP_ORDER) ===
       JSON.stringify([
@@ -996,8 +1365,8 @@ const lifecycle = (composition) => composition.conversationLifecycle;
         'amendments',
         'corrections',
         'source-links',
-        'proposals',
         'originating-tombstones',
+        'proposals',
         'assembly-evidence',
         'conversation-link',
         'thread',
@@ -1021,9 +1390,11 @@ const lifecycle = (composition) => composition.conversationLifecycle;
       d2.QLT_D2_USER_ACTOR_PATTERN.test('actor-quellight-local'),
   );
   check(
-    'the frozen negative-control matrix carries 18 controls',
+    'the frozen negative-control matrix carries 24 controls (Amendment 1 added N-D2-19..24)',
     'structural',
-    d2.QLT_D2_NEGATIVE_CONTROLS.length === 18 && d2.QLT_D2_NEGATIVE_CONTROLS[0].id === 'N-D2-1',
+    d2.QLT_D2_NEGATIVE_CONTROLS.length === 24 &&
+      d2.QLT_D2_NEGATIVE_CONTROLS[0].id === 'N-D2-1' &&
+      d2.QLT_D2_NEGATIVE_CONTROLS[18].id === 'N-D2-19',
   );
 }
 
