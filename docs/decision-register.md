@@ -2213,3 +2213,36 @@ text: `docs/report/QUELLIGHT-STAGE-07E-EXIT-CONTRACT-FREEZE.md` §5/§6.1
 narrow L-4 scanner disposition; exit-gate machinery and negative controls;
 preparation report/status). Stage 07 remains IN PROGRESS; 07A–07D remain
 FORMALLY CLOSED; the final independent Stage 07E exit audit has NOT begun.
+
+## D-07E-02 — Stage 07E L-5 investigation outcome and the gate-script race repair
+
+**Decision (2026-09-24, Stage 07E preparation under the D-07E-01 mandate;
+"investigate L-5 only to the degree necessary to make the final audit
+trustworthy").** The frozen exit-contract protocol's deterministic trigger
+fired: after the preparation's standalone confirmation run failed, three
+further fresh runs failed at the IDENTICAL step (`openOldestThreadTray`'s
+tray-reopen wait), including a fully serial run with no concurrent load — on a
+tree whose `src/` and check script were byte-identical to the 07D-closed tip.
+The investigation found a DETERMINISTIC GATE-SCRIPT ACTIVATION RACE, not a
+product defect: within every failing run the identical keyboard-activation
+succeeded repeatedly through `openTray`, and the failing site delivers
+`focus()` + a page-level `keyboard.press()` across the post-thread-switch
+re-render cascade, so Enter landed on a detached element.
+
+**Decision:** repair the check script assertion-neutrally and timeout-neutrally
+(both chip-activation sites use `locator.press('Enter', { timeout: 20_000 })` —
+re-resolve, actionability, focus, press, with Playwright retry on detachment;
+the script's own Lane E prior art for the identical Send-button race), re-pin
+the amended contract digest in the gate, and retain the fresh-run protocol for
+any future browser-gate failure. No timeout was increased; the check was not
+suppressed; no product code changed; the keyboard-activation assertion is
+unchanged; verified by two consecutive full-completion serial runs (all steps
+green, zero console warnings/errors) covering the correction-lineage, memory-
+mode, fresh-conversation, responsive/axe, and console-cleanliness steps the
+race had been blocking. Full normative text:
+`docs/report/QUELLIGHT-STAGE-07E-EXIT-CONTRACT-FREEZE.md` §8.2 (amended).
+
+**Consequences:** the final independent Stage 07E exit audit runs the repaired
+check; the L-5 carried limitation is reclassified truthfully as a repaired
+test-machinery defect (not an intermittent product-adjacent flake); Stage 07
+remains IN PROGRESS; nothing here declares Stage 07 closed.

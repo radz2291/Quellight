@@ -276,51 +276,63 @@ skipped (history preserved). Any other exit shape is a real failure. This refusa
 invariant is the by-design protection of the sealed evidence; it is NOT a
 regression and MUST NOT be "fixed" by moving or unsealing evidence.
 
-### 8.2 L-5 — pre-existing intermittent browser-ceremony timing flake
+### 8.2 L-5 — deterministic gate-script activation race (REPAIRED during this preparation); fresh-run protocol retained
 
-Classification (frozen): infrastructure/test-timing limitation of the
-browser-check machinery — NOT a product defect and NOT an authority or
-durability violation. Mechanism (refined during this preparation by a fresh
-standalone reproduction): the memory chip's pending-count label is refreshed by
-a ONE-SHOT post-turn `refreshMemory()` call inside `durableReconcile()` (stream
-terminal) whose failure is silently absorbed ("the last known state stands"),
-with no retry or re-poll; one unlucky refresh leaves the chip label stale
-indefinitely while the underlying proposal remains durably created (opening the
-tray always re-fetches and shows it). Observed failure points vary (late-phase
-tray-reopen wait in the D5 re-verification's in-sequence runs; the chip-pending
-wait in this preparation's standalone run) — consistent with timing variance,
-not a fixed defect. Evidence: reproduced identically on the pre-fix tree
-`60859c4`; the gate script is byte-identical since the 07C era; the same class
-is recorded in VICT §0.32 during the Q7 audit; standalone runs are usually
-green (2/2 in the D5 re-verification; 1 failure observed in this preparation's
-standalone confirmation run).
+**AMENDMENT (Stage 07E preparation; supersedes the freeze-time text under the
+Contract ID rule — standalone amendment commit, then an explicit gate re-pin).**
+The frozen protocol's own deterministic trigger fired during the preparation's
+investigation, so the classification below was re-derived on a tree whose
+`src/` and check script were byte-identical to the 07D-closed tip `b78d8cd`
+(the script byte-identical since the 07C era):
 
-Protocol for the final audit (frozen): timeouts are NOT increased; the check is
-NOT suppressed. On any browser-gate failure (in-sequence or standalone), re-run
-that gate fresh. Closure requires ALL of: at least one fully green run of every
-browser gate; no step failing in two or more independent fresh runs (the same
-step failing twice across fresh runs is treated as a deterministic defect and
-refuses closure); and every run — green or not — recorded truthfully in the
-audit. Product-side repair of the refresh robustness gap is OUT of Stage 07E
-scope (no product change is authorized) and belongs to future product work; it
-is carried in §9.
+- Five fresh runs reproduced the failure — the D5-era in-sequence run and four
+  preparation-era standalone runs. Four failed at the IDENTICAL step:
+  `openOldestThreadTray`'s tray-reopen wait (the memory chip's keyboard
+  activation never opened the tray), including a fully serial run with no
+  concurrent load. One failed at the Scenario-C chip-pending wait.
+- Within EVERY failing run, the identical keyboard-activation interaction
+  succeeded repeatedly through `openTray` (steps 2, 3, 4, 5+11, 6+7, 9a, 9b):
+  the product's single tray-open path works. The failing site is specific to
+  the script delivering `focus()` + a page-level `keyboard.press()` across the
+  post-thread-switch re-render cascade — Enter landed on a detached element.
+- **Classification: a deterministic (under the current machine timing regime)
+  GATE-SCRIPT activation race — a test-machinery defect, NOT a product defect**,
+  with no authority, durability, or truthfulness implication.
+
+**REPAIR (frozen as part of this amendment; assertion-neutral and
+timeout-neutral, following the script's own Lane E prior art for the identical
+Send-button race):** both memory-chip activation sites now use
+`locator.press('Enter', { timeout: 20_000 })` — the element is re-resolved,
+actionability-waited, focused, and pressed, with Playwright retrying on
+detachment. The keyboard-activation assertion is UNCHANGED; no timeout was
+increased; the check was NOT suppressed; product code was NOT touched.
+**Verified:** with the repair the check runs to FULL completion serially —
+every step green including the correction-lineage, memory-mode, fresh-conversation,
+responsive/axe, and zero-console steps that the deterministic race had been
+blocking — twice consecutively.
+
+Protocol for the final audit (RETAINED unchanged): timeouts are NOT increased;
+the check is NOT suppressed. On any browser-gate failure, re-run that gate
+fresh. Closure requires ALL of: at least one fully green run of every browser
+gate; no step failing in two or more independent fresh runs; and every run —
+green or not — recorded truthfully in the audit.
 
 The `verify:stage7e` aggregate composes no browser gate, so L-5 cannot
 destabilize it.
 
 ## 9. Carried-limitation inventory (complete, with future disposition)
 
-| ID                                  | Limitation                                                                                                                                                                                                                                                                                                | Disposition                                                                                                                                                                                             |
-| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| M-1 (07D, Medium)                   | D1a Amendment 1 landed Lane B implementation under a docs/standalone label (`6856d45`)                                                                                                                                                                                                                    | Carried permanently as process history; no contract ambiguity, no executable bypass, history not rewritten; no future work                                                                              |
-| L-2 (07D, Low)                      | D4 Layer B OB-1/3/4/7 aggregate attestation (permitted, honestly labeled)                                                                                                                                                                                                                                 | Optional direct owner answers would close it; carried into post-Stage-07 product work; no Stage 07E action                                                                                              |
-| L-4 (07D, Low)                      | Frozen D5 report vs local-path scan                                                                                                                                                                                                                                                                       | RESOLVED by the owner decision frozen in §5 and implemented by the narrow scanner disposition; the gate enforces it permanently                                                                         |
-| L-5 (07D, Low)                      | Intermittent browser-ceremony timing flake (one-shot post-turn memory-chip refresh, silently absorbed failures; mechanism refined in §8.2)                                                                                                                                                                | Carried per the §8.2 fresh-run protocol; the product-side refresh-robustness repair belongs to future product work (not Stage 07E); treat as deterministic only if a step fails twice across fresh runs |
-| D4 attempt-2 exit code 1            | Windows SQLite-unlock lag in the 15 s post-close cleanup verification window                                                                                                                                                                                                                              | Truthfully sealed in the attempt-2 record; platform-bounded; no future work unless the platform behavior changes                                                                                        |
-| Attempt-2 summary observability     | The `passed` summary omits the exact provider-request count (additive gap)                                                                                                                                                                                                                                | Carried, disclosed in D5 §10; may be closed by an additive evidence-tooling change in future product work; never by editing sealed evidence                                                             |
-| MSTR-012 backup/recovery disclosure | Nothing outside the application's stores is claimed erased; documented backup/recovery limitations                                                                                                                                                                                                        | Remains disclosed product documentation; future product work may widen the guarantee                                                                                                                    |
-| Q7-era carried notes                | Synthetic-fixture wording (private fixture never tested); live-success non-guarantee; 2,048-token bound demonstrated not minimal; hashed Mastra dist import in boundary replay; fixture-check adversary bounds; audit L-1/L-2 observations; stale `0.3.0` console-label prose in two focused-gate scripts | Carried as recorded in the Q7 closure §3; non-blocking; future harness/product work may close them; the stale console-label prose is correctable docs-only at leisure                                   |
-| `verify:d4-prep` single red         | By-design active-paths refusal (§8.1)                                                                                                                                                                                                                                                                     | Permanent refusal invariant; no future work                                                                                                                                                             |
+| ID                                  | Limitation                                                                                                                                                                                                                                                                                                | Disposition                                                                                                                                                                                |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| M-1 (07D, Medium)                   | D1a Amendment 1 landed Lane B implementation under a docs/standalone label (`6856d45`)                                                                                                                                                                                                                    | Carried permanently as process history; no contract ambiguity, no executable bypass, history not rewritten; no future work                                                                 |
+| L-2 (07D, Low)                      | D4 Layer B OB-1/3/4/7 aggregate attestation (permitted, honestly labeled)                                                                                                                                                                                                                                 | Optional direct owner answers would close it; carried into post-Stage-07 product work; no Stage 07E action                                                                                 |
+| L-4 (07D, Low)                      | Frozen D5 report vs local-path scan                                                                                                                                                                                                                                                                       | RESOLVED by the owner decision frozen in §5 and implemented by the narrow scanner disposition; the gate enforces it permanently                                                            |
+| L-5 (07D, Low)                      | Browser-ceremony gate-script activation race — REPAIRED in the Stage 07E preparation (assertion-neutral `locator.press` at both chip-activation sites; product unaffected)                                                                                                                                | Repaired and re-verified; the §8.2 fresh-run protocol is retained for any future browser-gate failure; the one-shot chip-refresh robustness observation is carried for future product work |
+| D4 attempt-2 exit code 1            | Windows SQLite-unlock lag in the 15 s post-close cleanup verification window                                                                                                                                                                                                                              | Truthfully sealed in the attempt-2 record; platform-bounded; no future work unless the platform behavior changes                                                                           |
+| Attempt-2 summary observability     | The `passed` summary omits the exact provider-request count (additive gap)                                                                                                                                                                                                                                | Carried, disclosed in D5 §10; may be closed by an additive evidence-tooling change in future product work; never by editing sealed evidence                                                |
+| MSTR-012 backup/recovery disclosure | Nothing outside the application's stores is claimed erased; documented backup/recovery limitations                                                                                                                                                                                                        | Remains disclosed product documentation; future product work may widen the guarantee                                                                                                       |
+| Q7-era carried notes                | Synthetic-fixture wording (private fixture never tested); live-success non-guarantee; 2,048-token bound demonstrated not minimal; hashed Mastra dist import in boundary replay; fixture-check adversary bounds; audit L-1/L-2 observations; stale `0.3.0` console-label prose in two focused-gate scripts | Carried as recorded in the Q7 closure §3; non-blocking; future harness/product work may close them; the stale console-label prose is correctable docs-only at leisure                      |
+| `verify:d4-prep` single red         | By-design active-paths refusal (§8.1)                                                                                                                                                                                                                                                                     | Permanent refusal invariant; no future work                                                                                                                                                |
 
 ## 10. Gate machinery requirements (for the implementation commit)
 
