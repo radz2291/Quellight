@@ -122,6 +122,27 @@ if (receiptState.code !== QLT_D4_CODES.NOT_AUTHORIZED) {
   refuse(receiptState.code, 'the existing authorization receipt is malformed.');
 }
 
+// ---------- 2b. active output paths must be absent ------------------------
+// Every run writes its OWN receipt, evidence summary, and cleanup record;
+// a file already occupying any of these paths belongs to a previous
+// attempt whose bundle must be archived first. Refusing here — before the
+// credential, scenario, workspace, or authorization consumption — proves
+// the run can never append to, or silently overwrite, another attempt's
+// record, and can never exit 0 without recording its own evidence.
+const evidencePath = join(repoRoot, QLT_D4_EVIDENCE_PATH);
+const cleanupPath = join(repoRoot, `${QLT_D4_EVIDENCE_PATH}.cleanup.json`);
+for (const [occupiedLabel, occupiedPath] of [
+  ['evidence summary', evidencePath],
+  ['cleanup record', cleanupPath],
+]) {
+  if (existsSync(occupiedPath)) {
+    refuse(
+      QLT_D4_CODES.SEAL_REFUSED,
+      `a ${occupiedLabel} from a previous attempt still occupies the active path — archive the previous attempt's receipt/evidence/cleanup bundle first.`,
+    );
+  }
+}
+
 // ---------- 3. credential presence (existence only; never persisted) ------
 // QUELLIGHT_D4_CREDENTIAL_SOURCE=none is a TEST-ONLY override (used by
 // verify:d4-prep to force the missing-credential refusal deterministically
@@ -345,6 +366,10 @@ class QuellightSessionExit extends Error {}
 let cleanupTail = Promise.resolve();
 const sessionStartedAtMs = Date.now();
 let sealed = false;
+// Fail-closed bookkeeping: set when the durable evidence write collides or
+// fails; every exit path that observes it reports a non-zero result, and
+// the cleanup record carries the truthful `evidenceSealed` flag.
+let sealWriteFailed = false;
 // D4b remediation (observability): durable structural session facts that
 // must survive any termination path. Values are closed metadata only —
 // never conversation content, credential material, paths, or scenario
@@ -364,10 +389,10 @@ const sealSession = (forcedCode, failure = {}) => {
   const overRequestBudget = observer.records.length > plan.providerRequests;
   const overSessionBudget = sessionEndedAtMs - sessionStartedAtMs > QLT_D4_BOUNDS.maxSessionMs;
   // D4b remediation: one structural failure-fact block, computed once and
-  // attached to EVERY failed summary (forced-code, scan-hit, or ledger
-  // verdict alike). Closed metadata only: stable tokens, counts, and
-  // booleans — never messages, paths, prompts, responses, scenario text,
-  // or credential material.
+  // attached to EVERY failed summary (bounds-exceeded, forced-code, scan-hit,
+  // or ledger verdict alike). Closed metadata only: stable tokens, counts,
+  // and booleans — never messages, paths, prompts, responses, scenario
+  // text, or credential material.
   const failureFacts = {
     failurePhase: phase,
     providerRequests: observer.records.length,
@@ -383,11 +408,19 @@ const sealSession = (forcedCode, failure = {}) => {
   };
   let summary;
   if (overRequestBudget || overSessionBudget) {
+    // Bounds-exceeded failures carry the SAME complete structural
+    // accounting as every other failed branch: phase, request accounting,
+    // transport/headers/bytes booleans, turn settlement, elapsed time, and
+    // a stable failure class naming which bound was exceeded.
     summary = {
       outcome: 'failed',
+      contract: QLT_D4_PROOF_CONTRACT_ID,
+      profile: QLT_D4_PROFILE,
       code: QLT_D4_CODES.BOUNDS_EXCEEDED,
-      providerRequests: observer.records.length,
-      sessionMs: sessionEndedAtMs - sessionStartedAtMs,
+      ...failureFacts,
+      failureClass: overRequestBudget
+        ? 'bounds-exceeded:provider-requests'
+        : 'bounds-exceeded:session-ms',
     };
   } else if (typeof forcedCode === 'string') {
     summary = {
@@ -426,12 +459,19 @@ const sealSession = (forcedCode, failure = {}) => {
       };
     }
   }
-  const evidencePath = join(repoRoot, QLT_D4_EVIDENCE_PATH);
+  // Fail-closed seal: a run may NEVER report success unless its own
+  // evidence was durably recorded. A collision with a file that somehow
+  // occupied the path (the preflight makes this unreachable for a
+  // well-formed attempt, so a collision here is itself an anomaly) forces
+  // a non-zero exit — the truthful console line is supplementary, the
+  // exit status is the contract.
   try {
     writeFileSync(evidencePath, JSON.stringify(summary, null, 2) + '\n', { flag: 'wx' });
     console.log(`  sealed: ${summary.outcome} → ${QLT_D4_EVIDENCE_PATH}`);
   } catch {
-    console.error('FAIL: the evidence summary already exists — refusing to overwrite.');
+    console.error(`FAIL: the evidence summary could not be sealed (path occupied or unwritable).`);
+    sealWriteFailed = true;
+    process.exitCode = 1;
   }
   return summary;
 };
@@ -459,12 +499,16 @@ const runCleanup = async () => {
   );
   try {
     writeFileSync(
-      join(repoRoot, QLT_D4_EVIDENCE_PATH + '.cleanup.json'),
-      JSON.stringify({ workspaceRemoved: removed }, null, 2) + '\n',
+      cleanupPath,
+      JSON.stringify({ workspaceRemoved: removed, evidenceSealed: !sealWriteFailed }, null, 2) +
+        '\n',
       { flag: 'wx' },
     );
   } catch {
-    /* supplementary record; the seal remains authoritative */
+    // Fail-closed: a run whose cleanup result was not durably recorded can
+    // never report success, even when the workspace itself was removed.
+    console.error('FAIL: the cleanup record could not be written (path occupied or unwritable).');
+    process.exitCode = 1;
   }
   if (!removed) {
     process.exitCode = 1;
@@ -1065,6 +1109,11 @@ try {
     sealSession(QLT_D4_CODES.PROOF_POINT_FAILED, {
       failureClass,
     });
+    // The cleanup result is durably recorded for EVERY termination path —
+    // including unexpected throws — so a run never ends without its
+    // workspace disposition on durable record.
+    cleanupTail = runCleanup();
+    await cleanupTail;
     process.exitCode = 1;
   }
 }

@@ -1835,3 +1835,45 @@ the real credential's validity against the pinned endpoint (resolution is
 proven; validity is the one untested link). A new structured-session
 authorization is machinery-ready; D4 remains incomplete; Stage 07D is NOT
 verified or formally closed; Stage 07E has NOT begun.
+
+## D-07D-9 — Stage 07D Phase D4: the attempt-1 bundle archived and the evidence lifecycle made fail-closed
+
+**Date:** 2026-09-23. Under the owner's explicit instruction the attempt-1
+D4 bundle (the consumed receipt and the truthful failed-evidence summary
+from the one authorized 2026-09-23 session) was archived byte-identically
+to immutable attempt-1 filenames, and the evidence lifecycle was corrected
+so every future attempt records its own truth or fails closed.
+
+**Additive archive mapping (byte-identical, verified by SHA-256 before and
+after the move; no new receipt created):**
+
+| from (active path, now absent)                             | to (immutable archive)                                               | sha-256                                                            |
+| ---------------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `docs/report/evidence/d4-structured-session-receipt.json`  | `docs/report/evidence/d4-structured-session-receipt.attempt-1.json`  | `4ff67b61150a8d7de5a1e8c0d68f14bdec305fb545ca5455cc83bc7c43194f8e` |
+| `docs/report/evidence/d4-structured-session-evidence.json` | `docs/report/evidence/d4-structured-session-evidence.attempt-1.json` | `c87bbd9128cf1fc38b727646719a9aa41fa56d6ee732900da8b298187b4751b5` |
+
+No attempt-1 cleanup record existed (the attempt-1 workspace was removed
+and verified; the runbook's bundle instruction covers the cleanup record
+for future attempts). **Lifecycle corrections (all offline, no contract,
+bounds, or product-semantic change; no gate weakened):** the harness now
+refuses — before the credential, scenario, workspace, or authorization
+consumption — unless the active receipt, evidence, AND cleanup-record
+paths are all absent; every evidence or cleanup-record write collision
+fails closed with a non-zero exit and the cleanup record carries the
+truthful `evidenceSealed` flag (a run can never report success unless its
+own evidence and cleanup result were durably recorded); unexpected-throw
+termination now also records the cleanup result; the bounds-exceeded seal
+carries the same complete structural accounting as every other failed
+branch (phase, stable failure class naming the exceeded bound, request
+accounting, transport/header/bytes facts, turn settlement, elapsed time);
+and the owner runbook now instructs handling every attempt as one atomic
+receipt/evidence/cleanup bundle. New permanent gate controls:
+N-D4-P-27/28 (stale active output paths refuse before anything is
+consumed or created), N-D4-P-29 (fail-closed collisions, complete bounds
+accounting, and cleanup recorded on every termination path), N-D4-P-30
+(the archived attempt-1 bytes are pinned by digest), plus the active-paths
+all-absent invariant. Gate now 35 checks green. The active canonical
+paths are clean; a fresh owner authorization can create exactly one new
+attempt. No new structured-session authorization is granted or running;
+D4 remains incomplete; Stage 07D is NOT verified or formally closed;
+Stage 07E has NOT begun.

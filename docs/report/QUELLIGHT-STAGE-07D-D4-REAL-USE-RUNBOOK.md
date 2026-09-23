@@ -90,16 +90,38 @@ node --import tsx scripts/run-d4-structured-session.mjs
 ```
 
 What happens: the harness refuses unless the flag is set, the receipt
-`docs/report/evidence/d4-structured-session-receipt.json` is absent, and
-a credential is present. Then it consumes the receipt (one-shot),
-runs the proof points, seals `docs/report/evidence/d4-structured-session-
+`docs/report/evidence/d4-structured-session-receipt.json` is absent, a
+credential is present, and all three active output paths — the receipt,
+the evidence summary `docs/report/evidence/d4-structured-session-
+evidence.json`, and the cleanup record
+`docs/report/evidence/d4-structured-session-evidence.json.cleanup.json` —
+are absent (a file at any of them means a previous attempt's bundle has
+not been archived yet, and the harness refuses before anything is
+consumed or created). Then it consumes the receipt (one-shot), runs the
+proof points, seals `docs/report/evidence/d4-structured-session-
 evidence.json` (structural outcomes only), removes its workspace, and
-verifies the removal. If anything fails, the seal says so truthfully —
-a failed session is a valid, truthful result, not a hidden error.
+records the cleanup result in
+`docs/report/evidence/d4-structured-session-evidence.json.cleanup.json`.
+Every evidence or cleanup-record write is exclusive-create and fails
+closed: a run whose own evidence or cleanup result could not be durably
+recorded can never report success (non-zero exit). If anything fails —
+including a frozen bounds being exceeded — the seal carries the complete
+structural accounting (phase, stable failure class, provider-request
+count, transport/header/bytes facts, turn settlement, elapsed time) and
+says so truthfully; a failed session is a valid, truthful result, not a
+hidden error.
 
-A consumed receipt prevents rerun. To authorize a fresh session after an
-infrastructure-only failure, archive the receipt file yourself (e.g.
-rename it with the date), state a new authorization line, and run again.
+A consumed receipt prevents rerun. Each attempt is handled as ONE atomic
+bundle: the receipt, the evidence summary, and the cleanup record belong
+together. To close an attempt, archive all of its files that exist as a
+byte-identical, immutably named set — e.g.
+`d4-structured-session-receipt.attempt-N.json`,
+`d4-structured-session-evidence.attempt-N.json`, and, when present,
+`d4-structured-session-evidence.attempt-N.cleanup.json` — record the
+mapping additively (decision register), state a new authorization line,
+and run again; the fresh authorization can then create exactly one new
+attempt because all active paths are absent. Never archive the evidence
+without the receipt, or the receipt without the evidence.
 
 ## Part 2 — The organic-use observation window (Layer B)
 

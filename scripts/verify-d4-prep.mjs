@@ -19,6 +19,7 @@
  * authorization for the structured session is requested.
  */
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -156,6 +157,33 @@ const evidencePath = join(
   'evidence',
   'd4-structured-session-evidence.json',
 );
+const cleanupPath = join(
+  repoRoot,
+  'docs',
+  'report',
+  'evidence',
+  'd4-structured-session-evidence.json.cleanup.json',
+);
+const attempt1ReceiptPath = join(
+  repoRoot,
+  'docs',
+  'report',
+  'evidence',
+  'd4-structured-session-receipt.attempt-1.json',
+);
+const attempt1EvidencePath = join(
+  repoRoot,
+  'docs',
+  'report',
+  'evidence',
+  'd4-structured-session-evidence.attempt-1.json',
+);
+const sha256Of = (path) => createHash('sha256').update(readFileSync(path)).digest('hex');
+// The archived attempt-1 bundle (owner-authorized archive, D-07D-9). The
+// bytes are IMMUTABLE history; the gate pins their digests so any
+// modification of the archived pair turns the gate red.
+const ATTEMPT1_RECEIPT_SHA256 = '4ff67b61150a8d7de5a1e8c0d68f14bdec305fb545ca5455cc83bc7c43194f8e';
+const ATTEMPT1_EVIDENCE_SHA256 = 'c87bbd9128cf1fc38b727646719a9aa41fa56d6ee732900da8b298187b4751b5';
 const withReceipt = (body) => {
   writeFileSync(receiptPath, body, { flag: 'wx' });
 };
@@ -780,24 +808,93 @@ try {
   // a minimal structural summary that can never be mistaken for a
   // successful session. The harness's exclusive-create seal ('wx') remains
   // the enforcement for the next execution.
-  const historicalEvidence = (() => {
-    if (!existsSync(evidencePath)) return { absent: true, historical: false };
-    try {
-      const parsed = JSON.parse(readFileSync(evidencePath, 'utf8'));
-      return {
-        absent: false,
-        historical:
-          parsed.outcome === 'failed' &&
-          parsed.code === QLT_D4_CODES.PROOF_POINT_FAILED &&
-          parsed.contract === QLT_D4_PROOF_CONTRACT_ID,
-      };
-    } catch {
-      return { absent: false, historical: false };
-    }
-  })();
+  // D4b lifecycle correction: the attempt-1 receipt and evidence were
+  // owner-authorized archived to the attempt-1 filenames. The ACTIVE
+  // receipt, evidence, and cleanup paths must all be ABSENT — a fresh
+  // authorization can then create exactly one new attempt, and it can
+  // never collide with (or silently skip) a previous attempt's record.
   check(
-    'the pre-execution evidence state is absence or the archived historical failure record',
-    historicalEvidence.absent || historicalEvidence.historical,
+    'the active receipt, evidence, and cleanup output paths are all absent (attempt-1 archived)',
+    !existsSync(receiptPath) && !existsSync(evidencePath) && !existsSync(cleanupPath),
+  );
+
+  // ---- N-D4-P-30: the archived attempt-1 bundle is byte-pinned ------------
+  const attempt1Pinned =
+    existsSync(attempt1ReceiptPath) &&
+    existsSync(attempt1EvidencePath) &&
+    sha256Of(attempt1ReceiptPath) === ATTEMPT1_RECEIPT_SHA256 &&
+    sha256Of(attempt1EvidencePath) === ATTEMPT1_EVIDENCE_SHA256;
+  check(
+    'N-D4-P-30 the archived attempt-1 receipt and evidence are byte-pinned (immutable)',
+    attempt1Pinned,
+  );
+
+  // ---- N-D4-P-27/28: stale active output paths refuse before anything else
+  const evidenceAbsentAtGateStart = !existsSync(evidencePath);
+  const cleanupAbsentAtGateStart = !existsSync(cleanupPath);
+  if (evidenceAbsentAtGateStart && cleanupAbsentAtGateStart) {
+    const staleTempBefore = readdirSync(tmpdir()).filter((entry) =>
+      entry.startsWith('qlt-d4-realuse-'),
+    );
+    writeFileSync(evidencePath, JSON.stringify({ outcome: 'stale-probe' }) + '\n', {
+      flag: 'wx',
+    });
+    const p27 = spawnHarness({ QUELLIGHT_D4_STRUCTURED: '1' });
+    const staleTempAfter27 = readdirSync(tmpdir()).filter((entry) =>
+      entry.startsWith('qlt-d4-realuse-'),
+    );
+    check(
+      'N-D4-P-27 a stale evidence file at the active path refuses before credential, scenario, workspace, or receipt consumption',
+      p27.status === 2 &&
+        p27.stderr.includes(QLT_D4_CODES.SEAL_REFUSED) &&
+        staleTempAfter27.length === staleTempBefore.length &&
+        !existsSync(receiptPath),
+      `workspace delta: ${staleTempAfter27.length - staleTempBefore.length}`,
+    );
+    rmSync(evidencePath, { force: true });
+
+    writeFileSync(cleanupPath, JSON.stringify({ workspaceRemoved: false }) + '\n', {
+      flag: 'wx',
+    });
+    const p28 = spawnHarness({ QUELLIGHT_D4_STRUCTURED: '1' });
+    const staleTempAfterCleanup = readdirSync(tmpdir()).filter((entry) =>
+      entry.startsWith('qlt-d4-realuse-'),
+    );
+    check(
+      'N-D4-P-28 a stale cleanup record at the active path refuses before credential, scenario, workspace, or receipt consumption',
+      p28.status === 2 &&
+        p28.stderr.includes(QLT_D4_CODES.SEAL_REFUSED) &&
+        staleTempAfterCleanup.length === staleTempBefore.length &&
+        !existsSync(receiptPath),
+      `workspace delta: ${staleTempAfterCleanup.length - staleTempBefore.length}`,
+    );
+    rmSync(cleanupPath, { force: true });
+  } else {
+    check(
+      'N-D4-P-27/28 skipped: active output paths were not absent at gate start (history preserved)',
+      true,
+    );
+  }
+
+  // ---- N-D4-P-29: fail-closed collision and complete bounds accounting ----
+  const staleGateMarker = '2b. active output paths must be absent';
+  const credentialGateMarker29 = '3. credential presence';
+  const cleanupCatchIndex = harnessSource.indexOf('the cleanup record could not be written');
+  const cleanupCatchTail = harnessSource.slice(cleanupCatchIndex, cleanupCatchIndex + 400);
+  check(
+    'N-D4-P-29 every output-path collision fails closed and bounds-exceeded seals the complete structural accounting',
+    harnessSource.indexOf('2b. active output paths must be absent') >= 0 &&
+      harnessSource.indexOf('2b. active output paths must be absent') <
+        harnessSource.indexOf(credentialGateMarker29) &&
+      harnessSource.includes("['evidence summary', evidencePath]") &&
+      harnessSource.includes("['cleanup record', cleanupPath]") &&
+      harnessSource.includes('sealWriteFailed = true;') &&
+      cleanupCatchTail.includes('process.exitCode = 1;') &&
+      harnessSource.includes('evidenceSealed') &&
+      /BOUNDS_EXCEEDED,[\s\S]{0,200}?\.\.\.failureFacts/.test(harnessSource) &&
+      harnessSource.includes("'bounds-exceeded:provider-requests'") &&
+      harnessSource.includes("'bounds-exceeded:session-ms'") &&
+      /unexpected throws[\s\S]{0,600}?cleanupTail = runCleanup\(\)/.test(harnessSource),
   );
 
   // ---- exclusive-create machinery (task-owned temp path; never the real
