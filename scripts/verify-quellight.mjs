@@ -24,7 +24,12 @@
  */
 import { execFileSync, spawnSync } from 'node:child_process';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, sep } from 'node:path';
+import { join, relative, sep } from 'node:path';
+import {
+  evaluateFrozenEvidence,
+  frozenEvidenceFor,
+  gitBlobIdOfWorkingFile,
+} from './lib/frozen-evidence.mjs';
 
 const step = (title) => console.log(`\n=== ${title} ===`);
 const runNpm = (script, options = {}) => {
@@ -242,13 +247,25 @@ const scanTargets = [
 //  - local absolute paths of the implementation machines.
 const canaryMarker = /sk-ollama-canary-|qlt-token-canary-/;
 const credentialAssignment = /OLLAMA_API_KEY\s*[=:]\s*['"][^'"]{8,}['"]/;
-const localPath = /[A-Z]:\\Users\\|\/home\/[a-z]+\//;
+// Non-global: boolean membership test (a /g regex would carry lastIndex
+// across files and silently skip findings).
+const localPathPresent = /[A-Z]:\\Users\\|\/home\/[a-z]+\//;
+// Global twin of the SAME pattern: ordered match collection for the
+// frozen-evidence disposition (collectMatches resets lastIndex per line).
+const localPathScan = /[A-Z]:\\Users\\|\/home\/[a-z]+\//g;
+// Frozen-evidence exception (owner decision D-07E-01; Stage 07E contract
+// §5/§6.1): exactly ONE historical file is digest-pinned; the scanner still
+// inspects it and reports the accepted matches explicitly. Any byte change,
+// additional match, different file, different path, or new local-path
+// disclosure fails. The canary and credential checks below are NOT weakened
+// and apply to the frozen file like any other.
 // The canary marker may legitimately appear where the canaries are
 // DEFINED (test sources and this scanner); it must never appear in
 // product source or in any build artifact.
 const canaryAllowedIn = (file, scope) =>
   scope === 'source' && (file.includes(`${sep}test${sep}`) || file.includes(`${sep}scripts${sep}`));
 let scanned = 0;
+let frozenAccepted = 0;
 for (const { file, scope } of scanTargets) {
   let content;
   try {
@@ -264,7 +281,31 @@ for (const { file, scope } of scanTargets) {
   if (credentialAssignment.test(content)) {
     failures.push(`${tag}: credential-shaped assignment present`);
   }
-  if (localPath.test(content)) {
+  const record = frozenEvidenceFor(relative(process.cwd(), file).split(sep).join('/'));
+  if (record !== undefined) {
+    // Digest-bound disposition: the frozen file must be byte-identical to
+    // the pinned record; its local-path matches must be exactly the pinned
+    // set. Without a verified exception the normal failure applies.
+    const verdict = evaluateFrozenEvidence(
+      record,
+      content,
+      gitBlobIdOfWorkingFile(file),
+      content.split('\n'),
+      localPathScan,
+    );
+    if (!verdict.accepted) {
+      for (const problem of verdict.problems) {
+        failures.push(`${tag}: frozen-evidence exception invalid — ${problem}`);
+      }
+    } else {
+      frozenAccepted += 1;
+      console.log(
+        `artifact scan: frozen-evidence exception ACCEPTED ${verdict.matches.length} ` +
+          `local-path match(es) in ${record.path} (${verdict.detail}; ` +
+          `owner decision ${record.decision}; historical record byte-preserved)`,
+      );
+    }
+  } else if (localPathPresent.test(content)) {
     failures.push(`${tag}: local absolute path present`);
   }
 }
@@ -274,10 +315,14 @@ if (
     (entry) =>
       !entry.includes('canary marker') &&
       !entry.includes('credential-shaped') &&
-      !entry.includes('local absolute'),
+      !entry.includes('local absolute') &&
+      !entry.includes('frozen-evidence exception invalid'),
   )
 ) {
-  console.log(`artifact scan: PASS (${scanned} files scanned: sources + build output)`);
+  console.log(
+    `artifact scan: PASS (${scanned} files scanned: sources + build output; ` +
+      `${frozenAccepted} frozen-evidence exception(s) verified)`,
+  );
 }
 
 // 8. Git hygiene.
