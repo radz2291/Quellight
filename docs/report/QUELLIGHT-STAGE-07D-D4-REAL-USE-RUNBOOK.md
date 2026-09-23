@@ -4,7 +4,7 @@
 > performs the proof. **D4 real-use evidence does not exist yet.** This
 > runbook is the owner's instructions for the two D4 evidence layers
 > fixed by the proof contract
-> `quellight.stage07d.d4.proof-contract@1`.
+> `quellight.stage07d.d4.proof-contract@2` (Amendment 1).
 
 ## Part 1 — The bounded structured session (Layer A)
 
@@ -12,7 +12,7 @@
 
 The harness `scripts/run-d4-structured-session.mjs` drives the REAL
 application against the pinned provider profile
-(`ollama-cloud/glm-4.6-flash` at `https://ollama.com/v1`) in a dedicated
+(`ollama-cloud/glm-5.3-flash` at `https://ollama.com/v1`) in a dedicated
 disposable data directory outside the repository. It performs the
 structural proof points A1–A13 (contract §2): conversation usable,
 deliberate meaning preservation (ceremony confirmation or direct Save —
@@ -51,26 +51,35 @@ The file's content stays in memory only — it is never printed,
 logged, or committed. Only its SHA-256 digest (kept in memory) feeds
 the leak scanners.
 
-2. Make sure `OLLAMA_API_KEY` is present in the environment (or the
-   owner-located auth file the Q6 precedent used). The value is never
-   printed or written anywhere.
+2. Have your provider credential reachable through the OWNER-DESIGNATED
+   authentication boundary (the credential file the Q6 live precedent
+   used; the environment variable is accepted as a secondary source).
+   Presence is checked only — the value is held in memory for the
+   pinned transport and never printed, hashed, persisted, reported, or
+   copied into the proof workspace.
 
 ### Authorization (exact text)
 
 > I authorize ONE Quellight D4 structured real-use session. It will run
 > the real application against the pinned provider profile
-> `ollama-cloud/glm-4.6-flash` using my `OLLAMA_API_KEY` from the
-> environment. It will use a dedicated proof data directory outside the
-> repository; my normal Quellight data and VICT `.pi/` data are not
-> touched. Bounds: one session of at most 45 minutes, at most 5 of my
-> user turns, at most 20 provider requests, at most 2048 output tokens
-> per request, no retries and no fallback. I will supply the scenario
-> file myself and it will never be committed. Evidence will be
-> structural outcomes only — no conversation content, no credentials,
-> no absolute paths. If the provider fails before the scenario begins,
-> the session is sealed as failed and I may authorize one fresh session
-> with a new receipt. Everything is cleaned up afterwards; a receipt
-> records that the authorization was consumed. — Owner, [date]
+> `ollama-cloud/glm-5.3-flash`, resolving my provider credential
+> through the owner-designated authentication boundary — presence
+> checked only, held in memory for the pinned transport, never printed,
+> hashed, persisted, reported, or copied into the proof workspace. It
+> will use a dedicated proof data directory outside the repository; my
+> normal Quellight data and VICT `.pi/` data are not touched. Bounds:
+> one session of at most 45 minutes, at most 5 of my user turns, at
+> most 20 provider requests, at most 2048 output tokens per request,
+> no retries and no fallback. I will supply the scenario file myself
+> and it will never be committed. Evidence will be structural outcomes
+> only — no conversation content, no credentials, no absolute paths.
+> Required proof points complete through my own governed actions and
+> deterministic application behavior; what the model drafts or calls
+> is recorded only as observation. If the provider fails before the
+> scenario begins, the session is sealed as failed and I may authorize
+> one fresh session with a new receipt. Everything is cleaned up
+> afterwards; a receipt records that the authorization was consumed.
+> — Owner, [date]
 
 ### Running it
 

@@ -1755,3 +1755,30 @@ exact authorization text. **D4 real-use evidence DOES NOT EXIST; no
 provider or operator-data access occurred; D4 execution requires its own
 owner authorization; Stage 07D is NOT verified or formally closed; Stage
 07E has NOT begun.**
+
+## D-07D-6 — Stage 07D Phase D4a: D4 proof determinism correction (Amendment 1)
+
+**Date:** 2026-09-22. The D4a report's A7 limitation ("the live trigger
+depends on the model's key choice") was corrected under the accepted
+principle: model discretion is a real-use observation; required state
+transitions must have a deterministic owner-governed path. The D4 proof
+contract moved to @2 (standalone amendment `ebbcdd9` BEFORE dependent
+machinery `3b3f9e2`): every required A1–A13 pass condition now
+classifies owner-action or runtime-observation; the scenario-behavior
+outcome/code are removed; A2's required path is the owner's direct Save
+with ceremony as observation; A3 is a user-attribution audit; A6's
+required exclusions are owner-seeded (removed + expired); A7 is
+deterministic at the real decision boundary (standing commitment via
+`act.createCommitment`; every commitment-kind proposal resolved through
+`act.confirmProposal` with quiet refusal + challenge + user-only
+dismissal on same key; the standing commitment unchanged; zero open
+challenges; zero mutation; no-proposal still passes). The full conflict
+class is permanently proven offline through a real composition at the
+real user boundary (`verify:d4-prep` N-D4-P-23; gate now 29 checks
+green). The credential boundary wording was reconciled to the
+owner-designated authentication boundary (presence-only, in-memory);
+the runbook's stale pinned-profile text was corrected to the
+composition-pinned `ollama-cloud/glm-5.3-flash`. Bounds unchanged. No
+provider, credential, operator data, `.pi/`, `.quellight-data`, or
+scenario file access; D4 execution remains NOT authorized; Stage 07D is
+NOT verified or formally closed; Stage 07E has NOT begun.
