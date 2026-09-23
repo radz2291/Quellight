@@ -160,6 +160,15 @@ const withReceipt = (body) => {
   writeFileSync(receiptPath, body, { flag: 'wx' });
 };
 
+// D4b remediation: the consumed authorization receipt is a committed
+// HISTORICAL record after D4b. Every receipt probe must therefore be
+// STATE-AWARE: when the receipt exists it is never overwritten or removed;
+// the refusal semantics are proven against the real receipt itself, and
+// the exclusive-create machinery is exercised at a task-owned temporary
+// path instead. The state is captured BEFORE the gate touches anything.
+const receiptExistedAtGateStart = existsSync(receiptPath);
+const receiptBytesAtGateStart = receiptExistedAtGateStart ? readFileSync(receiptPath) : undefined;
+
 console.log('verify:d4-prep — the MSTR-012 real-use proof preparation gate (offline)');
 
 try {
@@ -170,46 +179,74 @@ try {
     p1.status === 2 && p1.stderr.includes(QLT_D4_CODES.NOT_AUTHORIZED),
     p1.stderr.split('\n')[0] ?? '',
   );
-  check('N-D4-P-1b no receipt was written by the refusal', !existsSync(receiptPath));
+  check(
+    'N-D4-P-1b the refusal neither creates nor removes an authorization receipt',
+    existsSync(receiptPath) === receiptExistedAtGateStart,
+  );
 
   // ---- N-D4-P-2: the harness refuses a reused authorization receipt -------
-  withReceipt(
-    JSON.stringify({
-      authorizedAt: '2026-09-22T00:00:00.000Z',
-      contract: QLT_D4_PROOF_CONTRACT_ID,
-      profile: QLT_D4_PROFILE,
-    }) + '\n',
-  );
-  const p2 = spawnHarness({ QUELLIGHT_D4_STRUCTURED: '1', QUELLIGHT_D4_SCENARIO_FILE: 'x.json' });
-  check(
-    'N-D4-P-2 harness refuses a reused authorization receipt',
-    p2.status === 2 && p2.stderr.includes(QLT_D4_CODES.ALREADY_AUTHORIZED),
-    p2.stderr.split('\n')[0] ?? '',
-  );
-  rmSync(receiptPath, { force: true });
+  if (receiptExistedAtGateStart) {
+    // The historical consumed receipt IS the reuse case: no probe write.
+    const p2 = spawnHarness({ QUELLIGHT_D4_STRUCTURED: '1', QUELLIGHT_D4_SCENARIO_FILE: 'x.json' });
+    check(
+      'N-D4-P-2 harness refuses the consumed authorization receipt',
+      p2.status === 2 && p2.stderr.includes(QLT_D4_CODES.ALREADY_AUTHORIZED),
+      p2.stderr.split('\n')[0] ?? '',
+    );
+  } else {
+    withReceipt(
+      JSON.stringify({
+        authorizedAt: '2026-09-22T00:00:00.000Z',
+        contract: QLT_D4_PROOF_CONTRACT_ID,
+        profile: QLT_D4_PROFILE,
+      }) + '\n',
+    );
+    const p2 = spawnHarness({ QUELLIGHT_D4_STRUCTURED: '1', QUELLIGHT_D4_SCENARIO_FILE: 'x.json' });
+    check(
+      'N-D4-P-2 harness refuses a reused authorization receipt',
+      p2.status === 2 && p2.stderr.includes(QLT_D4_CODES.ALREADY_AUTHORIZED),
+      p2.stderr.split('\n')[0] ?? '',
+    );
+    rmSync(receiptPath, { force: true });
+  }
 
   // ---- N-D4-P-3: the harness refuses a malformed receipt ------------------
-  withReceipt('{ not json at all');
-  const p3 = spawnHarness({ QUELLIGHT_D4_STRUCTURED: '1', QUELLIGHT_D4_SCENARIO_FILE: 'x.json' });
-  check(
-    'N-D4-P-3 harness refuses a malformed authorization receipt',
-    p3.status === 2 && p3.stderr.includes(QLT_D4_CODES.AUTHORIZATION_MALFORMED),
-    p3.stderr.split('\n')[0] ?? '',
-  );
-  rmSync(receiptPath, { force: true });
+  // D4b remediation: the malformed-receipt probe writes synthetic bytes at
+  // the real path; it may only run when NO historical receipt exists.
+  if (!receiptExistedAtGateStart) {
+    withReceipt('{ not json at all');
+    const p3 = spawnHarness({ QUELLIGHT_D4_STRUCTURED: '1', QUELLIGHT_D4_SCENARIO_FILE: 'x.json' });
+    check(
+      'N-D4-P-3 harness refuses a malformed authorization receipt',
+      p3.status === 2 && p3.stderr.includes(QLT_D4_CODES.AUTHORIZATION_MALFORMED),
+      p3.stderr.split('\n')[0] ?? '',
+    );
+    rmSync(receiptPath, { force: true });
+  }
 
   // ---- N-D4-P-4: missing credential refuses BEFORE any workspace ----------
   const tempBefore = readdirSync(tmpdir()).filter((entry) => entry.startsWith('qlt-d4-realuse-'));
+  // D4b remediation: force the missing-credential state explicitly (the
+  // documented test-only override) — the owner-designated authentication
+  // boundary makes the credential PRESENT on the owner machine, so the
+  // natural-absence assumption cannot be relied on.
   const p4 = spawnHarness({
     QUELLIGHT_D4_STRUCTURED: '1',
     QUELLIGHT_D4_SCENARIO_FILE: join(repoRoot, 'package.json'),
+    QUELLIGHT_D4_CREDENTIAL_SOURCE: 'none',
   });
   const tempAfter = readdirSync(tmpdir()).filter((entry) => entry.startsWith('qlt-d4-realuse-'));
-  check(
-    'N-D4-P-4 missing credential refuses before any workspace exists',
+  // D4b remediation: with the archived consumed receipt present, every
+  // preflight refuses EARLIER (at the receipt gate) — which also proves no
+  // workspace was created. The credential refusal is the asserted code only
+  // in the pre-authorization (absence) state.
+  const p4RefusedClean =
     p4.status === 2 &&
-      p4.stderr.includes(QLT_D4_CODES.CREDENTIAL_MISSING) &&
-      tempAfter.length === tempBefore.length,
+    (receiptExistedAtGateStart || p4.stderr.includes(QLT_D4_CODES.CREDENTIAL_MISSING)) &&
+    tempAfter.length === tempBefore.length;
+  check(
+    'N-D4-P-4 the harness refuses before any workspace exists (credential state enforced)',
+    p4RefusedClean,
     `workspace delta: ${tempAfter.length - tempBefore.length}`,
   );
 
@@ -611,6 +648,105 @@ try {
     }
   }
 
+  // ---- N-D4-P-25: the D4b remediation statics ------------------------------
+  // (a) the failure seal durably preserves the structural facts;
+  // (b) no abrupt session exits remain (the refusal gate's exit(2) is the
+  //     only abrupt exit, and it runs before anything exists to preserve);
+  // (c) the turn dispatch crosses the admitted boundary; the seed's
+  //     retention payloads carry the declared contract field names.
+  {
+    const removalFamilyKeyPattern = /\{\s*recordId: removedRecordId, family: 'claim'/;
+    const remediationText = readFileSync(harnessPath, 'utf8');
+    const requiredLiterals = [
+      'failurePhase',
+      'failureClass',
+      'transportBegan',
+      'responseHeadersArrived',
+      'responseBytesArrived',
+      'turnSettlement',
+      'sessionMs',
+      'workspaceRemoved',
+      'await cleanupTail',
+    ];
+    const allPresent = requiredLiterals.every((literal) => remediationText.includes(literal));
+    const noAbruptSessionExit =
+      !remediationText.includes('process.exit(0)') && !remediationText.includes('process.exit(1)');
+    const admittedDispatch = remediationText.includes('composition.admitTurn(');
+    const declaredRemoveField =
+      remediationText.includes("recordKind: 'claim'") &&
+      remediationText.includes('getRecordView({') &&
+      !removalFamilyKeyPattern.test(remediationText);
+    const declaredPassPayload =
+      remediationText.includes('await governedMutate(') &&
+      remediationText.includes('setTimeout(resolveWait, 3_000)');
+    check(
+      'N-D4-P-25 the durable failure accounting, graceful exits, admitted turn dispatch, and declared seed payloads (static)',
+      allPresent &&
+        noAbruptSessionExit &&
+        admittedDispatch &&
+        declaredRemoveField &&
+        declaredPassPayload,
+    );
+  }
+
+  // ---- N-D4-P-26: the gated live seam fails closed (offline child probe) ----
+  {
+    const probeDir = mkdtempSync(join(tmpdir(), 'verify-d4-liveseam-'));
+    try {
+      const compositionUrl = new URL('../src/lib/server/composition.ts', import.meta.url).href;
+      const probePath = join(probeDir, 'probe-live-seam.mjs');
+      writeFileSync(
+        probePath,
+        [
+          'delete process.env.OLLAMA_API_KEY;',
+          "process.env.QUELLIGHT_LIVE_PROOF = '1';",
+          'const { createQuellightComposition, resolveQuellightEnvironment } = await import(',
+          '  process.env.QLT_PROBE_COMPOSITION_URL',
+          ');',
+          "const { mkdtempSync, rmSync } = await import('node:fs');",
+          "const { tmpdir } = await import('node:os');",
+          "const { join } = await import('node:path');",
+          "const repoLike = mkdtempSync(join(tmpdir(), 'probe-repo-'));",
+          "const dataDir = mkdtempSync(join(tmpdir(), 'probe-data-'));",
+          'try {',
+          '  const env = resolveQuellightEnvironment(',
+          "    { QUELLIGHT_DATA_DIR_ABSOLUTE: dataDir, QUELLIGHT_LIVE_PROOF: '1' }",
+          '    , repoLike);',
+          '  await createQuellightComposition({ env, offlineScript: {}, skipListen: true });',
+          "  console.log('LIVE-SEAM-COMPOSED');",
+          '} catch (cause) {',
+          "  console.log('LIVE-SEAM-THREW:' + String(cause && cause.code ? cause.code : cause && cause.name ? cause.name : 'unknown'));",
+          '} finally {',
+          '  try { rmSync(repoLike, { recursive: true, force: true }); } catch {}',
+          '  try { rmSync(dataDir, { recursive: true, force: true }); } catch {}',
+          '}',
+        ].join('\n'),
+      );
+      const childEnv = { ...process.env, QLT_PROBE_COMPOSITION_URL: compositionUrl };
+      delete childEnv.OLLAMA_API_KEY;
+      const spawned = spawnSync(process.execPath, ['--import', 'tsx', probePath], {
+        cwd: repoRoot,
+        env: childEnv,
+        encoding: 'utf8',
+        timeout: 120_000,
+      });
+      const threwUnavailable = String(spawned.stdout ?? '').includes(
+        'LIVE-SEAM-THREW:VICT_OPERATOR_CREDENTIAL_UNAVAILABLE',
+      );
+      const neverComposed = !String(spawned.stdout ?? '').includes('LIVE-SEAM-COMPOSED');
+      check(
+        'N-D4-P-26 the gated live seam fails closed on the absent credential variable (offline child probe)',
+        threwUnavailable && neverComposed,
+      );
+    } finally {
+      try {
+        rmSync(probeDir, { recursive: true, force: true });
+      } catch {
+        /* disposable */
+      }
+    }
+  }
+
   // ---- contract self-consistency -------------------------------------------
   const everyPrereqExists = Object.values(QLT_D4_CHECK_PREREQUISITES).every((rules) =>
     rules.every((rule) => QLT_D4_REQUIRED_CHECKS.includes(rule.check)),
@@ -624,21 +760,60 @@ try {
   );
 
   // ---- the consumed receipt refuses again (rerun prevention end state) ----
+  // D4b remediation: the truthful receipt end state is ABSENCE (fresh
+  // authorization readiness) or the ARCHIVED CONSUMED receipt with its
+  // bytes untouched — never a synthetic probe receipt.
   const reread = readAuthorizationReceipt(receiptPath);
+  const receiptEndStateOk = receiptExistedAtGateStart
+    ? existsSync(receiptPath) &&
+      Buffer.compare(readFileSync(receiptPath), receiptBytesAtGateStart) === 0
+    : !existsSync(receiptPath) && !reread.ok && reread.code === QLT_D4_CODES.NOT_AUTHORIZED;
   check(
-    'receipt absence is the stable pre-authorization state',
-    !existsSync(receiptPath) && !reread.ok && reread.code === QLT_D4_CODES.NOT_AUTHORIZED,
+    'the authorization receipt end state is absence or the archived consumed receipt (bytes intact)',
+    receiptEndStateOk,
   );
-  check('no evidence summary exists before execution', !existsSync(evidencePath));
+  // D4b remediation: since the one authorized D4b session was executed and
+  // its truthful failure evidence was committed at the contract path, the
+  // pre-execution invariant is no longer plain absence. The truthful state
+  // is: absent (fresh authorization, after the owner archives the
+  // historical pair) OR exactly the committed historical failure record —
+  // a minimal structural summary that can never be mistaken for a
+  // successful session. The harness's exclusive-create seal ('wx') remains
+  // the enforcement for the next execution.
+  const historicalEvidence = (() => {
+    if (!existsSync(evidencePath)) return { absent: true, historical: false };
+    try {
+      const parsed = JSON.parse(readFileSync(evidencePath, 'utf8'));
+      return {
+        absent: false,
+        historical:
+          parsed.outcome === 'failed' &&
+          parsed.code === QLT_D4_CODES.PROOF_POINT_FAILED &&
+          parsed.contract === QLT_D4_PROOF_CONTRACT_ID,
+      };
+    } catch {
+      return { absent: false, historical: false };
+    }
+  })();
+  check(
+    'the pre-execution evidence state is absence or the archived historical failure record',
+    historicalEvidence.absent || historicalEvidence.historical,
+  );
 
-  // ---- exclusive-create still works for the real authorization ------------
-  const exclusive = writeAuthorizationReceipt(receiptPath, { probe: true });
-  const exclusiveTwice = writeAuthorizationReceipt(receiptPath, { probe: true });
+  // ---- exclusive-create machinery (task-owned temp path; never the real
+  // receipt: the historical record must survive every gate run) ------------
+  const probeReceiptPath = join(tmpdir(), `verify-d4-receipt-probe-${Date.now()}.json`);
+  const exclusive = writeAuthorizationReceipt(probeReceiptPath, { probe: true });
+  const exclusiveTwice = writeAuthorizationReceipt(probeReceiptPath, { probe: true });
   const exclusiveResult = !exclusive.ok || (exclusive.ok && !exclusiveTwice.ok);
   check('the authorization receipt is exclusive-create (one-shot)', exclusiveResult);
-  rmSync(receiptPath, { force: true });
+  rmSync(probeReceiptPath, { force: true });
 } finally {
-  rmSync(receiptPath, { force: true });
+  // Restore the synthetic state ONLY when the gate started with no receipt;
+  // a historical consumed receipt is never written, overwritten, or removed.
+  if (!receiptExistedAtGateStart) {
+    rmSync(receiptPath, { force: true });
+  }
 }
 
 if (failures.length > 0) {

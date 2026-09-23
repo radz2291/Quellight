@@ -93,6 +93,11 @@ import { QLT_CONTEXT_BLOCK_OPEN } from '../src/lib/sharedworld/context-contract.
 const repoRoot = resolve(fileURLToPath(new URL('..', import.meta.url)));
 
 const refuse = (code, message) => {
+  // Preflight refusals run BEFORE the heavy application import and before
+  // any receipt, workspace, or evidence exists (nothing needs durable
+  // preservation); the single-line console write at this depth is
+  // empirically synchronous on this platform (verified by the D4b
+  // forensics captures), so the abrupt exit cannot discard it.
   console.error(`${code}: ${message}`);
   process.exit(2);
 };
@@ -225,6 +230,11 @@ const { createQuellightComposition, resolveQuellightEnvironment } = await import
 
 const composed = [];
 const composeSession = async () => {
+  // D4b remediation (structural): the second argument is the REPOSITORY
+  // root used by the composition's fail-closed isolation check — the proof
+  // workspace must resolve OUTSIDE it. The original session passed the
+  // workspace itself here, so the check compared the workspace against
+  // itself and refused the composition before any transport could exist.
   const env = resolveQuellightEnvironment(
     {
       QUELLIGHT_DATA_DIR_ABSOLUTE: workspace,
@@ -232,8 +242,20 @@ const composeSession = async () => {
       QUELLIGHT_MAX_OUTPUT_TOKENS: String(plan.maxOutputTokensPerRequest),
       QUELLIGHT_TURN_DEADLINE_MS: String(plan.maxTurnDeadlineMs),
     },
-    workspace,
+    repoRoot,
   );
+  // D4b remediation (structural): the gated live seam resolves the
+  // provider credential from the pinned credential VARIABLE in the
+  // process environment and fails closed with
+  // VICT_OPERATOR_CREDENTIAL_UNAVAILABLE when it is absent. Gate 3
+  // already resolved that value (environment or the owner-designated
+  // authentication boundary, presence-checked, in memory only) — deliver
+  // it to the seam here. The value stays in process memory; it never
+  // enters any store, log, event, or evidence byte (the leak scans below
+  // enforce exactly that).
+  if (process.env[QLT_D4_CREDENTIAL_VAR] !== credential) {
+    process.env[QLT_D4_CREDENTIAL_VAR] = credential;
+  }
   const composition = await createQuellightComposition({ env, skipListen: true });
   composed.push(composition);
   return composition;
@@ -273,23 +295,39 @@ const governedMutate = async (composition, actionId, input, idempotencyKey) => {
   };
 };
 
-const startTurn = async (composition, mastraThreadId, input, key) => {
-  const outcome = await composition.commandService.dispatch(actorOf(composition), {
-    command: 'agent.turn.start',
-    payload: { threadId: mastraThreadId, input },
-    idempotencyKey: key,
-  });
-  if (!outcome.ok) {
-    throw new Error(`turn start failed: ${outcome.code}`);
+const startTurn = async (composition, swThreadId, mastraThreadId, input, key) => {
+  // D4b remediation: the turn dispatch crosses the composition's admission
+  // boundary (the Q6 live-precedent `startTurnAdmitted` shape) — the same
+  // boundary installs the Q5 Memory-Mode row and the Q4 per-turn assembly
+  // scope; a raw dispatch bypasses both and no assembly can ever exist.
+  const admission = await composition.admitTurn(
+    { swThreadId, mastraThreadId, idempotencyKey: key },
+    () =>
+      composition.commandService.dispatch(actorOf(composition), {
+        command: 'agent.turn.start',
+        payload: { threadId: mastraThreadId, input },
+        idempotencyKey: key,
+      }),
+  );
+  if (admission.refused) {
+    failFast(QLT_D4_CODES.PROOF_POINT_FAILED, 'the turn admission was refused');
   }
-  return outcome.data;
+  if (!admission.result.ok) {
+    throw new Error(`turn start failed: ${admission.result.code}`);
+  }
+  return admission.result.data;
 };
 
-const awaitTerminal = async (composition, turnId) => {
+const awaitTerminal = async (composition, turnId, proofPoint) => {
   const startedAt = Date.now();
   for (;;) {
     const turn = await composition.turnService.getTurn(actorOf(composition), turnId);
     if (['completed', 'failed', 'cancelled'].includes(turn.status)) {
+      sessionState.turnSettlement = {
+        proofPoint: typeof proofPoint === 'string' ? proofPoint : 'unknown',
+        status: turn.status,
+        errorCode: typeof turn.errorCode === 'string' ? turn.errorCode : undefined,
+      };
       return { status: turn.status, errorCode: turn.errorCode, elapsedMs: Date.now() - startedAt };
     }
     if (Date.now() - startedAt > plan.maxTurnDeadlineMs + 30_000) {
@@ -301,10 +339,21 @@ const awaitTerminal = async (composition, turnId) => {
 
 // ---------- evidence ledger + truthful seal/cleanup ------------------------
 const ledger = createEvidenceLedger();
+/** Internal unwinding sentinel for mid-session fail-fast (never sealed as evidence). */
+class QuellightSessionExit extends Error {}
+
+let cleanupTail = Promise.resolve();
 const sessionStartedAtMs = Date.now();
 let sealed = false;
+// D4b remediation (observability): durable structural session facts that
+// must survive any termination path. Values are closed metadata only —
+// never conversation content, credential material, paths, or scenario
+// text.
+const sessionState = {
+  turnSettlement: undefined,
+};
 
-const sealAndCleanup = (forcedCode) => {
+const sealSession = (forcedCode, failure = {}) => {
   if (sealed) return;
   sealed = true;
   const sessionEndedAtMs = Date.now();
@@ -314,6 +363,24 @@ const sealAndCleanup = (forcedCode) => {
   ]);
   const overRequestBudget = observer.records.length > plan.providerRequests;
   const overSessionBudget = sessionEndedAtMs - sessionStartedAtMs > QLT_D4_BOUNDS.maxSessionMs;
+  // D4b remediation: one structural failure-fact block, computed once and
+  // attached to EVERY failed summary (forced-code, scan-hit, or ledger
+  // verdict alike). Closed metadata only: stable tokens, counts, and
+  // booleans — never messages, paths, prompts, responses, scenario text,
+  // or credential material.
+  const failureFacts = {
+    failurePhase: phase,
+    providerRequests: observer.records.length,
+    transportBegan: observer.records.length > 0,
+    responseHeadersArrived: observer.records.some(
+      (record) => record.http !== null && record.http !== undefined,
+    ),
+    responseBytesArrived: observer.records.some(
+      (record) => record.reasoningBytes > 0 || record.contentBytes > 0 || record.toolDeltas > 0,
+    ),
+    turnSettlement: sessionState.turnSettlement,
+    sessionMs: sessionEndedAtMs - sessionStartedAtMs,
+  };
   let summary;
   if (overRequestBudget || overSessionBudget) {
     summary = {
@@ -328,9 +395,18 @@ const sealAndCleanup = (forcedCode) => {
       contract: QLT_D4_PROOF_CONTRACT_ID,
       profile: QLT_D4_PROFILE,
       code: forcedCode,
+      ...failureFacts,
+      failureClass:
+        typeof failure.failureClass === 'string' ? failure.failureClass : 'unclassified',
     };
   } else if (scanHits.length > 0) {
-    summary = { outcome: 'failed', code: QLT_D4_CODES.SCAN_HIT, hits: scanHits };
+    summary = {
+      outcome: 'failed',
+      code: QLT_D4_CODES.SCAN_HIT,
+      hits: scanHits,
+      ...failureFacts,
+      failureClass: 'evidence-leak-scan',
+    };
   } else {
     summary = sealEvidence(ledger, {
       credentialNeedle: credential,
@@ -338,6 +414,17 @@ const sealAndCleanup = (forcedCode) => {
       sessionStartedAtMs,
       sessionEndedAtMs,
     });
+    if (summary.outcome === 'failed') {
+      const firstFalse = ledger.receipts().find((row) => row.ok === false);
+      summary = {
+        ...summary,
+        ...failureFacts,
+        failureClass:
+          firstFalse === undefined
+            ? 'proof-point-failed'
+            : `proof-point-failed:${firstFalse.check}`,
+      };
+    }
   }
   const evidencePath = join(repoRoot, QLT_D4_EVIDENCE_PATH);
   try {
@@ -346,21 +433,50 @@ const sealAndCleanup = (forcedCode) => {
   } catch {
     console.error('FAIL: the evidence summary already exists — refusing to overwrite.');
   }
+  return summary;
+};
+
+// Cleanup runs AFTER the durable seal (the seal is authoritative and must
+// never wait on, or be lost with, teardown). The retry absorbs the Windows
+// SQLite-unlock lag after close; a workspace that still cannot be removed
+// is reported truthfully (exit status 1, cleanup record written).
+const runCleanup = async () => {
   for (const composition of composed.splice(0)) {
-    void composition.close().catch(() => undefined);
+    await composition.close().catch(() => undefined);
   }
   observer.restore();
-  rmSync(workspace, { recursive: true, force: true });
-  const removed = !existsSync(workspace);
+  let removed = false;
+  for (let attempt = 0; attempt < 30 && !removed; attempt += 1) {
+    try {
+      rmSync(workspace, { recursive: true, force: true });
+      removed = !existsSync(workspace);
+    } catch {
+      await new Promise((resolvePause) => setTimeout(resolvePause, 500));
+    }
+  }
   console.log(
     `  cleanup: the owned workspace was ${removed ? 'removed (verified)' : 'NOT removed — remove it manually'}`,
   );
+  try {
+    writeFileSync(
+      join(repoRoot, QLT_D4_EVIDENCE_PATH + '.cleanup.json'),
+      JSON.stringify({ workspaceRemoved: removed }, null, 2) + '\n',
+      { flag: 'wx' },
+    );
+  } catch {
+    /* supplementary record; the seal remains authoritative */
+  }
+  if (!removed) {
+    process.exitCode = 1;
+  }
 };
 
 const failFast = (code, message) => {
   console.error(`FAIL: ${message}`);
-  sealAndCleanup(code);
-  process.exit(1);
+  sealSession(code);
+  cleanupTail = runCleanup();
+  process.exitCode = 1;
+  throw new QuellightSessionExit(message);
 };
 
 const appendReceipt = (check, ok, detail = {}) => {
@@ -407,8 +523,14 @@ try {
 
   // ---- A1: natural conversation remains usable ----------------------------
   phase = 'a1';
-  const t1 = await startTurn(composition, convA.mastraThreadId, scenario.chatter, 'd4-a1');
-  const t1Settled = await awaitTerminal(composition, t1.turnId);
+  const t1 = await startTurn(
+    composition,
+    threadA.id,
+    convA.mastraThreadId,
+    scenario.chatter,
+    'd4-a1',
+  );
+  const t1Settled = await awaitTerminal(composition, t1.turnId, 'a1');
   const restoredA1 = await composition.restoreThread(threadA.id);
   appendReceipt('a1-conversation-usable', t1Settled.status === 'completed', {
     turnStatus: t1Settled.status,
@@ -423,8 +545,14 @@ try {
   // its absence can never gate the required preservation.
   phase = 'a2';
   const pendingBefore = (await composition.sharedWorld.meaning.listProposals({})).total;
-  const t2 = await startTurn(composition, convA.mastraThreadId, scenario.durableRemember, 'd4-a2');
-  const t2Settled = await awaitTerminal(composition, t2.turnId);
+  const t2 = await startTurn(
+    composition,
+    threadA.id,
+    convA.mastraThreadId,
+    scenario.durableRemember,
+    'd4-a2',
+  );
+  const t2Settled = await awaitTerminal(composition, t2.turnId, 'a2');
   if (t2Settled.status !== 'completed') {
     failFast(QLT_D4_CODES.TURN_FAILED, `the a2 turn ended ${t2Settled.status}`);
   }
@@ -569,7 +697,13 @@ try {
   const expirySet = await governedMutate(
     composition,
     'act.setClaimExpiry',
-    { claimId: expiredRecordId, expiresAtMs: Date.now() + 60_000 },
+    // D4b remediation: the declared input contract for the retention pass
+    // (`qlt.retention.pass.input`) is closed and empty — the pass runs at
+    // the composition's real clock. The expiry therefore sits only two
+    // seconds ahead (still future-only per the frozen rule) and the
+    // in-session wait below makes it due deterministically without extra
+    // turns or provider requests.
+    { claimId: expiredRecordId, expiresAtMs: Date.now() + 2_000 },
     'd4-seed-expiry-set',
   );
   if (!expirySet.ok) {
@@ -578,10 +712,17 @@ try {
       `the expiry assignment was refused (${expirySet.code})`,
     );
   }
+  // D4b remediation: let the seeded expiry genuinely come due on the
+  // real clock before the pass (expiry sits two seconds ahead). Wall
+  // clock only: no user turns, no provider requests.
+  await new Promise((resolveWait) => setTimeout(resolveWait, 3_000));
   const passOutcome = await governedMutate(
     composition,
     'act.runRetentionPass',
-    { now: Date.now() + 120_000 },
+    {},
+    // D4b remediation: the pass runs after the seeded expiry has genuinely
+    // come due on the real clock. This costs wall-clock time only — no
+    // user turns, no provider requests — inside the frozen session bound.
     'd4-seed-retention-pass',
   );
   if (!passOutcome.ok) {
@@ -605,8 +746,14 @@ try {
   // permanently proven offline (verify:d4-prep N-D4-P-23).
   phase = 'a7';
   const standingBefore = await composition.sharedWorld.meaning.getCommitment(commitmentId);
-  const t3 = await startTurn(composition, convA.mastraThreadId, scenario.durableSecond, 'd4-a7');
-  const t3Settled = await awaitTerminal(composition, t3.turnId);
+  const t3 = await startTurn(
+    composition,
+    threadA.id,
+    convA.mastraThreadId,
+    scenario.durableSecond,
+    'd4-a7',
+  );
+  const t3Settled = await awaitTerminal(composition, t3.turnId, 'a7');
   if (t3Settled.status !== 'completed') {
     failFast(QLT_D4_CODES.TURN_FAILED, `the a7 turn ended ${t3Settled.status}`);
   }
@@ -684,11 +831,12 @@ try {
   phase = 'ordinary';
   const t4 = await startTurn(
     composition,
+    threadA.id,
     convA.mastraThreadId,
     scenario.ordinaryFollowup,
     'd4-ord',
   );
-  const t4Settled = await awaitTerminal(composition, t4.turnId);
+  const t4Settled = await awaitTerminal(composition, t4.turnId, 'ordinary');
   if (t4Settled.status !== 'completed') {
     failFast(QLT_D4_CODES.TURN_FAILED, `the ordinary turn ended ${t4Settled.status}`);
   }
@@ -717,7 +865,9 @@ try {
   const removalOutcome = await governedMutate(
     composition,
     'act.removeRecord',
-    { recordId: removedRecordId, family: 'claim' },
+    // D4b remediation: the declared input contract (`qlt.retention.remove.input`)
+    // names this field `recordKind`; the original payload used a wrong key.
+    { recordId: removedRecordId, recordKind: 'claim' },
     'd4-a9-remove',
   );
   if (!removalOutcome.ok) {
@@ -726,7 +876,7 @@ try {
       `the governed removal was refused (${removalOutcome.code})`,
     );
   }
-  const removedView = composition.sharedWorld.retention.getRecordView({
+  const removedView = await composition.sharedWorld.retention.getRecordView({
     recordId: removedRecordId,
     family: 'claim',
   });
@@ -760,8 +910,14 @@ try {
   phase = 'a5';
   const threadB = await composition2.sharedWorld.createThread({ title: 'd4-proof-fresh' });
   const convB = await composition2.sharedWorld.ensureConversationLink(threadB.id);
-  const t5 = await startTurn(composition2, convB.mastraThreadId, scenario.freshProbe, 'd4-a5');
-  const t5Settled = await awaitTerminal(composition2, t5.turnId);
+  const t5 = await startTurn(
+    composition2,
+    threadB.id,
+    convB.mastraThreadId,
+    scenario.freshProbe,
+    'd4-a5',
+  );
+  const t5Settled = await awaitTerminal(composition2, t5.turnId, 'a5');
   if (t5Settled.status !== 'completed') {
     failFast(QLT_D4_CODES.TURN_FAILED, `the fresh-conversation turn ended ${t5Settled.status}`);
   }
@@ -881,10 +1037,34 @@ try {
   appendReceipt('a13-evidence-hygiene', true, { scanned: 'workspace-bytes' });
 
   // ---- seal -------------------------------------------------------------------
-  sealAndCleanup(undefined);
-  process.exit(0);
+  sealSession(undefined);
+  cleanupTail = runCleanup();
+  await cleanupTail;
+  // Natural module completion: the durable evidence is already written
+  // synchronously, cleanup has completed and been verified, and the exit
+  // code stays 0 — no abrupt exit can discard truthful output.
 } catch (cause) {
-  console.error(`FAIL: the session failed truthfully (${String(cause).slice(0, 200)})`);
-  sealAndCleanup(QLT_D4_CODES.PROOF_POINT_FAILED);
-  process.exit(1);
+  if (cause instanceof QuellightSessionExit) {
+    // Mid-session fail-fast already sealed durably and printed its
+    // truthful line; only the exit status and the awaited cleanup remain.
+    process.exitCode = 1;
+    await cleanupTail;
+  } else {
+    // D4b remediation: seal the durable structural truth BEFORE the exit
+    // status is set, and never rely on buffered console output. The only
+    // tokens printed or sealed are stable identifiers: the product or
+    // framework fail-closed code when one is present (QLT_/VICT_ tokens are
+    // stable, path-free, content-free), otherwise the error's constructor
+    // name. Raw messages can carry unsuitable material and are never
+    // printed or sealed.
+    const messageText = cause instanceof Error ? cause.message : '';
+    const codeMatch = /(?:QLT|VICT)_[A-Z0-9_]+/.exec(messageText);
+    const failureClass =
+      codeMatch?.[0] ?? (cause instanceof Error ? cause.name : 'non-error-throw');
+    console.error(`FAIL: the session failed truthfully (${failureClass})`);
+    sealSession(QLT_D4_CODES.PROOF_POINT_FAILED, {
+      failureClass,
+    });
+    process.exitCode = 1;
+  }
 }

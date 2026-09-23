@@ -1805,3 +1805,33 @@ now blocks re-execution. Per the owner's instruction, any future
 execution requires a new explicit owner authorization; the organic-use
 window has NOT begun; Stage 07D is NOT verified or formally closed;
 Stage 07E has NOT begun.
+
+## D-07D-8 — Stage 07D Phase D4b: the early-session failure proven, fixed, and locked in
+
+**Date:** 2026-09-23. The D4b termination ~3.4 s after receipt
+consumption was investigated under the owner's conditional diagnostic
+authorization. The triggering cause is PROVEN offline: the harness passed
+the proof workspace as the repository-root argument to the composition's
+fail-closed isolation check, refusing every execution before any provider
+contact (zero provider requests occurred). Five stacked local harness
+defects were found and fixed (credential delivery to the gated live seam,
+the declared `recordKind` field, the closed-empty retention-pass payload
+with a two-second-ahead expiry and an in-session wait, a missing await on
+the removal view read, and the turn dispatch bypassing the admitted
+boundary), and the failure observability was rebuilt (durable structural
+failure facts on every failed seal — phase, stable class, request
+accounting, transport/header/bytes booleans, turn settlement, elapsed
+time, cleanup record — with no abrupt session exits). The corrected
+machinery sealed a COMPLETE 24-check structured session `passed` against
+a loopback provider stand-in and every requested failure class
+truthfully; two new permanent gate controls (the durable-accounting
+statics and the live-seam fail-closed child probe) lock the remediation
+in, and the gate's legacy destructive receipt/evidence controls were made
+history-aware after they briefly deleted the committed consumed receipt
+(restored byte-identical, verified against git). The conditional provider
+diagnostic was NOT used (the cause was distinguishable offline; zero real
+provider requests in the entire investigation). Remaining uncertainty:
+the real credential's validity against the pinned endpoint (resolution is
+proven; validity is the one untested link). A new structured-session
+authorization is machinery-ready; D4 remains incomplete; Stage 07D is NOT
+verified or formally closed; Stage 07E has NOT begun.
