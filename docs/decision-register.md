@@ -1902,3 +1902,27 @@ first. D4 Layer A is COMPLETE; Layer B (the organic-use window — three
 genuine sessions across two launches on two days, no harness) awaits the
 owner and must not begin automatically. D4 remains incomplete until
 Layer B; Stage 07D is NOT formally closed; Stage 07E has NOT begun.
+
+## D-07D-11 — Stage 07D Contract Amendment 2: the supported operator live-use startup (`quellight.stage07d.operator-live-use@1`)
+
+**Date:** 2026-09-23. Product-readiness finding (owner): ordinary `npm run
+dev` composes the OFFLINE fixture only — the owner's attempted organic-use
+session ran in offline-fixture mode and therefore does NOT count toward the
+D4 Layer B window. The only live seam in the released source was the
+proof-only `QUELLIGHT_LIVE_PROOF=1` gate of the Q6/D4 harnesses. **Amended
+(frozen as this document, committed before any executable change):** the
+supported normal-use live startup is `npm run dev:live` through the new
+`QUELLIGHT_OPERATOR_LIVE=1` seam — entirely separate from
+`QUELLIGHT_LIVE_PROOF` and all D4 machinery (setting both live seams is a
+fail-closed `VICT_OPERATOR_CONFIG_INVALID`); the credential resolves ONLY
+(a) through the protected operator credential variable via the closed VICT
+operator-configuration foundation, or (b) in memory through the existing
+owner-designated authentication boundary (the Q6/D4 precedent field), never
+printed, persisted, echoed, or asked of the owner; absence fails closed with
+`VICT_OPERATOR_CREDENTIAL_UNAVAILABLE` and NO fixture fallback; the pinned
+profile and the normal operator store (`.quellight-data`) are used;
+deterministic offline remains the default for `npm run dev` and all tests;
+mode disclosure stays exactly Live / Offline fixture / Unavailable. The
+live path is proven offline through the loopback transport stand-in over a
+task-owned store. No D4 machinery change; no rerun of the structured
+proof; D5 not begun.
