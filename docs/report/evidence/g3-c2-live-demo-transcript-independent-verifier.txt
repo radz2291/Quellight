@@ -1,0 +1,82 @@
+(node:16088) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+=== PRODUCT PROOF — real turn via admission (method POST /vict/v1/turns, authorization header PRESENT, value REDACTED) ===
+{
+  "startResponse": {
+    "status": 200,
+    "body": {
+      "ok": true,
+      "data": {
+        "turnId": "turn-a8530955-3b62-49fe-89ff-dff7ae5fa858",
+        "streamId": "stream-37069439-284c-4c0b-a1ab-3dbaaddc58ae"
+      }
+    }
+  },
+  "terminalStatus": "completed",
+  "recordedTurn": {
+    "ok": true,
+    "data": {
+      "turn": {
+        "turnId": "turn-a8530955-3b62-49fe-89ff-dff7ae5fa858",
+        "streamId": "stream-37069439-284c-4c0b-a1ab-3dbaaddc58ae",
+        "threadId": "vict-conv-conv-9a024673e432a716",
+        "actorId": "actor-quellight-local",
+        "agentProfileVersion": "v1_f34b3c23f75552267f998173131c141429ae93b413b98fcc1d418bcd6bfa6b41",
+        "inputSummary": "user-input:length=45",
+        "status": "completed",
+        "createdAt": 1790745683537,
+        "updatedAt": 1790745684606,
+        "terminalAt": 1790745684606,
+        "traceId": "da69939360ce69caeca21944882b2387"
+      }
+    }
+  }
+}
+
+=== DEMO 1a — operator token, GET /vict/v1/actor/whoami (authorization header PRESENT, value REDACTED) ===
+HTTP 200
+{"ok":true,"data":{"actorId":"actor-quellight-local","roles":["developer","operator"],"scopes":["activation.read","activation.select","agent.stream.read","agent.turn.cancel","agent.turn.start","app.data.read","app.data.write","audit.read","changeset.propose","changeset.read","changeset.revise","conversation.delete","conversation.read","operator.resolve","release.read","release.select","run.cancel","run.read"],"mastraResourceId":"vict-actor-actor-quellight-local"}}
+
+=== DEMO 1b — agent-context token, GET /vict/v1/actor/whoami (authorization header PRESENT, value REDACTED) ===
+HTTP 200
+{"ok":true,"data":{"actorId":"agent-quellight-agent-context","roles":["developer"],"scopes":["activation.read","agent.stream.read","agent.turn.cancel","agent.turn.start","app.data.read","audit.read","changeset.propose","changeset.read","changeset.revise","release.read","run.read"],"mastraResourceId":"vict-actor-agent-quellight-agent-context"}}
+
+=== DEMO 2 — agent-context token, app.data.query on qlt.inspection (REFUSED by Quellight’s own authorization; authorization resolved through the boundary authenticator) ===
+{
+  "ok": true,
+  "data": {
+    "result": {
+      "ok": false,
+      "code": "DATA_UNAUTHORIZED",
+      "message": "Access to resource 'qlt.inspection' requires permission 'qlt.inspection.read'."
+    }
+  }
+}
+
+=== DEMO 3 — operator token, the SAME surface (SUCCEEDS; inspect answers actor-independent) ===
+{
+  "ok": true,
+  "data": {
+    "result": {
+      "ok": true,
+      "rows": [],
+      "total": 0
+    }
+  }
+}
+
+=== S4 — health.inspect under BOTH tokens (byte-identical; GET /vict/v1/health) ===
+{
+  "operator": "HTTP 200\n{\"ok\":true,\"data\":{\"healthy\":true,\"commandSchema\":\"vict.command@1\",\"streamSchema\":\"vict.agent-stream@1\"}}",
+  "agent-context": "HTTP 200\n{\"ok\":true,\"data\":{\"healthy\":true,\"commandSchema\":\"vict.command@1\",\"streamSchema\":\"vict.agent-stream@1\"}}"
+}
+
+=== S4 — compatibility.inspect under BOTH tokens (byte-identical; GET /vict/v1/compatibility) ===
+{
+  "operator": "HTTP 200\n{\"ok\":true,\"data\":{\"commandSchema\":\"vict.command@1\",\"streamSchema\":\"vict.agent-stream@1\",\"changesetSchema\":\"vict.changeset@1\",\"turnSchema\":\"vict.agent-turn@1\"}}",
+  "agent-context": "HTTP 200\n{\"ok\":true,\"data\":{\"commandSchema\":\"vict.command@1\",\"streamSchema\":\"vict.agent-stream@1\",\"changesetSchema\":\"vict.changeset@1\",\"turnSchema\":\"vict.agent-turn@1\"}}"
+}
+This storage provider does not support batch creating metrics
+
+DEMO COMPLETE
