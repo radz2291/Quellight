@@ -395,6 +395,15 @@ export interface QuellightComposition {
   readonly agentContextActorId: string;
   /** G3-C2 (OD-R4): the resolved agent-context actor context. */
   readonly agentContextActor: ReturnType<typeof authenticatedActorContext>;
+  /**
+   * G3-C2 (OD-R4): resolve a PRESENTED TOKEN through the composed boundary
+   * authenticator (the exact machinery the loopback boundary uses) and
+   * return its authoritative server-side actor context. In-process only;
+   * the token value is never logged or persisted.
+   */
+  readonly resolveBoundaryActor: (
+    presentedToken: string,
+  ) => Promise<ReturnType<typeof authenticatedActorContext> & { presentedTokenKind: 'local-test' }>;
   readonly dataDir: string;
   readonly turnDeadlineMs: number;
   readonly stores: AgentControlStores;
@@ -730,6 +739,8 @@ export async function createQuellightComposition(
     }),
     directory: agentStores.actors,
   });
+  const resolveBoundaryActor = async (presentedToken: string) =>
+    authenticator.resolve(presentedToken);
 
   // ---- Agent profile + activation (AI-003/AI-004 discipline) ----------------
   const registry = new AgentProfileRegistry({
@@ -1326,6 +1337,7 @@ export async function createQuellightComposition(
     actor,
     agentContextActorId: AGENT_CONTEXT_ACTOR_ID,
     agentContextActor,
+    resolveBoundaryActor,
     dataDir,
     turnDeadlineMs: env.turnDeadlineMs,
     stores: agentStores,
