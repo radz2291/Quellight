@@ -190,6 +190,16 @@ export const APPLICATION_RELEASE_VERSION = 'quellight-local-1';
 /** The single local actor identity (single-actor envelope). */
 export const LOCAL_ACTOR_ID = 'actor-quellight-local';
 
+/**
+ * Stage 9 G3-C2 (OD-R4): the SECOND boundary actor — a distinct
+ * agent-context identity served through the same loopback boundary. It
+ * carries NO app.data.write and NO inspection grant (the grant is
+ * actor-derived, S2); its read scopes cover exactly what a server-side
+ * agent caller legitimately needs (turn/status reads). The browser proxy
+ * keeps injecting ONLY the operator token (S3).
+ */
+export const AGENT_CONTEXT_ACTOR_ID = 'agent-quellight-agent-context';
+
 /** Composition failure (stable, non-echoing). */
 export class QuellightCompositionError extends Error {
   readonly code: string;
@@ -215,6 +225,12 @@ export interface QuellightEnvironment {
    */
   readonly operatorLiveRequested: boolean;
   readonly actorToken: string;
+  /**
+   * Stage 9 G3-C2 (OD-R4): the boundary token of the SECOND (agent-context)
+   * actor, resolved exactly like `actorToken` — operator environment value
+   * or an EPHEMERAL in-process token (never logged, never persisted).
+   */
+  readonly agentActorToken: string;
   readonly port: number | undefined;
 }
 
@@ -342,6 +358,12 @@ export function resolveQuellightEnvironment(
     env.QUELLIGHT_ACTOR_TOKEN !== undefined && env.QUELLIGHT_ACTOR_TOKEN.length > 0
       ? env.QUELLIGHT_ACTOR_TOKEN
       : `qlt-local-${randomBytes(32).toString('base64url')}`;
+  // Stage 9 G3-C2 (OD-R4): the second boundary token follows the same
+  // pattern as the operator token (same env-var naming family).
+  const agentActorToken =
+    env.QUELLIGHT_AGENT_ACTOR_TOKEN !== undefined && env.QUELLIGHT_AGENT_ACTOR_TOKEN.length > 0
+      ? env.QUELLIGHT_AGENT_ACTOR_TOKEN
+      : `qlt-agent-${randomBytes(32).toString('base64url')}`;
   const port =
     env.QUELLIGHT_PORT !== undefined && env.QUELLIGHT_PORT.trim() !== ''
       ? Number(env.QUELLIGHT_PORT)
@@ -353,6 +375,7 @@ export function resolveQuellightEnvironment(
     liveProofRequested,
     operatorLiveRequested,
     actorToken,
+    agentActorToken,
     port,
   };
 }
@@ -666,7 +689,8 @@ export async function createQuellightComposition(
     },
   });
 
-  // ---- Actor boundary (single local actor) ----------------------------------
+  // ---- Actor boundary (the ONE operator actor, plus the G3-C2 agent-context
+  // actor — the exact two-entry OD-R4 map) ------------------------------------
   const actorRecord: ActorRecord = {
     actorId: LOCAL_ACTOR_ID,
     status: 'active',
@@ -676,8 +700,29 @@ export async function createQuellightComposition(
   await agentStores.actors.upsert(actorRecord);
   const actor = authenticatedActorContext(actorRecord, LOCAL_ACTOR_ID);
 
+  // Stage 9 G3-C2 (OD-R4, S1): the second actor record. Minimally-realistic
+  // roles: `developer` only — it carries the read scopes a server-side agent
+  // caller legitimately needs (`app.data.read`, `agent.turn.get` through
+  // `run.read`, `agent.stream.read`, `audit.read`) and NOTHING with write
+  // authority (`app.data.write` stays operator-only), and the actor-derived
+  // inspection grant (S2 below) resolves WITHOUT the inspection permission.
+  const agentContextActorRecord: ActorRecord = {
+    actorId: AGENT_CONTEXT_ACTOR_ID,
+    status: 'active',
+    roles: ['developer'],
+    createdAt: 0,
+  };
+  await agentStores.actors.upsert(agentContextActorRecord);
+  const agentContextActor = authenticatedActorContext(
+    agentContextActorRecord,
+    AGENT_CONTEXT_ACTOR_ID,
+  );
+
   const authenticator = createServerAuthenticator({
-    authenticator: createLocalTestAuthenticator({ [env.actorToken]: LOCAL_ACTOR_ID }),
+    authenticator: createLocalTestAuthenticator({
+      [env.actorToken]: LOCAL_ACTOR_ID,
+      [env.agentActorToken]: AGENT_CONTEXT_ACTOR_ID,
+    }),
     directory: agentStores.actors,
   });
 
