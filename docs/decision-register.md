@@ -2328,3 +2328,48 @@ disclosed here because the alternative was leaving the exit gate knowingly red
 against the truthful closed status. All contracts, reports, evidence bundles,
 receipts, and historical records — including the preparation report — remain
 byte-for-byte preserved.
+
+## D-G3-C2-1 — Stage 9 G3-C2 increment IMPLEMENTED under owner decision OD-R4: second boundary actor + actor-derived inspection grant (AWAITING FRESH INDEPENDENT VERIFICATION; trigger: the fresh verifier's ruling X at review/stage9-g3-c-verification-20260930 @ 381905c)
+
+**Decision (2026-09-29/30; authorized by owner decision OD-R4 after the
+fresh verifier showed the 0.3.1 boundary authenticator was the one-entry
+map `env.actorToken -> actor-quellight-local` with a hard-coded inspection
+grant, so no distinct/underprivileged authorization state was reachable).**
+The increment is ADDITIVE MINIMALITY per its committed entry contract
+`docs/governance/STAGE-9-G3-C2-ENTRY-CONTRACT.md` (verbatim first commit):
+
+- **S1**: the loopback boundary authenticator resolves TWO token entries.
+  `QUELLIGHT_AGENT_ACTOR_TOKEN` (operator env var or the same ephemeral
+  in-process pattern as `QUELLIGHT_ACTOR_TOKEN`) maps to the NEW distinct
+  actor identity `agent-quellight-agent-context` with roles `developer`
+  only — real read scopes the agent caller legitimately needs
+  (`app.data.read`, `agent.turn.get` through `run.read`, `agent.stream.read`,
+  `audit.read`) and NO write authority (`app.data.write` stays
+  operator-only). The composed authenticator is exposed in-process as
+  `resolveBoundaryActor()` for demos/tests ONLY.
+- **S2**: the inspection permission is ACTOR-DERIVED at Quellight's read
+  boundary: ` inspectionPermissionsForActorRecord()` derives
+  `qlt.inspection.read` from the authenticated actor's DIRECTORY record
+  (granted exactly to the operator actor — byte-identical released
+  behavior); every other actor resolves WITHOUT the permission and Quellight's
+  own surface authorization REFUSES the read with the stable code
+  `DATA_UNAUTHORIZED`. Unresolvable actors fail closed.
+- **S3**: `src/routes/vict/[...path]/+server.ts` is UNCHANGED (the proxy
+  still injects only the operator token; the distinct identities are
+  exercised on the direct loopback boundary port).
+- **S4**: NOTHING else changes; health/compatibility inspect answers are
+  byte-identical for both tokens; no dependency or lockfile change; the
+  two 07E product Lows are NOT folded.
+
+**Consequences**: Quellight's own authorization can now REFUSE an identity
+lacking the inspection permission; the VICT-side G3-C re-verification can
+demonstrate operator allow / underprivileged denial / preserved
+agent-identity refusal. Demos executed LIVE in offline deterministic mode
+(one real turn through the product admission boundary plus all three
+demonstrations): transcripts committed at
+`docs/report/QUELLIGHT-STAGE-9-G3-C2-IMPLEMENTATION.md` (tokens REDACTED).
+Verify ladder on the incremented tree: `npm run typecheck` green; `format:check`
+green; `test:node` 31 files / 360 tests green; `test:ui` 20 green;
+`verify:stage7e` PASS (every negative control held). The fresh independent
+verifier (separate checkout) must verify the contract demos, minimality,
+and the ladder before the VICT-side re-verification consumes the tree.
