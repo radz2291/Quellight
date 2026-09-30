@@ -1168,9 +1168,7 @@ export async function createQuellightComposition(
             ...(filters !== undefined ? { filters } : {}),
             // The server-derived actor id (added by the released query
             // boundary) forwarded for the surface's agent-refusal guard.
-            ...(typeof request['actorId'] === 'string'
-              ? { actorId: request['actorId'] }
-              : {}),
+            ...(typeof request['actorId'] === 'string' ? { actorId: request['actorId'] } : {}),
           } as Parameters<typeof inspectionSurface.query>[0],
           {
             permissions: inspectionPermissionsForActorRecord(
