@@ -131,6 +131,7 @@ import {
   QLT_MEMORY_MODE_POLICY_ID,
 } from '../sharedworld/policy-contract';
 import {
+  QLT_INSPECTION_READ_PERMISSION,
   QLT_INSPECTION_RESOURCE_ID,
   QLT_INSPECTION_USAGE_LABELS,
 } from '../sharedworld/inspection-contract';
@@ -390,6 +391,10 @@ export interface QuellightComposition {
   readonly releaseVersion: string;
   readonly actorId: string;
   readonly actor: ReturnType<typeof authenticatedActorContext>;
+  /** G3-C2 (OD-R4): the distinct agent-context boundary actor identity. */
+  readonly agentContextActorId: string;
+  /** G3-C2 (OD-R4): the resolved agent-context actor context. */
+  readonly agentContextActor: ReturnType<typeof authenticatedActorContext>;
   readonly dataDir: string;
   readonly turnDeadlineMs: number;
   readonly stores: AgentControlStores;
@@ -1047,6 +1052,23 @@ export async function createQuellightComposition(
   } satisfies MemoryPolicySurfaceDeps);
 
   const plan = getCompiledPlan();
+
+  /**
+   * Stage 9 G3-C2 (OD-R4, S2): the Quellight-side inspection GRANT POLICY.
+   * The permission is derived from the authenticated ACTOR's directory
+   * record on every read — never hard-coded at the boundary. The Quellight
+   * operator actor (the roles `operator` carries the granted surface exactly
+   * as released) resolves WITH the permission; every other actor resolves
+   * WITHOUT it and Quellight's own surface authorization refuses the read
+   * (stable `DATA_UNAUTHORIZED`). Unresolvable actors fail CLOSED (no
+   * permission, never a silent grant).
+   */
+  const inspectionPermissionsForActorRecord = (
+    record: ActorRecord | undefined,
+  ): readonly string[] =>
+    record !== undefined && record.status === 'active' && record.roles.includes('operator')
+      ? [QLT_INSPECTION_READ_PERMISSION]
+      : [];
   const contractImplementations = new Map(
     inputContractImplementations.map((contract) => [contract.id, contract] as const),
   );
@@ -1132,6 +1154,13 @@ export async function createQuellightComposition(
         );
       }
       if (request['resourceId'] === QLT_INSPECTION_RESOURCE_ID) {
+        // Stage 9 G3-C2 (OD-R4, S2): the inspection permission is
+        // ACTOR-DERIVED from the server-resolved actor record — the
+        // operator actor's granted surface is byte-identical to the
+        // released behavior (its record carries the exact same derived
+        // permission), while an actor without the operator grant resolves
+        // WITHOUT it and is REFUSED by Quellight's own authorization
+        // below (never simulated client-side).
         return inspectionSurface.query(
           {
             op: 'list',
@@ -1139,9 +1168,18 @@ export async function createQuellightComposition(
             ...(filters !== undefined ? { filters } : {}),
             // The server-derived actor id (added by the released query
             // boundary) forwarded for the surface's agent-refusal guard.
-            ...(typeof request['actorId'] === 'string' ? { actorId: request['actorId'] } : {}),
+            ...(typeof request['actorId'] === 'string'
+              ? { actorId: request['actorId'] }
+              : {}),
           } as Parameters<typeof inspectionSurface.query>[0],
-          { permissions: ['qlt.inspection.read'], effect: 'read' },
+          {
+            permissions: inspectionPermissionsForActorRecord(
+              typeof request['actorId'] === 'string'
+                ? await agentStores.actors.get(String(request['actorId']))
+                : undefined,
+            ),
+            effect: 'read',
+          },
         );
       }
       const result: ApplicationDataResult = await sharedWorld.adapter.query(
@@ -1288,6 +1326,8 @@ export async function createQuellightComposition(
     releaseVersion: APPLICATION_RELEASE_VERSION,
     actorId: LOCAL_ACTOR_ID,
     actor,
+    agentContextActorId: AGENT_CONTEXT_ACTOR_ID,
+    agentContextActor,
     dataDir,
     turnDeadlineMs: env.turnDeadlineMs,
     stores: agentStores,
