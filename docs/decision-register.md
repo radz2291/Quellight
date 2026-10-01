@@ -2373,3 +2373,7 @@ green; `test:node` 31 files / 360 tests green; `test:ui` 20 green;
 `verify:stage7e` PASS (every negative control held). The fresh independent
 verifier (separate checkout) must verify the contract demos, minimality,
 and the ladder before the VICT-side re-verification consumes the tree.
+
+## D-G3-C2-1 addendum — owner acceptance (2026-09-30)
+
+The owner accepted the increment at `1f7dcdc…` for the Stage 9 product proof (VICT G3 closure, PASS WITH NON-BLOCKING). Verification: `review/stage9-g3-c2-verification-20260930` @ `57ebabb…` VERIFIED PASS (0 Blocking / 0 High / 1 pre-existing Low); consumed by the VICT G3-C re-verification @ `cdedc0a…` (refusal + denial demonstrated). Acceptance record: `docs/report/QUELLIGHT-STAGE9-G3-C2-OWNER-ACCEPTANCE-2026-09-30.md`. Findings retained; the greenfield pairing remains unproven and unclaimed.
